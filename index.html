@@ -659,6 +659,7 @@ td.center,th.center{text-align:center}
       <h2 id="viewTitle">회의록 미리보기</h2>
       <div class="actions">
         <button class="btn gold" onclick="Cloud.openMenu()">☁ 클라우드</button>
+        <select id="cloudQuick" class="btn" style="max-width:220px" onchange="Cloud.quickLoad(this.value)" title="저장된 회의록 바로 열기"><option value="">📂 이전 회의록…</option></select>
         <button class="btn soft" onclick="openExportModal('backup')">백업 저장</button>
         <input id="restoreInput" type="file" accept=".json,application/json" hidden>
         <button class="btn" onclick="openExportModal('word')">Word / 한글용</button>
@@ -25927,7 +25928,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record }).then(function (res) {
-      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); toast("클라우드 저장 완료"); }
+      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); toast("클라우드 저장 완료"); refreshQuick(); }
       else toast("저장 실패: " + ((res && res.error) || "알 수 없음"));
     }).catch(function (e) { toast("저장 오류: " + e.message); });
   }
@@ -25946,13 +25947,14 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var parsed = JSON.parse(res.item.json || "{}");
       applyLoadedState(parsed, res.item.id);
       closeOverlay();
+      var sel = document.getElementById("cloudQuick"); if (sel) sel.value = res.item.id;
       toast("불러오기 완료: " + (res.item.name || ""));
     }).catch(function (e) { toast("불러오기 오류: " + e.message); });
   }
   function doDelete(cfg, id, name) {
     if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
     apiPost(cfg, { action: "delete", id: id }).then(function (res) {
-      if (res && res.ok) { toast("삭제 완료"); doList(); } else toast("삭제 실패");
+      if (res && res.ok) { toast("삭제 완료"); doList(); refreshQuick(); } else toast("삭제 실패");
     }).catch(function (e) { toast("삭제 오류: " + e.message); });
   }
 
@@ -26003,14 +26005,34 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     Cloud._del = function (id, name) { doDelete(cfg, id, name); };
   }
 
+  function refreshQuick() {
+    var sel = document.getElementById("cloudQuick");
+    if (!sel) return;
+    var cfg = loadCfg();
+    apiGet(cfg, { action: "list", token: cfg.token }).then(function (res) {
+      if (!res || !res.ok) return;
+      var cur = (typeof state !== "undefined" && state.cloudId) || "";
+      var opts = '<option value="">📂 이전 회의록…</option>';
+      (res.items || []).forEach(function (it) {
+        opts += '<option value="' + escAttr(it.id) + '"' + (it.id === cur ? ' selected' : '') + '>' + esc(it.name || "(이름없음)") + '</option>';
+      });
+      sel.innerHTML = opts;
+    }).catch(function () {});
+  }
+  function quickLoad(id) { if (id) doLoad(loadCfg(), id); }
+
   window.Cloud = {
     openMenu: openMenu,
     _save: function () { closeOverlay(); doSave(); },
     _list: doList,
     _close: closeOverlay,
     _pick: function () {},
-    _del: function () {}
+    _del: function () {},
+    quickLoad: quickLoad,
+    refresh: refreshQuick
   };
+  if (document.readyState !== "loading") setTimeout(refreshQuick, 400);
+  else document.addEventListener("DOMContentLoaded", function () { setTimeout(refreshQuick, 400); });
 })();
 </script>
 </body>
