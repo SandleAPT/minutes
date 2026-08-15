@@ -659,7 +659,6 @@ td.center,th.center{text-align:center}
       <h2 id="viewTitle">회의록 미리보기</h2>
       <div class="actions">
         <button class="btn gold" onclick="Cloud.openMenu()">☁ 클라우드</button>
-        <select id="cloudQuick" class="btn" style="max-width:220px" onchange="Cloud.quickLoad(this.value)" title="저장된 회의록 바로 열기"><option value="">📂 이전 회의록…</option></select>
         <button class="btn soft" onclick="openExportModal('backup')">백업 저장</button>
         <input id="restoreInput" type="file" accept=".json,application/json" hidden>
         <button class="btn" onclick="openExportModal('word')">Word / 한글용</button>
@@ -824,15 +823,14 @@ td.center,th.center{text-align:center}
 
     <section id="archiveView" class="view">
       <div class="help">
-        완료한 회의를 보관하면 날짜와 회의명별로 다시 열어볼 수 있습니다. 보관 자료는 현재 브라우저에 저장되며,
-        다른 기기로 옮길 때는 별도의 <b>백업 저장</b>을 이용하세요.
+        클라우드에 저장된 회의록 목록입니다. 회의를 클릭하면 바로 열립니다. 연도별로 묶여 있고, 검색으로 빠르게 찾을 수 있습니다.
       </div>
       <div class="card">
         <div class="card-title">
-          <div><h3>이전 회의록 보관함</h3><small>현재 회의록을 시점별로 보관·조회·불러오기</small></div>
-          <button class="btn primary" type="button" onclick="archiveCurrentMinutes()">현재 회의록 보관</button>
+          <div><h3>이전 회의록</h3><small>클라우드 저장 · 클릭하면 열기</small></div>
+          <input id="cloudSearch" class="rep-input" style="max-width:240px;border:1px solid var(--line);border-radius:11px;padding:9px 11px" placeholder="회의명 검색 (예: 06월, 임시)" oninput="Cloud.renderArchiveList()">
         </div>
-        <div id="archiveList" class="archive-list"></div>
+        <div id="cloudArchiveList" class="archive-list"></div>
       </div>
     </section>
   </main>
@@ -24222,7 +24220,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.getElementById(btn.dataset.view).classList.add("active");
     document.getElementById("viewTitle").textContent=viewNames[btn.dataset.view];
     if(btn.dataset.view==="previewView") renderPreview();
-    if(btn.dataset.view==="archiveView") renderArchive();
+    if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
   });
 });
 
@@ -24475,7 +24473,6 @@ function agendaMissingFields(agenda){
   normalizeRemarks(agenda);
   const missing=[];
   if(!String(agenda.title||"").trim()) missing.push("안건명");
-  if(!String(agenda.summary||"").trim()) missing.push("회의 전 안건 요지");
   if(!String(agenda.decision||"").trim()) missing.push("의결사항");
   const vote=voteStatus(agenda);
   if(currentAttendees().length===0 || vote.incomplete>0) missing.push("표결");
@@ -25011,8 +25008,8 @@ function agendaPageHtml(item,currentPage,totalPages){
 
     ${item.isOther?`<div class="other-subtitle"><small>기타안건 ${item.subIndex} / ${item.subTotal}</small>${esc(a.title||"소제목 미입력")}</div>`:""}
 
-    <div class="section-band">안건 요지</div>
-    <div class="summary-box">${nl2br(a.summary,{autoBullets:true})}</div>
+    ${String(a.summary||"").trim()?`<div class="section-band">안건 요지</div>
+    <div class="summary-box">${nl2br(a.summary,{autoBullets:true})}</div>`:""}
 
     ${materials ? `<div class="${a.showMaterials?"":"screen-only-materials"}">
       <div class="section-band">회의자료 · 첨부자료${a.showMaterials?"":" (출력 제외)"}</div>
@@ -25361,7 +25358,7 @@ function wordDocumentHtml(){
     return `<div class="word-page-break">&nbsp;</div><div class="page Section1">
       <div class="word-title">산들마을 입주자대표회의 회의록</div>
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
-      ${sectionTitle("안건 요지")}${contentBox(nl2br(a.summary),"summary")}
+      ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
       ${sectionTitle("의결사항")}${contentBox(nl2br(a.decision),"decision")}
       ${sectionTitle("표결")}<table class="grid votes">${voteRows}</table>
@@ -25539,7 +25536,7 @@ function docxDocumentXml(){
     body+=`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
     body+=wParagraph(buildMeetingName(),{size:15,color:"6F746C",align:"right",after:35});
     body+=wParagraph(`${agendaLabelAt(idx)}  ${a.title||"안건명 미입력"}`,{bold:true,size:30,align:"left",after:120,line:330,borders:titleBorders});
-    body+=wSectionTitle("안건 요지")+wContentBox(a.summary||" ",{autoBullets:true});
+    if(String(a.summary||"").trim()) body+=wSectionTitle("안건 요지")+wContentBox(a.summary,{autoBullets:true});
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim());
     if(a.showMaterials && printableMaterials.length){
       body+=wSectionTitle("회의자료 · 첨부자료");
@@ -25726,7 +25723,7 @@ async function buildDocxBlob(){
     children.push(pageBreak(),p(buildMeetingName(),{size:20,color:"6F746C",alignment:AlignmentType.RIGHT,after:30}));
     children.push(p([run(item.label,{bold:true,size:26,color:"647660"}),run(`  ${item.title}`,{bold:true,size:34})],{after:85,line:360,border:titleBorders}));
     if(item.isOther)children.push(p(`기타안건 ${item.subIndex} / ${item.subTotal}  ${a.title||"소제목 미입력"}`,{bold:true,size:28,after:60,border:{bottom:{style:BorderStyle.SINGLE,size:4,color:"C8C2B6",space:3}}}));
-    children.push(sectionTitle("안건 요지"),contentBox(a.summary,true));
+    if(String(a.summary||"").trim()) children.push(sectionTitle("안건 요지"),contentBox(a.summary,true));
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim()||m.fileName);
     if(a.showMaterials&&printableMaterials.length){
       children.push(sectionTitle("회의자료 · 첨부자료"));
@@ -25928,7 +25925,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record }).then(function (res) {
-      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); toast("클라우드 저장 완료"); refreshQuick(); }
+      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); toast("클라우드 저장 완료"); listCache = null; }
       else toast("저장 실패: " + ((res && res.error) || "알 수 없음"));
     }).catch(function (e) { toast("저장 오류: " + e.message); });
   }
@@ -25947,14 +25944,14 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var parsed = JSON.parse(res.item.json || "{}");
       applyLoadedState(parsed, res.item.id);
       closeOverlay();
-      var sel = document.getElementById("cloudQuick"); if (sel) sel.value = res.item.id;
+      renderArchiveList();
       toast("불러오기 완료: " + (res.item.name || ""));
     }).catch(function (e) { toast("불러오기 오류: " + e.message); });
   }
   function doDelete(cfg, id, name) {
     if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
     apiPost(cfg, { action: "delete", id: id }).then(function (res) {
-      if (res && res.ok) { toast("삭제 완료"); doList(); refreshQuick(); } else toast("삭제 실패");
+      if (res && res.ok) { toast("삭제 완료"); doList(); listCache = null; } else toast("삭제 실패");
     }).catch(function (e) { toast("삭제 오류: " + e.message); });
   }
 
@@ -26005,21 +26002,45 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     Cloud._del = function (id, name) { doDelete(cfg, id, name); };
   }
 
-  function refreshQuick() {
-    var sel = document.getElementById("cloudQuick");
-    if (!sel) return;
+  var listCache = null;
+  function fetchList(cb) {
     var cfg = loadCfg();
     apiGet(cfg, { action: "list", token: cfg.token }).then(function (res) {
-      if (!res || !res.ok) return;
-      var cur = (typeof state !== "undefined" && state.cloudId) || "";
-      var opts = '<option value="">📂 이전 회의록…</option>';
-      (res.items || []).forEach(function (it) {
-        opts += '<option value="' + escAttr(it.id) + '"' + (it.id === cur ? ' selected' : '') + '>' + esc(it.name || "(이름없음)") + '</option>';
-      });
-      sel.innerHTML = opts;
-    }).catch(function () {});
+      listCache = (res && res.ok) ? (res.items || []) : [];
+      if (cb) cb();
+    }).catch(function () { listCache = []; if (cb) cb(); });
   }
-  function quickLoad(id) { if (id) doLoad(loadCfg(), id); }
+  function renderArchiveList() {
+    var box = document.getElementById("cloudArchiveList");
+    if (!box) return;
+    if (listCache === null) { box.innerHTML = '<div style="padding:24px;color:#999;text-align:center">불러오는 중…</div>'; fetchList(renderArchiveList); return; }
+    var qEl = document.getElementById("cloudSearch");
+    var q = (qEl ? qEl.value : "").trim().toLowerCase();
+    var items = listCache.filter(function (it) { return !q || String(it.name || "").toLowerCase().indexOf(q) >= 0; });
+    var groups = {};
+    items.forEach(function (it) {
+      var m = String(it.name || "").match(/(\d{4})년\s*(\d{1,2})월/);
+      var yr = m ? m[1] : "기타", mo = m ? parseInt(m[2], 10) : 0;
+      (groups[yr] = groups[yr] || []).push({ it: it, mo: mo });
+    });
+    var years = Object.keys(groups).sort(function (a, b) { return b.localeCompare(a); });
+    var cur = (typeof state !== "undefined" && state.cloudId) || "";
+    var html = "";
+    if (!items.length) html = '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
+    years.forEach(function (yr) {
+      var rows = groups[yr].sort(function (a, b) { return b.mo - a.mo; });
+      html += '<div style="margin:16px 0 7px;font-weight:800;color:#5c5b56;font-size:13px">' + esc(yr) + '년 <span style="color:#aaa;font-weight:600">(' + rows.length + ')</span></div>';
+      rows.forEach(function (r) {
+        var it = r.it, active = it.id === cur;
+        html += '<div onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
+          '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + '</div>' +
+          '<div style="font-size:11px;color:#999">' + esc(fmtWhen(it.updatedAt)) + (active ? ' · 현재 열림' : '') + '</div></div>' +
+          '<span class="btn" style="pointer-events:none">열기</span>' +
+          '<button class="btn danger" onclick="event.stopPropagation();Cloud._delArc(\'' + escAttr(it.id) + '\',\'' + escAttr(it.name || "") + '\')">삭제</button></div>';
+      });
+    });
+    box.innerHTML = html;
+  }
 
   window.Cloud = {
     openMenu: openMenu,
@@ -26028,11 +26049,18 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     _close: closeOverlay,
     _pick: function () {},
     _del: function () {},
-    quickLoad: quickLoad,
-    refresh: refreshQuick
+    renderArchiveList: renderArchiveList,
+    _open: function (id) { var b = document.querySelector('[data-view="previewView"]'); if (b) b.click(); doLoad(loadCfg(), id); },
+    _delArc: function (id, name) {
+      if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
+      apiPost(loadCfg(), { action: "delete", id: id }).then(function (res) {
+        if (res && res.ok) { toast("삭제 완료"); listCache = null; renderArchiveList(); } else toast("삭제 실패");
+      }).catch(function (e) { toast("삭제 오류: " + e.message); });
+    },
+    _invalidate: function () { listCache = null; }
   };
-  if (document.readyState !== "loading") setTimeout(refreshQuick, 400);
-  else document.addEventListener("DOMContentLoaded", function () { setTimeout(refreshQuick, 400); });
+  if (document.readyState !== "loading") setTimeout(function () { fetchList(); }, 400);
+  else document.addEventListener("DOMContentLoaded", function () { setTimeout(function () { fetchList(); }, 400); });
 })();
 </script>
 </body>
