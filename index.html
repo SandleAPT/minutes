@@ -178,6 +178,9 @@ td.center,th.center{text-align:center}
   margin-top:6mm;border-top:1px solid #9da79a;border-bottom:1px solid #cbd1c8;
   border-left:4px solid #7f927a
 }
+.section-band .band-sub{float:right;font-weight:600;color:#6f746c;font-size:10pt}
+.cover-sequence{border:1px solid #9d978c;border-top:0;padding:8px 12px;display:grid;gap:4px;font-size:11pt;line-height:1.5}
+.cover-sequence b{color:#647660;font-weight:800;margin-right:5px}
 .summary-box,.decision-box,.follow-box{
   border:1px solid #9d978c;border-top:0;padding:11px 12px;min-height:28mm;font-size:11pt;line-height:1.6;
   white-space:pre-wrap
@@ -544,18 +547,19 @@ td.center,th.center{text-align:center}
 .cover-page .cover-agenda .row span{padding:5px 7px;font-size:11pt;line-height:1.35}
 .cover-page .doc-table th{white-space:nowrap;word-break:keep-all}
 .cover-meta-table .meta-label{width:12%}
+.cover-meta-table td{word-break:keep-all}
 .cover-guest-table th,.cover-guest-table td{vertical-align:middle}
-.cover-guest-table td:last-child{text-align:center;white-space:nowrap}
+.cover-guest-table td:last-child{text-align:left;white-space:nowrap}
 .sequence-flow{
   --sequence-count:3;
-  display:flex;align-items:center;justify-content:center;
-  gap:0;padding:1px 8px;min-height:26px
+  display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;
+  gap:0;padding:0;min-height:0
 }
 .sequence-step{
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:1px 7px;
+  display:inline-flex;align-items:center;gap:7px;
+  padding:0;
   border:0;border-radius:0;background:transparent;
-  font-size:11pt;font-weight:400;text-align:center;line-height:1.35;
+  font-size:11pt;font-weight:400;text-align:left;line-height:1.4;
   white-space:nowrap
 }
 .sequence-step b{
@@ -563,8 +567,8 @@ td.center,th.center{text-align:center}
   background:transparent;color:#71806d;font-size:10pt;font-weight:600
 }
 .sequence-step:not(:last-child)::after{
-  content:"→";position:static;margin-left:13px;
-  color:#a9aaa4;font-weight:400
+  content:"→";position:static;margin:0 9px;
+  color:#b7b8b2;font-weight:400
 }
 .sequence-flow.stacked{
   display:grid;grid-template-columns:1fr;gap:2px;
@@ -656,7 +660,6 @@ td.center,th.center{text-align:center}
       <div class="actions">
         <button class="btn gold" onclick="Cloud.openMenu()">☁ 클라우드</button>
         <button class="btn soft" onclick="openExportModal('backup')">백업 저장</button>
-        <label class="btn soft" for="restoreInput">백업 불러오기</label>
         <input id="restoreInput" type="file" accept=".json,application/json" hidden>
         <button class="btn" onclick="openExportModal('word')">Word / 한글용</button>
         <button class="btn gold" onclick="openExportModal('pdf')">PDF · 인쇄</button>
@@ -754,12 +757,12 @@ td.center,th.center{text-align:center}
           <div class="meeting-extra-card">
             <div class="subsection-head">
               <div>
-                <h4>방청 · 참관</h4>
+                <h4>참관</h4>
                 <div class="mini-help">인원만 기록하며 비어 있으면 출력에 ‘없음’으로 표시</div>
               </div>
             </div>
             <div class="field">
-              <label>방청 · 참관 인원</label>
+              <label>참관 인원</label>
               <input id="audienceCountInput" type="number" min="0" step="1" placeholder="예: 2">
             </div>
           </div>
@@ -24939,16 +24942,19 @@ function coverHtml(totalPages){
   const guestText=guests.length
     ? guests.map(g=>esc(guestCoverLabel(g))).join("<br>")
     : "없음";
-  const audienceText=Number(state.meeting.audience?.count)>0?`총 ${Math.floor(Number(state.meeting.audience.count))}명`:"없음";
+  const audienceText=Number(state.meeting.audience?.count)>0?`입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`:"없음";
+  const namedReps=reps.filter(r=>String(r.name||"").trim());
+  const presentCount=namedReps.filter(r=>attendance[String(r.dong)]).length;
+  const absentCount=namedReps.length-presentCount;
+  const sequenceRows=sequenceItems().map((s,i)=>`<div><b>${i+1}.</b> ${esc(s)}</div>`).join("")||`<div style="color:#777">진행순서를 입력하세요.</div>`;
   return `<section class="paper cover-page">
     <div class="doc-title">산들마을 입주자대표회의 회의록</div>
     <table class="doc-table cover-meta-table">
-      <colgroup><col class="meta-label"><col><col class="meta-label"><col></colgroup>
+      <colgroup><col style="width:12%"><col style="width:45%"><col style="width:11%"><col style="width:32%"></colgroup>
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
       <tr><th>일시</th><td>${esc(formattedMeetingDateTime())}</td><th>장소</th><td>${esc(state.meeting.place)}</td></tr>
-      <tr><th>진행순서</th><td colspan="3">${sequenceDisplayHtml()}</td></tr>
     </table>
-    <div class="section-band">현재 동대표 현황 · 참석 및 서명</div>
+    <div class="section-band">참석자 명단<span class="band-sub">참석 ${presentCount} · 미참석 ${absentCount}</span></div>
     <div class="cover-reps column-first">
       <div class="cover-col">
         <div class="cover-rep" style="background:#fff;font-weight:900">
@@ -24963,11 +24969,13 @@ function coverHtml(totalPages){
         ${rightRows}
       </div>
     </div>
-    <div class="section-band">배석자 · 방청 현황</div>
+    <div class="section-band">배석자 · 참관 현황</div>
     <table class="doc-table cover-guest-table">
-      <colgroup><col style="width:12%"><col style="width:55%"><col style="width:18%"><col style="width:15%"></colgroup>
-      <tr><th>배석자</th><td>${guestText}</td><th>방청 · 참관</th><td>${audienceText}</td></tr>
+      <colgroup><col style="width:12%"><col style="width:45%"><col style="width:11%"><col style="width:32%"></colgroup>
+      <tr><th>배석자</th><td>${guestText}</td><th>참관</th><td>${audienceText}</td></tr>
     </table>
+    <div class="section-band">회의 진행순서</div>
+    <div class="cover-sequence">${sequenceRows}</div>
     <div class="section-band">상정 안건</div>
     <div class="cover-agenda">${agendas||`<div class="row"><span>-</span><span>등록된 안건이 없습니다.</span></div>`}</div>
     ${pageNumberHtml(1,totalPages)}
@@ -25092,7 +25100,7 @@ function openExportModal(type){
     content.innerHTML=`
       <p>현재 회의록 데이터를 <b>JSON 백업 파일</b>로 저장합니다.</p>
       <div class="export-modal-summary">
-        포함 내용: 회의 기본정보 · 기수별 동대표 명단 · 참석현황 · 배석자 · 방청인원 · 회의진행순서 · 안건 · 회의자료 기록과 첨부 PDF 원문 · 주요 발언 · 표결 · 의결사항 · 후속조치
+        포함 내용: 회의 기본정보 · 기수별 동대표 명단 · 참석현황 · 배석자 · 참관 인원 · 회의진행순서 · 안건 · 회의자료 기록과 첨부 PDF 원문 · 주요 발언 · 표결 · 의결사항 · 후속조치
       </div>`;
     actions.innerHTML=`
       <button class="btn soft" onclick="closeExportModal()">취소</button>
@@ -25306,7 +25314,7 @@ function wordDocumentHtml(){
     ? guests.map(g=>esc(guestCoverLabel(g))).join("<br>")
     : "없음";
   const audienceText=Number(state.meeting.audience?.count)>0
-    ? `총 ${Math.floor(Number(state.meeting.audience.count))}명`
+    ? `입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`
     : "없음";
   const sectionTitle=title=>`<table class="section-title"><tr><td>${esc(title)}</td></tr></table>`;
   const contentBox=(html,extra="")=>`<table class="content-box ${extra}"><tr><td>${html||"&nbsp;"}</td></tr></table>`;
@@ -25321,12 +25329,12 @@ function wordDocumentHtml(){
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
       <tr><th>일시</th><td>${esc(formattedMeetingDateTime())}</td><th>장소</th><td>${esc(state.meeting.place)}</td></tr>
     </table>
-    ${sectionTitle("현재 동대표 현황 · 참석 및 서명")}
+    ${sectionTitle("참석자 명단")}
     <table class="grid roster"><colgroup><col style="width:7%"><col style="width:9%"><col style="width:20%"><col style="width:9%"><col style="width:7%"><col style="width:9%"><col style="width:20%"><col style="width:9%"></colgroup>
       <tr class="head"><th>동</th><th>직책</th><th>성명</th><th>서명</th><th>동</th><th>직책</th><th>성명</th><th>서명</th></tr>${rosterRows}
     </table>
-    ${sectionTitle("배석자 · 방청 현황")}
-    <table class="grid guests"><tr><th>배석자</th><th>방청 · 참관</th></tr><tr><td>${guestText}</td><td>${audienceText}</td></tr></table>
+    ${sectionTitle("배석자 · 참관 현황")}
+    <table class="grid guests"><tr><th>배석자</th><th>참관</th></tr><tr><td>${guestText}</td><td>${audienceText}</td></tr></table>
     ${sectionTitle("회의 진행순서")}
     <table class="grid compact">${sequenceRows}</table>
     ${sectionTitle("상정 안건")}
@@ -25495,7 +25503,7 @@ function docxDocumentXml(){
     ? guests.map(guestCoverLabel).join("\n")
     : "없음";
   const audienceText=Number(state.meeting.audience?.count)>0
-    ? `총 ${Math.floor(Number(state.meeting.audience.count))}명`
+    ? `입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`
     : "없음";
   const titleBorders=`<w:pBdr><w:top w:val="double" w:sz="10" w:space="3" w:color="6F7F6B"/><w:bottom w:val="single" w:sz="5" w:space="3" w:color="AEB8AA"/></w:pBdr>`;
   const title=()=>wParagraph("산들마을 입주자대표회의 회의록",{bold:true,size:34,align:"center",after:210,line:340,borders:titleBorders});
@@ -25504,11 +25512,11 @@ function docxDocumentXml(){
     [{text:"회의명",index:0,bold:true,shade:"F4F6F2",align:"center"},{text:buildMeetingName(),index:1,span:3,width:8738,bold:true,size:20}],
     [{text:"일시",index:0,bold:true,shade:"F4F6F2",align:"center"},{text:formattedMeetingDateTime(),index:1},{text:"장소",index:2,bold:true,shade:"F4F6F2",align:"center"},{text:state.meeting.place,index:3}]
   ],[1422,3860,1220,3658],{after:15});
-  body+=wSectionTitle("현재 동대표 현황 · 참석 및 서명");
+  body+=wSectionTitle("참석자 명단");
   body+=wTable(rosterRows,rosterWidths,{cellMargin:55,after:10});
-  body+=wSectionTitle("배석자 · 방청 현황");
+  body+=wSectionTitle("배석자 · 참관 현황");
   body+=wTable([
-    [{text:"배석자",index:0,bold:true,shade:"F4F6F2"},{text:"방청 · 참관",index:1,bold:true,shade:"F4F6F2"}],
+    [{text:"배석자",index:0,bold:true,shade:"F4F6F2"},{text:"참관",index:1,bold:true,shade:"F4F6F2"}],
     [{text:guestText,index:0,size:18},{text:audienceText,index:1,size:18}]
   ],[5080,5080],{cellMargin:65,after:10});
   body+=wSectionTitle("회의 진행순서");
@@ -25688,7 +25696,7 @@ async function buildDocxBlob(){
   }
   const guests=(state.meeting.guests||[]).filter(g=>g.name.trim()||g.position.trim());
   const guestText=guests.length?guests.map(guestCoverLabel).join("\n"):"없음";
-  const audienceText=Number(state.meeting.audience?.count)>0?`총 ${Math.floor(Number(state.meeting.audience.count))}명`:"없음";
+  const audienceText=Number(state.meeting.audience?.count)>0?`입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`:"없음";
   const sequenceData=sequenceItems().length?sequenceItems():["-"];
   const sequenceTable=sequenceIsStacked(sequenceData)
     ? table(sequenceData.map((s,i)=>[cell(p(String(i+1).padStart(2,"0"),{size:20,color:"647660",alignment:AlignmentType.CENTER,after:0}),720,{compact:true}),cell(p(s,{size:24,after:0,line:280}),9440,{compact:true})]),[720,9440])
@@ -25704,9 +25712,9 @@ async function buildDocxBlob(){
     [cell(p("일시",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),cell(p(formattedMeetingDateTime(),{size:24,after:0,line:280}),3860,{compact:true}),cell(p("장소",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1220,{compact:true}),cell(p(state.meeting.place,{size:24,after:0,line:280}),3658,{compact:true})]
   ],[1422,3860,1220,3658]));
   children.push(sectionTitle("회의 진행순서"),sequenceTable);
-  children.push(sectionTitle("현재 동대표 현황 · 참석 및 서명"),table(rosterRows,rosterWidths));
-  children.push(sectionTitle("배석자 · 방청 현황"),table([
-    [cell(p("배석자",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1220,{compact:true}),cell(formatted(guestText,{size:24}),5580,{compact:true}),cell(p("방청 · 참관",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1840,{compact:true}),cell(p(audienceText,{size:24,alignment:AlignmentType.CENTER,after:0}),1520,{compact:true})]
+  children.push(sectionTitle("참석자 명단"),table(rosterRows,rosterWidths));
+  children.push(sectionTitle("배석자 · 참관 현황"),table([
+    [cell(p("배석자",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1220,{compact:true}),cell(formatted(guestText,{size:24}),5580,{compact:true}),cell(p("참관",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1840,{compact:true}),cell(p(audienceText,{size:24,alignment:AlignmentType.CENTER,after:0}),1520,{compact:true})]
   ],[1220,5580,1840,1520]));
   children.push(sectionTitle("상정 안건"));
   const agendaRows=officialAgendaRows();
