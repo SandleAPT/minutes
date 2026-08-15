@@ -647,6 +647,7 @@ td.center,th.center{text-align:center}
       <button data-view="repsView">③ 동대표 명단</button>
       <button data-view="agendaView">④ 안건 · 발언</button>
       <button data-view="archiveView">⑤ 이전 회의록</button>
+      <button data-view="topicView">⑥ 주제별 보기</button>
     </div>
     <div class="note">
       입력한 내용은 현재 브라우저에 자동 저장됩니다.<br>
@@ -831,6 +832,20 @@ td.center,th.center{text-align:center}
           <input id="cloudSearch" class="rep-input" style="max-width:240px;border:1px solid var(--line);border-radius:11px;padding:9px 11px" placeholder="회의명 검색 (예: 06월, 임시)" oninput="Cloud.renderArchiveList()">
         </div>
         <div id="cloudArchiveList" class="archive-list"></div>
+      </div>
+    </section>
+
+    <section id="topicView" class="view">
+      <div class="help">
+        모든 회의록의 안건을 <b>주제(카테고리)별로 모아</b> 시간순으로 이어봅니다. 주제를 고르면 관련 안건만 쭉 나옵니다.
+        분류는 안건명 기준 <b>자동</b>이며, 안건별로 카테고리를 직접 바꾸면(④ 안건·발언) 그 값이 우선합니다.
+      </div>
+      <div class="card">
+        <div class="card-title"><div><h3>주제별 보기</h3><small>클라우드 전체 안건을 주제로 묶어 조회</small></div>
+          <button class="btn" type="button" onclick="Topic.reload()">새로고침</button>
+        </div>
+        <div id="topicChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+        <div id="topicResult"></div>
       </div>
     </section>
   </main>
@@ -24210,7 +24225,8 @@ const viewNames={
   repsView:"동대표 명단",
   agendaView:"안건 · 발언",
   previewView:"회의록 미리보기",
-  archiveView:"이전 회의록"
+  archiveView:"이전 회의록",
+  topicView:"주제별 보기"
 };
 document.querySelectorAll(".nav button").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -24221,6 +24237,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.getElementById("viewTitle").textContent=viewNames[btn.dataset.view];
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
+    if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
   });
 });
 
@@ -24505,10 +24522,18 @@ function outputAgendaItems(){
   others.forEach((agenda,index)=>items.push({agenda,label:`제${regular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length}));
   return items;
 }
+const AGENDA_CATS=["주차","커뮤니티·헬스·도서관","LH·관리이관","화재·소방","관리비·회계","잡수입·예산·수광선","관리규약·선거·임원","장기수선","조경·환경","승강기","지원사업","저수조·청소","교통·버스","기타"];
+function categoryOptions(a){
+  const auto=(window.autoCategory?window.autoCategory(a):"기타");
+  const cur=a.category&&String(a.category).trim()?a.category:"";
+  let opts=`<option value="">자동 (${esc(auto)})</option>`;
+  opts+=AGENDA_CATS.map(c=>`<option value="${esc(c)}" ${cur===c?"selected":""}>${esc(c)}</option>`).join("");
+  return opts;
+}
 function newAgenda(){
   return {
     id:uid(),title:"",summary:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
-    followup:"",showFollowup:false,
+    category:"",followup:"",showFollowup:false,
     materials:[],showMaterials:false
   };
 }
@@ -24790,8 +24815,10 @@ function renderAgendas(){
         <div class="agenda-body">
           <div class="grid" style="grid-template-columns:1fr 1.4fr">
             <div class="field"><label>안건명 <b>*</b></label><input id="agenda-title-input-${a.id}" value="${esc(a.title)}" placeholder="예: 관리비 부과 내역서 심의 건" oninput="setAgenda('${a.id}','title',this.value)"></div>
-            <div class="field"><label>회의 전 안건 요지 <b>*</b></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
+            <div class="field"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
           </div>
+          <div class="field" style="max-width:340px;margin-top:8px"><label>카테고리 <span class="small">(자동 분류 · 직접 변경 가능)</span></label>
+            <select onchange="setAgenda('${a.id}','category',this.value)">${categoryOptions(a)}</select></div>
           <div class="subsection">
             <div class="subsection-head">
               <div>
@@ -26061,6 +26088,74 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   };
   if (document.readyState !== "loading") setTimeout(function () { fetchList(); }, 400);
   else document.addEventListener("DOMContentLoaded", function () { setTimeout(function () { fetchList(); }, 400); });
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+  var URL = "https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
+  var TOKEN = "ITDXaUBDTmrz6DbQ3tv9R";
+  function cfg() { try { var c = JSON.parse(localStorage.getItem("sandle_cloud_cfg")) || {}; return { url: c.url || URL, token: c.token || TOKEN }; } catch (e) { return { url: URL, token: TOKEN }; } }
+  function apiGet(p) { var c = cfg(); p.token = c.token; var q = Object.keys(p).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(p[k]); }).join("&"); return fetch(c.url + "?" + q).then(function (r) { return r.json(); }); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); }
+
+  var DEFS = [
+    { key: "주차", kw: ["주차", "차단기", "반사경"] },
+    { key: "커뮤니티·헬스·도서관", kw: ["커뮤니티", "헬스", "도서관", "노크타운", "체험단", "위탁관리업체 선정", "위탁업체 입찰", "위탁업체 입찰공고"] },
+    { key: "LH·관리이관", kw: ["LH", "관리이관", "관리 이관"] },
+    { key: "화재·소방", kw: ["화재", "소화기", "스프링", "소방"] },
+    { key: "관리비·회계", kw: ["관리비", "결산", "이익잉여", "회계감사", "위탁관리수수료", "부과 명세", "부과 내역"] },
+    { key: "잡수입·예산·수광선", kw: ["잡수입", "수광선", "비상대책", "격려금", "휴가비", "예산"] },
+    { key: "관리규약·선거·임원", kw: ["관리규약", "보궐선거", "임원", "동별 대표", "동별대표", "선출"] },
+    { key: "장기수선", kw: ["장기수선", "충당금", "재도장", "방수", "균열", "보도블럭", "아스팔트"] },
+    { key: "조경·환경", kw: ["철쭉", "회양목", "조경", "고사목", "금연", "불법소각", "묘목", "식재"] },
+    { key: "승강기", kw: ["승강기", "엘리베이터"] },
+    { key: "지원사업", kw: ["지원사업", "공모사업", "성남시", "지원 사업"] },
+    { key: "저수조·청소", kw: ["저수조", "청소용역"] },
+    { key: "교통·버스", kw: ["버스", "회차지", "셔틀", "불법차량"] }
+  ];
+  function autoCat(a) {
+    var t = (a.title || "") + " " + (a.decision || "") + " " + (a.summary || "");
+    for (var i = 0; i < DEFS.length; i++) for (var j = 0; j < DEFS[i].kw.length; j++) if (t.indexOf(DEFS[i].kw[j]) >= 0) return DEFS[i].key;
+    return "기타";
+  }
+  function catOf(a) { return (a.category && String(a.category).trim()) ? a.category : autoCat(a); }
+  window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
+
+  var cache = null, curCat = null;
+  function loadAll(cb) {
+    apiGet({ action: "list" }).then(function (res) {
+      if (!res || !res.ok) { cache = []; cb(); return; }
+      var items = res.items || [], out = [], pending = items.length;
+      if (!pending) { cache = []; cb(); return; }
+      items.forEach(function (it) {
+        apiGet({ action: "get", id: it.id }).then(function (r) {
+          if (r && r.ok && r.item) { try { var st = JSON.parse(r.item.json || "{}"); var mn = (st.meeting && st.meeting.name) || it.name; var md = (st.meeting && st.meeting.date) || ""; (st.agendas || []).forEach(function (a) { out.push({ mName: mn, mDate: md, agenda: a }); }); } catch (e) { } }
+          if (--pending === 0) { cache = out; cb(); }
+        }).catch(function () { if (--pending === 0) { cache = out; cb(); } });
+      });
+    }).catch(function () { cache = []; cb(); });
+  }
+  function render() {
+    var chips = document.getElementById("topicChips"), result = document.getElementById("topicResult");
+    if (!chips) return;
+    if (cache === null) { chips.innerHTML = ""; result.innerHTML = '<div style="padding:24px;color:#999;text-align:center">전체 회의록에서 안건을 모으는 중…</div>'; loadAll(render); return; }
+    var counts = {};
+    cache.forEach(function (x) { var c = catOf(x.agenda); counts[c] = (counts[c] || 0) + 1; });
+    var cats = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    if (!curCat || !counts[curCat]) curCat = cats[0] || null;
+    chips.innerHTML = cats.map(function (c) { var on = c === curCat; return '<button class="btn' + (on ? ' gold' : '') + '" onclick="Topic.pick(this.getAttribute(\'data-c\'))" data-c="' + esc(c) + '">' + esc(c) + ' <b>' + counts[c] + '</b></button>'; }).join("");
+    var items = cache.filter(function (x) { return catOf(x.agenda) === curCat; }).sort(function (a, b) { return String(a.mDate).localeCompare(String(b.mDate)); });
+    result.innerHTML = items.length ? items.map(function (x) {
+      var a = x.agenda;
+      return '<div style="border:1px solid #e7e2d8;border-left:4px solid #7f927a;border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:9px">' +
+        '<div style="font-size:11px;color:#8a8f86;font-weight:700;margin-bottom:3px">' + esc(x.mName) + ' · ' + esc(x.mDate) + '</div>' +
+        '<div style="font-weight:800;margin-bottom:4px">' + esc(a.title || "") + '</div>' +
+        '<div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap">' + esc(a.decision || "") + '</div></div>';
+    }).join("") : '<div style="padding:20px;color:#999">해당 주제 안건이 없습니다.</div>';
+  }
+  window.Topic = { render: render, pick: function (c) { curCat = c; render(); }, reload: function () { cache = null; curCat = null; render(); } };
 })();
 </script>
 </body>
