@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v23</title>
+<title>산들마을 입주자대표회의 회의록 v24</title>
 <style>
 :root{
   --bg:#fff;
@@ -639,7 +639,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p>v23 · 회의정보 입력 · 안건별 문서</p></div>
+      <div><h1>산들마을 회의록</h1><p>v24 · 회의정보 입력 · 안건별 문서</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -25907,6 +25907,21 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function loadCfg() { var s = stored(); return { url: s.url || DEFAULT_URL, token: s.token || DEFAULT_TOKEN }; }
   function saveCfg(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 
+  // ---- 관리자 비밀번호 (저장·삭제 전용) ----
+  // 서버(Apps Script)가 save/delete 요청에 adminKey를 요구한다. 비밀번호는 앱 소스에
+  // 없고, 관리자가 기기마다 한 번 입력하면 localStorage에 기억된다. 열람은 자유.
+  var ADMIN_LS = "sandle_admin_key";
+  function getAdminKey(promptIfMissing) {
+    var k = "";
+    try { k = localStorage.getItem(ADMIN_LS) || ""; } catch (e) {}
+    if (!k && promptIfMissing) {
+      k = (prompt("관리자 비밀번호를 입력하세요.\n(회의록 저장·삭제에만 필요하며, 이 기기에 기억됩니다)") || "").trim();
+      if (k) try { localStorage.setItem(ADMIN_LS, k); } catch (e) {}
+    }
+    return k;
+  }
+  function clearAdminKey() { try { localStorage.removeItem(ADMIN_LS); } catch (e) {} }
+
   // ---- 정적 데이터 파일 (data.json) ----
   // 확정된 회의록은 GitHub Pages의 data.json에서 즉시 읽고,
   // data.json에 없거나 클라우드에서 더 최근에 수정된 회의록만 클라우드에서 받아온다.
@@ -25974,13 +25989,16 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     return fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); });
   }
 
-  function doSave() {
+  function doSave(retried) {
     var cfg = loadCfg();
+    var key = getAdminKey(true);
+    if (!key) { toast("저장 취소됨 — 관리자 비밀번호가 필요합니다"); return; }
     try { if (typeof saveState === "function") saveState(); } catch (e) {}
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
-    apiPost(cfg, { action: "save", record: record }).then(function (res) {
+    apiPost(cfg, { action: "save", record: record, adminKey: key }).then(function (res) {
       if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); markSynced(); toast("클라우드 저장 완료"); listCache = null; renderArchiveList(); }
+      else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); if (!retried) doSave(true); }
       else toast("저장 실패: " + ((res && res.error) || "알 수 없음"));
     }).catch(function (e) { toast("저장 오류: " + e.message); });
   }
@@ -26016,8 +26034,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   function doDelete(cfg, id, name) {
     if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
-    apiPost(cfg, { action: "delete", id: id }).then(function (res) {
-      if (res && res.ok) { toast("삭제 완료"); doList(); listCache = null; } else toast("삭제 실패");
+    var key = getAdminKey(true);
+    if (!key) { toast("삭제 취소됨 — 관리자 비밀번호가 필요합니다"); return; }
+    apiPost(cfg, { action: "delete", id: id, adminKey: key }).then(function (res) {
+      if (res && res.ok) { toast("삭제 완료"); doList(); listCache = null; }
+      else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); }
+      else toast("삭제 실패");
     }).catch(function (e) { toast("삭제 오류: " + e.message); });
   }
 
@@ -26157,8 +26179,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     _open: function (id) { var b = document.querySelector('[data-view="previewView"]'); if (b) b.click(); doLoad(loadCfg(), id); },
     _delArc: function (id, name) {
       if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
-      apiPost(loadCfg(), { action: "delete", id: id }).then(function (res) {
-        if (res && res.ok) { toast("삭제 완료"); listCache = null; renderArchiveList(); } else toast("삭제 실패");
+      var key = getAdminKey(true);
+      if (!key) { toast("삭제 취소됨 — 관리자 비밀번호가 필요합니다"); return; }
+      apiPost(loadCfg(), { action: "delete", id: id, adminKey: key }).then(function (res) {
+        if (res && res.ok) { toast("삭제 완료"); listCache = null; renderArchiveList(); }
+        else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); }
+        else toast("삭제 실패");
       }).catch(function (e) { toast("삭제 오류: " + e.message); });
     },
     _invalidate: function () { listCache = null; }
