@@ -25955,7 +25955,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record }).then(function (res) {
-      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); toast("클라우드 저장 완료"); listCache = null; renderArchiveList(); }
+      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); markSynced(); toast("클라우드 저장 완료"); listCache = null; renderArchiveList(); }
       else toast("저장 실패: " + ((res && res.error) || "알 수 없음"));
     }).catch(function (e) { toast("저장 오류: " + e.message); });
   }
@@ -25973,6 +25973,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       if (!res || !res.ok || !res.item) { toast("불러오기 실패"); return; }
       var parsed = JSON.parse(res.item.json || "{}");
       applyLoadedState(parsed, res.item.id);
+      markSynced();
       closeOverlay();
       renderArchiveList();
       toast("불러오기 완료: " + (res.item.name || ""));
@@ -26072,6 +26073,35 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     box.innerHTML = html;
   }
 
+  // ---- 접속 시 최신 회의록 자동 열기 ----
+  // 마지막 클라우드 동기화(저장/불러오기) 시점의 상태 스냅샷. 현재 상태가 스냅샷과 같으면
+  // (= 저장 안 된 수정이 없으면) 시작 시 클라우드의 최신 회의록을 자동으로 연다.
+  var SNAP_KEY = "sandle_minutes_cloud_snapshot_v1";
+  function markSynced() {
+    try { localStorage.setItem(SNAP_KEY, localStorage.getItem(STORAGE_KEY) || ""); } catch (e) {}
+  }
+  function isPristine() {
+    try {
+      if (state.cloudId) return false;
+      var ags = state.agendas || [];
+      return ags.every(function (a) {
+        return !String(a.title || "").trim() && !String(a.summary || "").trim() && !String(a.decision || "").trim();
+      });
+    } catch (e) { return false; }
+  }
+  function autoOpenLatest() {
+    if (!listCache || !listCache.length) return;
+    var unchanged = false;
+    try { unchanged = (localStorage.getItem(STORAGE_KEY) || "") === (localStorage.getItem(SNAP_KEY) || " "); } catch (e) {}
+    if (!unchanged && !isPristine()) return; // 저장 안 된 작업이 있으면 건드리지 않음
+    var newest = listCache.slice().sort(function (a, b) {
+      var d = new Date(b.date || 0) - new Date(a.date || 0);
+      return d !== 0 ? d : (new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+    })[0];
+    if (!newest || !newest.id) return;
+    doLoad(loadCfg(), newest.id);
+  }
+
   window.Cloud = {
     openMenu: openMenu,
     saveNow: function () { doSave(); },
@@ -26090,8 +26120,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     },
     _invalidate: function () { listCache = null; }
   };
-  if (document.readyState !== "loading") setTimeout(function () { fetchList(); }, 400);
-  else document.addEventListener("DOMContentLoaded", function () { setTimeout(function () { fetchList(); }, 400); });
+  if (document.readyState !== "loading") setTimeout(function () { fetchList(autoOpenLatest); }, 400);
+  else document.addEventListener("DOMContentLoaded", function () { setTimeout(function () { fetchList(autoOpenLatest); }, 400); });
 })();
 </script>
 
