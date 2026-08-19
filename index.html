@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v27</title>
+<title>산들마을 입주자대표회의 회의록 v28</title>
 <style>
 :root{
   --bg:#fff;
@@ -639,7 +639,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p>v27 · 회의정보 입력 · 안건별 문서</p></div>
+      <div><h1>산들마을 회의록</h1><p>v28 · 회의정보 입력 · 안건별 문서</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -659,6 +659,7 @@ td.center,th.center{text-align:center}
     <div class="topbar">
       <h2 id="viewTitle">회의록 미리보기</h2>
       <div class="actions">
+        <button id="topbarSaveBtn" class="btn gold" style="display:none" onclick="Cloud.saveNow()">☁ 현재 회의록 저장</button>
         <button class="btn primary" onclick="startNewMeeting()">＋ 새 회의록</button>
         <input id="restoreInput" type="file" accept=".json,application/json" hidden>
         <button class="btn" onclick="openExportModal('word')">Word / 한글용</button>
@@ -24255,11 +24256,17 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     document.getElementById(btn.dataset.view).classList.add("active");
     document.getElementById("viewTitle").textContent=viewNames[btn.dataset.view];
+    updateTopbarSaveBtn(btn.dataset.view);
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
   });
 });
+// ② 회의 설정, ④ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
+function updateTopbarSaveBtn(view){
+  const el=document.getElementById("topbarSaveBtn");
+  if(el) el.style.display=(view==="setupView"||view==="agendaView")?"":"none";
+}
 
 function initMeetingControls(){
   const term=document.getElementById("termNo");
