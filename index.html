@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v26</title>
+<title>산들마을 입주자대표회의 회의록 v27</title>
 <style>
 :root{
   --bg:#fff;
@@ -639,7 +639,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p>v26 · 회의정보 입력 · 안건별 문서</p></div>
+      <div><h1>산들마을 회의록</h1><p>v27 · 회의정보 입력 · 안건별 문서</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -651,7 +651,7 @@ td.center,th.center{text-align:center}
     </div>
     <div class="note">
       입력한 내용은 현재 브라우저에 자동 저장됩니다.<br>
-      <b>백업 저장</b>을 이용하면 다른 기기로 데이터를 옮길 수 있습니다.
+      완성한 회의록은 <b>⑤ 이전 회의록 → ☁ 현재 회의록 저장</b>으로 클라우드에 올립니다.
     </div>
   </aside>
 
@@ -659,7 +659,7 @@ td.center,th.center{text-align:center}
     <div class="topbar">
       <h2 id="viewTitle">회의록 미리보기</h2>
       <div class="actions">
-        <button class="btn soft" onclick="openExportModal('backup')">백업 저장</button>
+        <button class="btn primary" onclick="startNewMeeting()">＋ 새 회의록</button>
         <input id="restoreInput" type="file" accept=".json,application/json" hidden>
         <button class="btn" onclick="openExportModal('word')">Word / 한글용</button>
         <button class="btn gold" onclick="openExportModal('pdf')">PDF · 인쇄</button>
@@ -24182,6 +24182,23 @@ function saveState(){
   renderMetrics();
   renderPreview();
 }
+function startNewMeeting(){
+  if(!confirm("새 회의록을 만들까요?\n지금 열려 있는 회의록에 저장하지 않은 수정이 있다면, 먼저 ⑤ 이전 회의록에서 '☁ 현재 회의록 저장'을 눌러 주세요.")) return;
+  const keepRosters=state.rosters||{};
+  const keepTerm=state.rosterTermNo;
+  const fresh=defaultState();
+  if(Object.keys(keepRosters).length) fresh.rosters=keepRosters;
+  fresh.rosterTermNo=keepTerm||fresh.rosterTermNo;
+  fresh.cloudId=null;
+  fresh.draft=true; // 작성 중 표시: 접속 시 최신 회의록 자동 열기가 이 문서를 덮어쓰지 않게 함
+  state=fresh;
+  ensureRoster(state.meeting.termNo);ensureRoster(state.rosterTermNo||state.meeting.termNo);
+  persistOnly();
+  renderMeetingControls();renderRepMaster();renderAttendance();renderAgendas();renderMetrics();renderPreview();
+  const btn=document.querySelector('[data-view="setupView"]');
+  if(btn) btn.click();
+  showToast("새 회의록을 시작합니다. 회의 기본정보를 설정하세요.");
+}
 function esc(s=""){
   return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 }
@@ -25994,6 +26011,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var key = getAdminKey(true);
     if (!key) { toast("저장 취소됨 — 관리자 비밀번호가 필요합니다"); return; }
     try { if (typeof saveState === "function") saveState(); } catch (e) {}
+    if (state.draft) delete state.draft; // 클라우드에 저장되면 더 이상 '작성 중'이 아님
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record, adminKey: key }).then(function (res) {
@@ -26148,6 +26166,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function isPristine() {
     try {
       if (state.cloudId) return false;
+      if (state.draft) return false; // '＋ 새 회의록'으로 시작한 작성 중 문서는 보호
       var ags = state.agendas || [];
       return ags.every(function (a) {
         return !String(a.title || "").trim() && !String(a.summary || "").trim() && !String(a.decision || "").trim();
