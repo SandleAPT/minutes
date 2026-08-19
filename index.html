@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v25</title>
+<title>산들마을 입주자대표회의 회의록 v26</title>
 <style>
 :root{
   --bg:#fff;
@@ -639,7 +639,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p>v25 · 회의정보 입력 · 안건별 문서</p></div>
+      <div><h1>산들마을 회의록</h1><p>v26 · 회의정보 입력 · 안건별 문서</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -25997,7 +25997,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record, adminKey: key }).then(function (res) {
-      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); markSynced(); toast("클라우드 저장 완료"); listCache = null; renderArchiveList(); }
+      if (res && res.ok) { state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); markSynced(); toast("클라우드 저장 완료"); listCache = null; renderArchiveList(); try { if (window.Topic) Topic.reload(); } catch (e2) {} }
       else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); if (!retried) doSave(true); }
       else toast("저장 실패: " + ((res && res.error) || "알 수 없음"));
     }).catch(function (e) { toast("저장 오류: " + e.message); });
@@ -26182,7 +26182,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var key = getAdminKey(true);
       if (!key) { toast("삭제 취소됨 — 관리자 비밀번호가 필요합니다"); return; }
       apiPost(loadCfg(), { action: "delete", id: id, adminKey: key }).then(function (res) {
-        if (res && res.ok) { toast("삭제 완료"); listCache = null; renderArchiveList(); }
+        if (res && res.ok) { toast("삭제 완료"); listCache = null; renderArchiveList(); try { if (window.Topic) Topic.reload(); } catch (e2) {} }
         else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); }
         else toast("삭제 실패");
       }).catch(function (e) { toast("삭제 오류: " + e.message); });
