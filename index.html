@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v24</title>
+<title>산들마을 입주자대표회의 회의록 v25</title>
 <style>
 :root{
   --bg:#fff;
@@ -639,7 +639,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p>v24 · 회의정보 입력 · 안건별 문서</p></div>
+      <div><h1>산들마을 회의록</h1><p>v25 · 회의정보 입력 · 안건별 문서</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -24525,7 +24525,7 @@ function outputAgendaItems(){
   others.forEach((agenda,index)=>items.push({agenda,label:`제${regular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length}));
   return items;
 }
-const AGENDA_CATS=["주차","커뮤니티·헬스·도서관","LH·관리이관","화재·소방","관리비·회계","잡수입·예산·수광선","관리규약·선거·임원","장기수선","조경·환경","승강기","지원사업","저수조·청소","교통·버스","기타"];
+const AGENDA_CATS=["헬스장","도서관","커뮤니티센터","주차","수광선","LH·관리이관","회계·결산","관리비","잡수입·예산","관리규약","선거·임원","장기수선","승강기","화재·소방","조경·환경","지원사업","저수조·청소","교통·버스","기타"];
 function categoryOptions(a){
   const auto=(window.autoCategory?window.autoCategory(a):"기타");
   const cur=a.category&&String(a.category).trim()?a.category:"";
@@ -26210,24 +26210,34 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); }
 
   var DEFS = [
+    { key: "헬스장", kw: ["헬스", "체험단", "GX"] },
+    { key: "도서관", kw: ["도서관", "사서"] },
+    { key: "커뮤니티센터", kw: ["커뮤니티", "노크타운", "위탁관리업체", "위탁업체"] },
     { key: "주차", kw: ["주차", "차단기", "반사경"] },
-    { key: "커뮤니티·헬스·도서관", kw: ["커뮤니티", "헬스", "도서관", "노크타운", "체험단", "위탁관리업체 선정", "위탁업체 입찰", "위탁업체 입찰공고"] },
+    { key: "수광선", kw: ["수광선", "비상대책", "철도"] },
     { key: "LH·관리이관", kw: ["LH", "관리이관", "관리 이관"] },
-    { key: "화재·소방", kw: ["화재", "소화기", "스프링", "소방"] },
-    { key: "관리비·회계", kw: ["관리비", "결산", "이익잉여", "회계감사", "위탁관리수수료", "부과 명세", "부과 내역"] },
-    { key: "잡수입·예산·수광선", kw: ["잡수입", "수광선", "비상대책", "격려금", "휴가비", "예산"] },
-    { key: "관리규약·선거·임원", kw: ["관리규약", "보궐선거", "임원", "동별 대표", "동별대표", "선출"] },
+    { key: "회계·결산", kw: ["결산", "이익잉여", "회계감사", "외부회계", "위탁관리수수료"] },
+    { key: "관리비", kw: ["관리비", "부과 명세", "부과 내역", "부과내역"] },
+    { key: "잡수입·예산", kw: ["잡수입", "격려금", "휴가비", "예산"] },
+    { key: "관리규약", kw: ["관리규약", "규약 개정"] },
+    { key: "선거·임원", kw: ["보궐선거", "임원", "동별 대표", "동별대표", "선출", "선거관리위원회"] },
     { key: "장기수선", kw: ["장기수선", "충당금", "재도장", "방수", "균열", "보도블럭", "아스팔트"] },
-    { key: "조경·환경", kw: ["철쭉", "회양목", "조경", "고사목", "금연", "불법소각", "묘목", "식재"] },
     { key: "승강기", kw: ["승강기", "엘리베이터"] },
+    { key: "화재·소방", kw: ["화재", "소화기", "스프링클러", "소방"] },
+    { key: "조경·환경", kw: ["철쭉", "회양목", "조경", "고사목", "금연", "불법소각", "묘목", "식재"] },
     { key: "지원사업", kw: ["지원사업", "공모사업", "성남시", "지원 사업"] },
-    { key: "저수조·청소", kw: ["저수조", "청소용역"] },
+    { key: "저수조·청소", kw: ["저수조", "청소용역", "청소 용역"] },
     { key: "교통·버스", kw: ["버스", "회차지", "셔틀", "불법차량"] }
   ];
-  function autoCat(a) {
-    var t = (a.title || "") + " " + (a.decision || "") + " " + (a.summary || "");
+  // 안건명을 먼저 보고(정확도 높음), 없으면 의결·요지 본문에서 찾는다.
+  function scanCat(t) {
     for (var i = 0; i < DEFS.length; i++) for (var j = 0; j < DEFS[i].kw.length; j++) if (t.indexOf(DEFS[i].kw[j]) >= 0) return DEFS[i].key;
-    return "기타";
+    return null;
+  }
+  function autoCat(a) {
+    var byTitle = scanCat(a.title || "");
+    if (byTitle) return byTitle;
+    return scanCat((a.decision || "") + " " + (a.summary || "")) || "기타";
   }
   function catOf(a) { return (a.category && String(a.category).trim()) ? a.category : autoCat(a); }
   window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
