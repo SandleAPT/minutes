@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v31</title>
+<title>산들마을 입주자대표회의 회의록 v32</title>
 <style>
 :root{
   --bg:#fff;
@@ -671,7 +671,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v31 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v32 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26652,17 +26652,25 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     return (cache || []).filter(function (x) { return tag === "__all__" || tagsOf(x.agenda).indexOf(tag) >= 0; })
       .sort(function (a, b) { return String(a.mDate).localeCompare(String(b.mDate)); });
   }
-  function keysFor(tag) { return itemsFor(tag).map(agendaKey); }
+  // 안건 내용 지문: 회의 전 안건명만 있다가 나중에 요지·의결이 채워지는 경우도 '변경'으로 잡기 위함
+  function strHash(s) { var h = 5381, i; s = String(s || ""); for (i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function agendaSig(x) { var a = x.agenda || {}; return agendaKey(x) + "#" + strHash((a.title || "") + "\n" + (a.summary || "") + "\n" + (a.decision || "") + "\n" + (a.followup || "")); }
+  function keysFor(tag) { return itemsFor(tag).map(agendaSig); }
   function staleInfo(tag) {
     var s = summaries && summaries.topics && summaries.topics[tag];
     var cur = itemsFor(tag);
-    if (!s) return { has: false, total: cur.length, added: cur, removed: [] };
-    var based = {}; (s.basedOn || []).forEach(function (k) { based[k] = 1; });
+    if (!s) return { has: false, total: cur.length, added: cur, changed: [], removed: [] };
+    var based = {}; (s.basedOn || []).forEach(function (k) { var p = String(k).split("#"); based[p[0]] = p[1] || ""; });
     var curSet = {}; cur.forEach(function (x) { curSet[agendaKey(x)] = 1; });
+    var added = [], changed = [];
+    cur.forEach(function (x) {
+      var k = agendaKey(x);
+      if (!(k in based)) added.push(x);
+      else if (based[k] && based[k] !== agendaSig(x).split("#")[1]) changed.push(x);
+    });
     return {
-      has: true, s: s, total: cur.length,
-      added: cur.filter(function (x) { return !based[agendaKey(x)]; }),
-      removed: (s.basedOn || []).filter(function (k) { return !curSet[k]; })
+      has: true, s: s, total: cur.length, added: added, changed: changed,
+      removed: Object.keys(based).filter(function (k) { return !curSet[k]; })
     };
   }
   function fmtDate(iso) { if (!iso) return ""; var d = new Date(iso); if (isNaN(d.getTime())) return String(iso).slice(0, 10); var p = function (n) { return String(n).padStart(2, "0"); }; return d.getFullYear() + "." + p(d.getMonth() + 1) + "." + p(d.getDate()); }
@@ -26695,13 +26703,15 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     }
     var s = info.s;
     var stale = "";
-    if (info.added.length || info.removed.length) {
-      var list = info.added.slice(0, 6).map(function (x) { return '<li>' + esc(x.mDate) + ' · ' + esc(x.agenda.title || "(제목 없음)") + '</li>'; }).join("");
-      if (info.added.length > 6) list += '<li>… 외 ' + (info.added.length - 6) + '건</li>';
-      stale = '<div class="topic-flow-stale">⚠ 요약 작성 이후 ' +
-        (info.added.length ? '안건 <b>' + info.added.length + '건이 추가</b>됨' : '') +
-        (info.added.length && info.removed.length ? ', ' : '') +
-        (info.removed.length ? '반영됐던 안건 ' + info.removed.length + '건이 삭제·변경됨' : '') +
+    if (info.added.length || info.changed.length || info.removed.length) {
+      var rows = info.added.map(function (x) { return { x: x, tag: "추가" }; }).concat(info.changed.map(function (x) { return { x: x, tag: "내용 변경" }; }));
+      var list = rows.slice(0, 6).map(function (r) { return '<li>' + esc(r.x.mDate) + ' · ' + esc(r.x.agenda.title || "(제목 없음)") + ' <span style="color:#9a7b12">(' + r.tag + ')</span></li>'; }).join("");
+      if (rows.length > 6) list += '<li>… 외 ' + (rows.length - 6) + '건</li>';
+      var parts = [];
+      if (info.added.length) parts.push('안건 <b>' + info.added.length + '건 추가</b>');
+      if (info.changed.length) parts.push('<b>' + info.changed.length + '건 내용 변경</b>(요지·의결 기입 등)');
+      if (info.removed.length) parts.push('반영됐던 안건 ' + info.removed.length + '건 삭제');
+      stale = '<div class="topic-flow-stale">⚠ 요약 작성 이후 ' + parts.join(', ') +
         ' — <b>요약 미반영</b>. ' + hint + (list ? '<ul>' + list + '</ul>' : '') + '</div>';
     }
     flow.innerHTML = '<div class="topic-flow' + (stale ? ' stale' : '') + '">' +
@@ -26717,11 +26727,11 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     tags: function () { return allTags(); },
     keysFor: keysFor,
     // 주제별 현황: {has, total, added, removed} (added/removed는 건수)
-    stale: function () { var out = {}; allTags().concat(["__all__"]).forEach(function (t) { var i = staleInfo(t); out[t] = { has: i.has, total: i.total, added: i.added.length, removed: i.removed.length, updatedAt: i.has ? i.s.updatedAt : null }; }); return out; },
-    // 요약 작성용 원문: 주제의 안건을 시간순으로. onlyNew=true면 요약 이후 추가된 안건만
+    stale: function () { var out = {}; allTags().concat(["__all__"]).forEach(function (t) { var i = staleInfo(t); out[t] = { has: i.has, total: i.total, added: i.added.length, changed: i.changed.length, removed: i.removed.length, updatedAt: i.has ? i.s.updatedAt : null }; }); return out; },
+    // 요약 작성용 원문: 주제의 안건을 시간순으로. onlyNew=true면 요약 이후 추가·내용변경된 안건만
     dump: function (tag, onlyNew) {
       var info = staleInfo(tag);
-      var arr = onlyNew ? info.added : itemsFor(tag);
+      var arr = onlyNew ? info.added.concat(info.changed) : itemsFor(tag);
       return arr.map(function (x) { return { key: agendaKey(x), meeting: x.mName, date: x.mDate, title: x.agenda.title || "", tags: tagsOf(x.agenda), summary: x.agenda.summary || "", decision: x.agenda.decision || "", followup: x.agenda.followup || "" }; });
     },
     // 저장: topics = { "<주제>": "요약문" | {text:"요약문"} }. basedOn/count/updatedAt은 현재 안건 기준으로 자동 기록. 관리자 비밀번호 필요.
