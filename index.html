@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v42</title>
+<title>산들마을 입주자대표회의 회의록 v43</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -326,6 +326,11 @@ td.center,th.center{text-align:center}
 .rh-badge.rh-out{background:#fbeaea;border-color:#e7b8b3;color:#8a433d}
 .rh-badge.rh-in{background:#e9f3e6;border-color:#bfd8b7;color:#3f6b37}
 .roster-change-cell{font-size:11px;max-width:260px}
+/* 회의체 테마 (v43): 임차인대표회의는 포인트 색을 청록으로 */
+html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"] .btn.gold{color:#fff}html[data-body="임차"] .agenda-head .num{background:#2f5f80}
+.body-chip{display:inline-block;margin:6px 0 0;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;background:var(--gold);color:#2f2b20}html[data-body="임차"] .body-chip{color:#fff}
+.body-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid #9fc1d6;background:#e3eef5;color:#2f5f80;margin-left:6px;vertical-align:1px}
+.body-badge.owner{border-color:#e0c98a;background:#fbf3dc;color:#7a5a12}
 
 
 /* 참석/서명 표현 */
@@ -699,7 +704,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v42 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v43 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -736,11 +741,19 @@ td.center,th.center{text-align:center}
           <span id="generatedMeetingName"></span>
         </div>
 
+        <div class="field" style="margin-top:14px;max-width:360px">
+          <label>회의체</label>
+          <select id="meetingBody">
+            <option value="입대의">입주자대표회의</option>
+            <option value="임차">임차인대표회의</option>
+          </select>
+          <div class="mini-help">회의체에 따라 회의명·명단·화면 색이 바뀝니다. 임차인대표회의는 기수를 직접 선택합니다.</div>
+        </div>
         <div class="grid four" style="margin-top:14px">
           <div class="field">
             <label>기수</label>
             <select id="termNo"></select>
-            <div class="mini-help">오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.</div>
+            <div class="mini-help" id="termHelp">오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.</div>
           </div>
           <div class="field">
             <label>연도</label>
@@ -24094,6 +24107,7 @@ function defaultMeeting(){
   const today=localTodayString();
   const dt=new Date(today+"T00:00:00");
   return {
+    body:"입대의",
     termNo:termForDate(today),
     year:dt.getFullYear(),
     month:dt.getMonth()+1,
@@ -24123,8 +24137,23 @@ const defaultState = () => {
 let state = loadState();
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
+// ---- 회의체 (v43) ----
+// 입주자대표회의(입대의) / 임차인대표회의(임차). 레코드에 body가 없으면 입대의로 본다.
+function bodyOf(m){ m=m||(state&&state.meeting)||{}; return m.body==="임차" ? "임차" : "입대의"; }
+function bodyLabel(b){ return (b||bodyOf())==="임차" ? "임차인대표회의" : "입주자대표회의"; }
+function docTitle(){ return `산들마을 ${bodyLabel()} 회의록`; }
+// 명단 저장 키: 입대의는 "5", 임차는 "t6"처럼 회의체별로 분리
+function rosterKeyFor(termNo, body){ const n=String(Number(termNo)); return (body||bodyOf())==="임차" ? "t"+n : n; }
+function applyBodyTheme(){
+  const b=bodyOf();
+  try{ document.documentElement.setAttribute("data-body", b); }catch(e){}
+  const chip=document.getElementById("bodyChip");
+  if(chip) chip.textContent=(b==="임차"?"◇ ":"◆ ")+bodyLabel(b);
+  const help=document.getElementById("termHelp");
+  if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다(기수 기간표는 자료 확보 후 반영)." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
+}
 function ensureRoster(termNo){
-  const key=String(Number(termNo));
+  const key=rosterKeyFor(termNo);
   if(!state.rosters) state.rosters={};
   if(!state.rosters[key]) state.rosters[key]=emptyRoster();
   // guarantee 16 rows
@@ -24191,6 +24220,7 @@ function migrateState(parsed){
   const old=parsed.meeting||{};
   const m=defaultMeeting();
 
+  m.body=(old.body==="임차")?"임차":"입대의"; // v43: 회의체(없으면 입대의)
   if(old.termNo) m.termNo=Number(old.termNo);
   else if(old.term){
     const mm=String(old.term).match(/(\d+)/);
@@ -24258,7 +24288,8 @@ function buildMeetingName(){
   const m=state.meeting;
   const mm=String(Number(m.month)||1).padStart(2,"0");
   const prefix=`제${m.termNo}기 ${m.year}년${mm}월`;
-  return m.type==="임시" ? `${prefix} 임시 입주자대표회의` : `${prefix} 입주자대표회의`;
+  const body=bodyLabel(bodyOf(m));
+  return m.type==="임시" ? `${prefix} 임시 ${body}` : `${prefix} ${body}`;
 }
 function weekdayKo(ymd){
   if(!ymd) return "";
@@ -24388,6 +24419,19 @@ function initMeetingControls(){
     }
     saveState(); renderAttendance(); renderAgendas();
   });
+  // 회의체 선택 (v43): 명단·회의명·테마가 함께 바뀐다
+  const bodySel=document.getElementById("meetingBody");
+  if(bodySel) bodySel.addEventListener("change",()=>{
+    const next=bodySel.value==="임차"?"임차":"입대의";
+    if(next!==bodyOf()){
+      state.meeting.body=next;
+      state.meeting.attendance={};
+      state.rosterTermNo=state.meeting.termNo;
+      ensureRoster(state.meeting.termNo);
+    }
+    applyBodyTheme();
+    saveState(); renderMeetingControls(); renderRepMaster(); renderAttendance(); renderAgendas(); renderPreview();
+  });
   document.getElementById("meetingYear").addEventListener("input",e=>{state.meeting.year=Number(e.target.value)||new Date().getFullYear();saveState()});
   month.addEventListener("change",()=>{state.meeting.month=Number(month.value);saveState()});
   document.getElementById("meetingType").addEventListener("change",e=>{state.meeting.type=e.target.value;saveState()});
@@ -24397,7 +24441,7 @@ function initMeetingControls(){
       const [y,mo]=e.target.value.split("-").map(Number);
       state.meeting.year=y;
       state.meeting.month=mo;
-      const nextTerm=termForDate(e.target.value);
+      const nextTerm=bodyOf()==="임차" ? state.meeting.termNo : termForDate(e.target.value); // 임차는 기수 자동판정 없음 (v43)
       if(nextTerm!==state.meeting.termNo){
         state.meeting.termNo=nextTerm;
         state.meeting.attendance={};
@@ -24430,6 +24474,8 @@ function renderMeetingControls(){
   const m=state.meeting;
   const el=id=>document.getElementById(id);
   if(el("generatedMeetingName")) el("generatedMeetingName").textContent=buildMeetingName();
+  if(el("meetingBody")) el("meetingBody").value=bodyOf(m);
+  applyBodyTheme();
   if(el("termNo")) el("termNo").value=String(m.termNo);
   if(el("meetingYear")) el("meetingYear").value=m.year;
   if(el("meetingMonth")) el("meetingMonth").value=String(m.month);
@@ -24508,7 +24554,7 @@ function removeSequenceItem(index){
 }
 
 function roleOptions(selected){
-  const roles=["회장","감사","이사","대표"];
+  const roles=["회장","부회장","감사","이사","대표"];
   return roles.map(v=>`<option value="${v}" ${selected===v?"selected":""}>${v}</option>`).join("");
 }
 function persistOnly(){
@@ -24596,7 +24642,7 @@ function copyPreviousRoster(){
   const current=ensureRoster(target);
   const hasData=current.some(r=>r.name.trim());
   if(hasData && !confirm(`제${target}기 명단에 입력된 내용이 있습니다. 이전 기수 명단으로 덮어쓰시겠습니까?`)) return;
-  state.rosters[String(target)]=prev.map(r=>({dong:r.dong,role:r.role,name:r.name}));
+  state.rosters[rosterKeyFor(target)]=prev.map(r=>({dong:r.dong,role:r.role,name:r.name}));
   persistOnly();
   renderRepMaster();
   if(target===state.meeting.termNo) syncRosterViews();
@@ -25154,7 +25200,7 @@ function coverHtml(totalPages){
   const absentCount=namedReps.length-presentCount;
   const sequenceRows=sequenceItems().map((s,i)=>`<div><b>${i+1}.</b> ${esc(s)}</div>`).join("")||`<div style="color:#777">진행순서를 입력하세요.</div>`;
   return `<section class="paper cover-page">
-    <div class="doc-title">산들마을 입주자대표회의 회의록</div>
+    <div class="doc-title">${docTitle()}</div>
     <table class="doc-table cover-meta-table">
       <colgroup><col style="width:12%"><col style="width:45%"><col style="width:11%"><col style="width:32%"></colgroup>
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
@@ -25531,7 +25577,7 @@ function wordDocumentHtml(){
     : `<tr><th>-</th><td>등록된 안건이 없습니다.</td></tr>`;
 
   const cover=`<div class="page Section1">
-    <div class="word-title">산들마을 입주자대표회의 회의록</div>
+    <div class="word-title">${docTitle()}</div>
     <table class="grid meta"><colgroup><col style="width:14%"><col style="width:41%"><col style="width:12%"><col style="width:33%"></colgroup>
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
       <tr><th>일시</th><td>${esc(formattedMeetingDateTime())}</td><th>장소</th><td>${esc(state.meeting.place)}</td></tr>
@@ -25565,7 +25611,7 @@ function wordDocumentHtml(){
          <tr><th>반대(${vote.againstCount})</th><td>${esc(voteNames(a,"against"))||"&nbsp;"}</td></tr>
          ${vote.incomplete?`<tr><th class="incomplete">미선택(${vote.incomplete})</th><td>표결 선택이 완료되지 않았습니다.</td></tr>`:""}`;
     return `<div class="word-page-break">&nbsp;</div><div class="page Section1">
-      <div class="word-title">산들마을 입주자대표회의 회의록</div>
+      <div class="word-title">${docTitle()}</div>
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
       ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
@@ -25713,7 +25759,7 @@ function docxDocumentXml(){
     ? `입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`
     : "없음";
   const titleBorders=`<w:pBdr><w:top w:val="double" w:sz="10" w:space="3" w:color="6F7F6B"/><w:bottom w:val="single" w:sz="5" w:space="3" w:color="AEB8AA"/></w:pBdr>`;
-  const title=()=>wParagraph("산들마을 입주자대표회의 회의록",{bold:true,size:34,align:"center",after:210,line:340,borders:titleBorders});
+  const title=()=>wParagraph(docTitle(),{bold:true,size:34,align:"center",after:210,line:340,borders:titleBorders});
   let body=title();
   body+=wTable([
     [{text:"회의명",index:0,bold:true,shade:"F4F6F2",align:"center"},{text:buildMeetingName(),index:1,span:3,width:8738,bold:true,size:20}],
@@ -25913,7 +25959,7 @@ async function buildDocxBlob(){
         ...(i<sequenceData.length-1?[run("     →     ",{size:22,color:"999B95"})]:[])
       ]),{alignment:AlignmentType.CENTER,after:0,line:280}),10160,{compact:true})]],[10160]);
   const children=[];
-  children.push(p("산들마을 입주자대표회의 회의록",{bold:true,size:40,alignment:AlignmentType.CENTER,after:120,line:390,border:titleBorders}));
+  children.push(p(docTitle(),{bold:true,size:40,alignment:AlignmentType.CENTER,after:120,line:390,border:titleBorders}));
   children.push(table([
     [cell(p("회의명",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),new TableCell({children:[p(buildMeetingName(),{bold:true,size:24,after:0,line:280})],columnSpan:3,width:{size:8738,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,margins:{top:45,bottom:45,left:90,right:90}})],
     [cell(p("일시",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),cell(p(formattedMeetingDateTime(),{size:24,after:0,line:280}),3860,{compact:true}),cell(p("장소",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1220,{compact:true}),cell(p(state.meeting.place,{size:24,after:0,line:280}),3658,{compact:true})]
@@ -26388,6 +26434,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
 
   var listCache = null, rawListCache = null, rawListAt = 0;
+  var archiveBodyFilter = "전체"; // ⑤ 회의체 필터 (v43)
   // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
   function isSysRecord(it) { return !!it && /^(topic_summaries|roster_history)/.test(String(it.id || "")); }
   function staticListFallback() {
@@ -26426,6 +26473,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var qEl = document.getElementById("cloudSearch");
     var q = (qEl ? qEl.value : "").trim().toLowerCase();
     var items = listCache.filter(function (it) { return !q || String(it.name || "").toLowerCase().indexOf(q) >= 0; });
+    if (archiveBodyFilter !== "전체") items = items.filter(function (it) { return (/임차인대표회의/.test(String(it.name || "")) ? "임차" : "입대의") === archiveBodyFilter; }); // 회의체 필터 (v43)
     // 회의 날짜 기준으로 연도별 묶고, 같은 연도 안에서는 최신 회의가 위로 (v37). 날짜가 없으면 회의명의 연·월로 대체.
     function meetDate(it) {
       var d = it && it.date ? new Date(it.date) : null;
@@ -26442,15 +26490,19 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     });
     var years = Object.keys(groups).sort(function (a, b) { return b.localeCompare(a); });
     var cur = (typeof state !== "undefined" && state.cloudId) || "";
-    var html = "";
-    if (!items.length) html = '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
+    // 회의체 필터 (v43): 전체 / 입대의 / 임차 — 회의명으로 판별
+    var isTenant = function (it) { return /임차인대표회의/.test(String((it && it.name) || "")); };
+    var html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + ["전체", "입대의", "임차"].map(function (b) {
+      return '<button type="button" class="btn' + (archiveBodyFilter === b ? ' gold' : '') + '" style="padding:6px 12px;font-size:12px" onclick="Cloud.setArchiveBody(\'' + b + '\')">' + (b === "입대의" ? "◆ 입주자대표회의" : b === "임차" ? "◇ 임차인대표회의" : "전체") + '</button>';
+    }).join("") + '</div>';
+    if (!items.length) html += '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
     years.forEach(function (yr) {
       var rows = groups[yr].sort(function (a, b) { return (b.t - a.t) || String(b.it.updatedAt || "").localeCompare(String(a.it.updatedAt || "")); });
       html += '<div style="margin:16px 0 7px;font-weight:800;color:#5c5b56;font-size:13px">' + esc(yr) + '년 <span style="color:#aaa;font-weight:600">(' + rows.length + ')</span></div>';
       rows.forEach(function (r) {
         var it = r.it, active = it.id === cur;
         html += '<div onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
-          '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + (isTenant(it) ? '<span class="body-badge">◇ 임차</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#999">' + (r.d ? '<b style="color:#6b6656">회의일 ' + esc(fmtDay(r.d)) + '</b>' : '회의일 미정') + ' · 저장 ' + esc(fmtWhen(it.updatedAt)) + (active ? ' · <span style="color:#b07d10;font-weight:700">현재 열림</span>' : '') + '</div></div>' +
           '<span class="btn" style="pointer-events:none">열기</span>' +
           '<button class="btn danger" onclick="event.stopPropagation();Cloud._delArc(\'' + escAttr(it.id) + '\',\'' + escAttr(it.name || "") + '\')">삭제</button></div>';
@@ -26585,6 +26637,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
 
   window.Cloud = {
+    setArchiveBody: function (b) { archiveBodyFilter = b || "전체"; renderArchiveList(); },
     requireAdmin: requireAdmin,
     saveSystemRecord: saveSystemRecord,
     getSystemRecord: getSystemRecord,
@@ -26677,7 +26730,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   window.autoTags = autoTags; window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
 
-  var cache = null, sel = [], query = "";
+  var cache = null, sel = [], query = "", bodyFilter = "전체"; // bodyFilter: ⑥ 회의체 필터 (v43)
   var sortDesc = (function () { try { return localStorage.getItem("sandle_topic_list_desc") !== "0"; } catch (e) { return true; } })(); // 안건 목록 정렬: 기본 최신순, 선택 기억 (v39)
   // ---- 시스템 레코드 (주제 흐름 요약 저장소) ----
   // 요약문은 기존 저장 API로 특수 레코드(id=topic_summaries_v1)에 보관한다. 회의록 목록·주제 집계에서는 제외. (v31)
@@ -26692,7 +26745,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var st = JSON.parse(rec.json || "{}");
       var mn = (st.meeting && st.meeting.name) || rec.name || fallbackName || "";
       var md = (st.meeting && st.meeting.date) || rec.date || "";
-      (st.agendas || []).forEach(function (a, i) { out.push({ mId: rec.id || "", mName: mn, mDate: md, agenda: a, idx: i }); });
+      var body = (st.meeting && st.meeting.body === "임차") || /임차인대표회의/.test(mn) ? "임차" : "입대의"; // v43 회의체
+      (st.agendas || []).forEach(function (a, i) { out.push({ mId: rec.id || "", mName: mn, mDate: md, body: body, agenda: a, idx: i }); });
     } catch (e) {}
   }
   // 안건 고유 키: 회의록 id + 안건 id. 요약이 어떤 안건까지 반영했는지 기록하는 데 쓴다.
@@ -26959,13 +27013,22 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     cache.forEach(function (x) { tagsOf(x.agenda).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
     var tags = Object.keys(counts).sort(function (a, b) { return (counts[b] - counts[a]) || a.localeCompare(b); });
     sel = sel.filter(function (t) { return counts[t]; });
-    var html = '<button type="button" class="btn' + (sel.length ? '' : ' gold') + '" onclick="Topic.clear()">전체 <b>' + cache.length + '</b></button>';
+    // 회의체 필터 (v43): 전체 / 입대의 / 임차 — 건수·목록 모두 필터 기준으로
+    var scoped = cache.filter(function (x) { return bodyFilter === "전체" || (x.body || "입대의") === bodyFilter; });
+    var bodyRow = '<div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-bottom:4px">' + ["전체", "입대의", "임차"].map(function (b) {
+      var n = b === "전체" ? cache.length : cache.filter(function (x) { return (x.body || "입대의") === b; }).length;
+      return '<button type="button" class="btn' + (bodyFilter === b ? ' gold' : '') + '" style="padding:6px 12px;font-size:12px" onclick="Topic.setBody(\'' + b + '\')">' + (b === "입대의" ? "◆ 입주자대표회의" : b === "임차" ? "◇ 임차인대표회의" : "전체") + ' <b>' + n + '</b></button>';
+    }).join("") + '</div>';
+    counts = {}; scoped.forEach(function (x) { tagsOf(x.agenda).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
+    tags = Object.keys(counts).sort(function (a, b) { return (counts[b] - counts[a]) || a.localeCompare(b); });
+    sel = sel.filter(function (t) { return counts[t]; });
+    var html = bodyRow + '<button type="button" class="btn' + (sel.length ? '' : ' gold') + '" onclick="Topic.clear()">전체 <b>' + scoped.length + '</b></button>';
     html += tags.map(function (t) {
       var on = sel.indexOf(t) >= 0;
       return '<button type="button" class="btn' + (on ? ' gold' : '') + '" onclick="Topic.toggle(this.getAttribute(\'data-c\'))" data-c="' + esc(t) + '" title="' + (on ? '다시 누르면 전체 보기' : '이 주제만 보기') + '">' + esc(t) + ' <b>' + counts[t] + '</b></button>';
     }).join("");
     chips.innerHTML = html;
-    var items = cache.filter(function (x) {
+    var items = scoped.filter(function (x) {
       var ts = tagsOf(x.agenda);
       for (var i = 0; i < sel.length; i++) if (ts.indexOf(sel[i]) < 0) return false;
       return matchesQuery(x);
@@ -26987,7 +27050,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       if (!body && a.summary) body = a.summary; // 회의 전(의결 없음)에는 요지를 본문으로
       else if (a.summary) extra = '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#777">안건 요지 보기</summary><div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap;margin-top:4px">' + esc(a.summary) + '</div></details>';
       return '<div style="border:1px solid #e7e2d8;border-left:4px solid #7f927a;border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:9px">' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:#8a8f86;font-weight:700">' + esc(x.mName) + ' · ' + esc(x.mDate) + '</span>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:#8a8f86;font-weight:700">' + esc(x.mName) + ' · ' + esc(x.mDate) + '</span>' + ((x.body || "입대의") === "임차" ? '<span class="body-badge">◇ 임차</span>' : '') +
           '<span class="topic-tags">' + ts.map(function (t) { return tagChip(t, sel.indexOf(t) >= 0); }).join("") + '</span></div>' +
         '<div style="font-weight:800;margin-bottom:4px">' + esc(a.title || "") + '</div>' +
         '<div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap">' + esc(body) + '</div>' + extra + '</div>';
@@ -26998,6 +27061,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     pick: function (c) { sel = c ? [c] : []; if (c && window.track) track("topic_pick", { topic: c, via: "card" }); render(); },                             // 한 주제만 보기
     toggle: function (c) { sel = (sel.length && sel[0] === c) ? [] : [c]; if (sel.length && window.track) track("topic_pick", { topic: c, via: "chip" }); render(); }, // 단일 선택: 같은 주제를 다시 누르면 전체로
     clear: function () { sel = []; render(); },
+    setBody: function (b) { bodyFilter = b || "전체"; render(); }, // 회의체 필터 (v43)
     search: function (q) { query = String(q || "").trim(); render(); },
     sort: function () { sortDesc = !sortDesc; try { localStorage.setItem("sandle_topic_list_desc", sortDesc ? "1" : "0"); } catch (e) {} render(); }, // 안건 목록 최신순/오래된순 (기억)
     flowOrder: function () { flowDesc = !flowDesc; try { localStorage.setItem(FLOW_ORDER_KEY, flowDesc ? "1" : "0"); } catch (e) {} render(); }, // 흐름 요약 타임라인 최신순/오래된순
