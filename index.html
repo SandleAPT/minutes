@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v33</title>
+<title>산들마을 입주자대표회의 회의록 v34</title>
 <style>
 :root{
   --bg:#fff;
@@ -671,7 +671,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v33 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v34 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26321,7 +26321,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     Cloud._del = function (id, name) { doDelete(cfg, id, name); };
   }
 
-  var listCache = null;
+  var listCache = null, rawListCache = null, rawListAt = 0;
   // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
   function isSysRecord(it) { return !!it && String(it.id || "").indexOf("topic_summaries") === 0; }
   function staticListFallback() {
@@ -26335,7 +26335,9 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function fetchList(cb) {
     var cfg = loadCfg();
     apiGet(cfg, { action: "list", token: cfg.token }).then(function (res) {
-      listCache = ((res && res.ok) ? (res.items || []) : staticListFallback()).filter(function (it) { return !isSysRecord(it); });
+      var raw = (res && res.ok) ? (res.items || []) : null;
+      rawListCache = raw; rawListAt = Date.now(); // 주제별 보기가 같은 목록을 재사용 (중복 호출 방지)
+      listCache = (raw || staticListFallback()).filter(function (it) { return !isSysRecord(it); });
       updateCloudLatestInfo();
       if (cb) cb();
     }).catch(function () { listCache = staticListFallback(); updateCloudLatestInfo(); if (cb) cb(); });
@@ -26504,7 +26506,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
         else toast("삭제 실패");
       }).catch(function (e) { toast("삭제 오류: " + e.message); });
     },
-    _invalidate: function () { listCache = null; }
+    _invalidate: function () { listCache = null; },
+    peekList: function () { return { items: rawListCache, at: rawListAt }; } // 주제별 보기가 최근 목록을 재사용
   };
   function bootCloud() {
     // data.json 로드를 먼저 기다렸다가(실패해도 진행) 목록 조회 → 최신 회의록 자동 열기
@@ -26589,40 +26592,78 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   // 안건 고유 키: 회의록 id + 안건 id. 요약이 어떤 안건까지 반영했는지 기록하는 데 쓴다.
   function agendaKey(x) { return (x.mId || "") + "/" + (x.agenda && x.agenda.id ? x.agenda.id : ("i" + x.idx)); }
-  // 확정분은 data.json에서 즉시 사용, data.json에 없거나 클라우드에서 더 최근에
-  // 수정된 회의록만 클라우드에서 개별로 받아온다. (10년치가 쌓여도 요청 수는 일정)
+  // ---- 데이터 적재 (v34: 즉시 표시 + 백그라운드 갱신) ----
+  // 1) 이 브라우저에 저장된 사본(localStorage) + data.json(정적, 매일 자동 재발행)으로 즉시 구성해 바로 그린다.
+  // 2) 그 뒤 클라우드 목록(1회 호출)과 updatedAt을 비교해 바뀐 회의록만 개별로 받아 갱신한다.
+  //    → 회의록이 10년치로 늘어도 평소 호출 수는 목록 1회 + 최근 변경분 몇 건. 목록은 접속 시 받은 것을 재사용한다.
+  var REC_CACHE_KEY = "sandle_topic_records_v1";
+  var recMap = null, refreshing = false, lastRefreshAt = 0;
+  function loadRecCache() { try { return JSON.parse(localStorage.getItem(REC_CACHE_KEY)) || {}; } catch (e) { return {}; } }
+  function saveRecCache() { try { localStorage.setItem(REC_CACHE_KEY, JSON.stringify(recMap || {})); } catch (e) { /* 용량 초과 등: 캐시 없이 동작 */ } }
+  function isNewer(a, b) { return (new Date(a || 0) - new Date(b || 0)) > 1000; }
+  function mergeRec(rec) {
+    if (!rec || !rec.id || isSystemRecord(rec) || !rec.json) return false;
+    var cur = recMap[rec.id];
+    if (cur && !isNewer(rec.updatedAt, cur.updatedAt)) return false;
+    recMap[rec.id] = { id: rec.id, name: rec.name || "", date: rec.date || "", updatedAt: rec.updatedAt || "", json: rec.json };
+    return true;
+  }
+  function rebuildCache() {
+    var out = [];
+    Object.keys(recMap || {}).forEach(function (k) { pushRecord(out, recMap[k]); });
+    cache = out;
+  }
+  // 사본(localStorage + data.json)만으로 즉시 구성
+  function quickBuild() {
+    if (recMap === null) {
+      recMap = {};
+      var ls = loadRecCache(); Object.keys(ls).forEach(function (k) { mergeRec(ls[k]); });
+    }
+    var sd = (window.StaticData && window.StaticData.map) || {};
+    Object.keys(sd).forEach(function (k) { mergeRec(sd[k]); });
+    rebuildCache();
+  }
+  // 클라우드 목록과 대조해 바뀐 회의록만 받아온다. cb(changed)
+  function refreshFromCloud(cb) {
+    if (refreshing) { if (cb) cb(false); return; }
+    refreshing = true;
+    var done = function (changed) { refreshing = false; lastRefreshAt = Date.now(); if (changed) { rebuildCache(); saveRecCache(); } if (cb) cb(changed); };
+    var useList = function (items) {
+      if (!items) { done(false); return; } // 목록 실패: 사본 유지
+      var sumItem = null, ids = {}, toFetch = [];
+      items.forEach(function (it) {
+        if (!it || !it.id) return;
+        if (String(it.id) === SUM_ID) { sumItem = it; return; }
+        if (isSystemRecord(it)) return;
+        ids[it.id] = 1;
+        var cur = recMap[it.id];
+        if (!cur || isNewer(it.updatedAt, cur.updatedAt)) toFetch.push(it);
+      });
+      var changed = false;
+      Object.keys(recMap).forEach(function (k) { if (!ids[k]) { delete recMap[k]; changed = true; } }); // 클라우드에서 삭제된 회의록
+      refreshSummaries(sumItem);
+      if (!toFetch.length) { done(changed); return; }
+      var pending = toFetch.length;
+      toFetch.forEach(function (it) {
+        apiGet({ action: "get", id: it.id }).then(function (r) {
+          if (r && r.ok && r.item && mergeRec(r.item)) changed = true;
+          if (--pending === 0) done(changed);
+        }).catch(function () { if (--pending === 0) done(changed); });
+      });
+    };
+    var peek = (window.Cloud && Cloud.peekList) ? Cloud.peekList() : null;
+    if (peek && peek.items && (Date.now() - peek.at) < 15000) { useList(peek.items); return; } // 접속 시 받은 목록 재사용
+    apiGet({ action: "list" }).then(function (res) { useList((res && res.ok) ? (res.items || []) : null); })
+      .catch(function () { done(false); });
+  }
   function loadAll(cb) {
     var start = function () {
-      apiGet({ action: "list" }).then(function (res) {
-        build((res && res.ok) ? (res.items || []) : null, cb);
-      }).catch(function () { build(null, cb); });
+      quickBuild();
+      if (cb) cb(); // 사본으로 즉시 표시
+      refreshFromCloud(function () { render(); }); // 확인이 끝나면 결과·상태 표시 갱신
     };
     if (window.StaticData && window.StaticData.ready) window.StaticData.ready.then(start, start);
     else start();
-  }
-  function build(items, cb) {
-    var sd = (window.StaticData && window.StaticData.map) || {};
-    var out = [];
-    if (items === null) { // 클라우드 연결 실패: 정적 데이터만으로 표시
-      Object.keys(sd).forEach(function (k) { pushRecord(out, sd[k]); });
-      cache = out; cb(); return;
-    }
-    var toFetch = [];
-    items = items.filter(function (it) { return !isSystemRecord(it); });
-    items.forEach(function (it) {
-      var s = sd[it.id];
-      var cloudNewer = s && it.updatedAt && s.updatedAt && (new Date(it.updatedAt) - new Date(s.updatedAt) > 1000);
-      if (s && !cloudNewer) pushRecord(out, s, it.name);
-      else toFetch.push(it);
-    });
-    if (!toFetch.length) { cache = out; cb(); return; }
-    var pending = toFetch.length;
-    toFetch.forEach(function (it) {
-      apiGet({ action: "get", id: it.id }).then(function (r) {
-        if (r && r.ok && r.item) pushRecord(out, r.item, it.name);
-        if (--pending === 0) { cache = out; cb(); }
-      }).catch(function () { if (--pending === 0) { cache = out; cb(); } });
-    });
   }
   function allTags() {
     var s = {};
@@ -26637,16 +26678,36 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   // ---- 주제 흐름 요약 (v31) ----
   // summaries = { version, updatedAt, topics: { "<주제>" | "__all__": { text, basedOn:[안건키...], count, updatedAt, by } } }
   // 요약문은 Claude Code가 작성해 TopicSummaries.save()로 저장한다. 앱은 표시와 "이후 추가된 안건(미반영)" 판정만 담당.
-  var summaries = null, summariesLoading = false;
-  function loadSummaries(cb) {
-    if (summariesLoading) return;
+  var SUM_CACHE_KEY = "sandle_topic_summaries_cache_v1"; // {updatedAt, data} — 이 브라우저 사본 (v34)
+  var summaries = null, summariesLoading = false, summariesUpdatedAt = null;
+  function loadSumCache() {
+    try { var c = JSON.parse(localStorage.getItem(SUM_CACHE_KEY)); if (c && c.data && c.data.topics) { summaries = c.data; summariesUpdatedAt = c.updatedAt || null; return true; } } catch (e) {}
+    return false;
+  }
+  function saveSumCache(data, updatedAt) {
+    summaries = data; summariesUpdatedAt = updatedAt || null;
+    try { localStorage.setItem(SUM_CACHE_KEY, JSON.stringify({ updatedAt: updatedAt || null, data: data })); } catch (e) {}
+  }
+  function fetchSummaries(cb) {
+    if (summariesLoading) return; // 진행 중인 요청이 끝나면 그쪽에서 다시 그린다
     summariesLoading = true;
     apiGet({ action: "get", id: SUM_ID }).then(function (r) {
       var s = null;
       try { if (r && r.ok && r.item) s = JSON.parse(r.item.json || "{}"); } catch (e) {}
-      summaries = (s && s.topics) ? s : { version: 1, topics: {} };
+      saveSumCache((s && s.topics) ? s : { version: 1, topics: {} }, (r && r.item && r.item.updatedAt) || null);
       summariesLoading = false; if (cb) cb();
-    }).catch(function () { summaries = { version: 1, topics: {} }; summariesLoading = false; if (cb) cb(); });
+    }).catch(function () { if (summaries === null) summaries = { version: 1, topics: {} }; summariesLoading = false; if (cb) cb(); });
+  }
+  // 처음: 이 브라우저 사본이 있으면 즉시 사용(클라우드 대조는 refreshFromCloud가), 없으면 클라우드에서 받아온다
+  function loadSummaries(cb) {
+    if (summaries === null && loadSumCache()) { if (cb) cb(); return; }
+    fetchSummaries(cb);
+  }
+  // 목록의 updatedAt과 비교해 바뀐 경우에만 다시 받아온다
+  function refreshSummaries(sumItem) {
+    if (!sumItem) { if (summaries === null) summaries = { version: 1, topics: {} }; return; }
+    if (summaries !== null && summariesUpdatedAt && !isNewer(sumItem.updatedAt, summariesUpdatedAt)) return;
+    fetchSummaries(render);
   }
   function itemsFor(tag) {
     return (cache || []).filter(function (x) { return tag === "__all__" || tagsOf(x.agenda).indexOf(tag) >= 0; })
@@ -26749,7 +26810,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var record = { id: SUM_ID, name: "주제 흐름 요약 (시스템)", date: "", json: JSON.stringify(cur) };
       return apiPost({ action: "save", record: record, adminKey: key }).then(function (res) {
         if (!(res && res.ok)) throw new Error((res && res.error) || "저장 실패");
-        summaries = cur; render(); return res;
+        saveSumCache(cur, null); render(); return res; // updatedAt은 다음 목록 대조 때 서버값으로 맞춰짐
       });
     }
   };
@@ -26783,7 +26844,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     if (sortBtn) sortBtn.textContent = sortDesc ? "최신순 ↓" : "오래된순 ↑";
     if (summary) {
       var what = sel.length ? "‘" + esc(sel[0]) + "’ 안건" : "전체 안건";
-      summary.innerHTML = what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '');
+      summary.innerHTML = what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '') +
+        (refreshing ? ' · <span style="color:#bbb">☁ 클라우드 변경분 확인 중…</span>' : (lastRefreshAt ? ' · <span style="color:#9aa68f">☁ 최신</span>' : ''));
     }
     renderFlow();
     result.innerHTML = items.length ? items.map(function (x) {
@@ -26811,6 +26873,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   };
   // 자동 분류 함수(window.autoTags)가 준비된 뒤 ④ 안건 카드의 태그 표시를 갱신
   try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
+  // ⑥을 열기 전에 미리 준비(사본 즉시 구성 + 클라우드 변경분 확인 + 요약 사본). 열 때 바로 그려진다. (v34)
+  setTimeout(function () { if (cache === null) loadAll(function () { loadSummaries(function () {}); }); }, 1500);
 })();
 </script>
 </body>
