@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v46</title>
+<title>산들마을 입주자대표회의 회의록 v47</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -331,6 +331,21 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .body-chip{display:inline-block;margin:6px 0 0;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;background:var(--gold);color:#2f2b20}html[data-body="임차"] .body-chip{color:#fff}
 .body-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid #9fc1d6;background:#e3eef5;color:#2f5f80;margin-left:6px;vertical-align:1px}
 .body-badge.owner{border-color:#e0c98a;background:#fbf3dc;color:#7a5a12}
+/* ⑤ 기록 범위 (v47): 회의체별 첫~마지막 회의, 연도별 월 보유 현황 */
+.arc-cov-wrap{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+.arc-cov{flex:1 1 280px;border:1px solid #e7e2d8;border-radius:12px;padding:10px 12px;background:#fffdf8}
+.arc-cov.tenant{background:#f6fafc;border-color:#cfe0ea}
+.arc-cov-head{font-size:12px;color:#5c5b56;margin-bottom:6px}
+.arc-cov-head b{color:#7a5a12}
+.arc-cov.tenant .arc-cov-head b{color:#2f5f80}
+.arc-cov-miss{color:#b85c52;font-weight:700}
+.arc-cov-row{display:flex;align-items:center;gap:2px;margin-top:3px}
+.arc-cov-y{width:38px;font-size:11px;font-weight:700;color:#8a8476}
+.arc-cov-m{width:22px;height:20px;line-height:20px;text-align:center;font-size:10.5px;border-radius:4px;background:#f1ede4;color:#b9b3a6}
+.arc-cov-m.on{background:#d8a944;color:#fff;font-weight:700}
+.arc-cov.tenant .arc-cov-m.on{background:#3f7fa6}
+.arc-cov-m.gap{background:#fde9e6;color:#b85c52;font-weight:700}
+.arc-cov-m.na{background:transparent;color:#d6d1c6}
 .doc-body-mark{text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;color:#2f5f80;margin:0 0 6px}.doc-body-mark.owner{color:#7a5a12}
 
 
@@ -705,7 +720,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v46 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v47 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26523,6 +26538,38 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     el.textContent = latest ? ("☁ 클라우드 최신 갱신: " + fmtWhen(latest)) : "☁ 클라우드 최신 갱신: 확인 불가";
     if (name) el.title = "가장 최근 저장된 회의록: " + name;
   }
+  // 기록 범위 (v47): 회의체별로 첫 회의 ~ 마지막 회의와 연도별 월 보유 현황을 보여 준다.
+  // 어느 달 회의록이 아직 안 들어왔는지(자료 누락 구간)를 한눈에 보기 위한 것. 검색어와 무관하게 전체 목록 기준.
+  function coverageHtml(all, isTenant, meetDate) {
+    var bodies = archiveBodyFilter === "전체" ? ["입대의", "임차"] : [archiveBodyFilter];
+    var out = "";
+    bodies.forEach(function (b) {
+      var tenant = b === "임차";
+      var title = tenant ? "◇ 임차인대표회의" : "◆ 입주자대표회의";
+      var its = (all || []).filter(function (it) { return (isTenant(it) ? "임차" : "입대의") === b; });
+      var ds = its.map(meetDate).filter(Boolean).sort(function (a, c) { return a - c; });
+      if (!ds.length) { out += '<div class="arc-cov' + (tenant ? ' tenant' : '') + '"><div class="arc-cov-head"><b>' + title + '</b> <span style="color:#999">기록 없음</span></div></div>'; return; }
+      var have = {};
+      ds.forEach(function (d) { var k = d.getFullYear() + "-" + (d.getMonth() + 1); have[k] = (have[k] || 0) + 1; });
+      var first = ds[0], last = ds[ds.length - 1];
+      var y0 = first.getFullYear(), y1 = last.getFullYear();
+      var fmtYM = function (d) { return d.getFullYear() + "." + pad(d.getMonth() + 1); };
+      var missing = 0, grid = "";
+      for (var y = y0; y <= y1; y++) {
+        grid += '<div class="arc-cov-row"><span class="arc-cov-y">' + y + '</span>';
+        for (var m = 1; m <= 12; m++) {
+          var k = y + "-" + m;
+          var outside = (y === y0 && m < first.getMonth() + 1) || (y === y1 && m > last.getMonth() + 1);
+          if (!have[k] && !outside) missing++;
+          grid += '<span class="arc-cov-m' + (have[k] ? ' on' : (outside ? ' na' : ' gap')) + '" title="' + y + '.' + pad(m) + (have[k] ? ' · ' + have[k] + '건' : (outside ? '' : ' · 회의록 없음')) + '">' + m + '</span>';
+        }
+        grid += '</div>';
+      }
+      out += '<div class="arc-cov' + (tenant ? ' tenant' : '') + '"><div class="arc-cov-head"><b>' + title + '</b> ' + fmtYM(first) + ' ~ ' + fmtYM(last) + ' · ' + its.length + '건' +
+        (missing ? ' <span class="arc-cov-miss">· 사이에 비어 있는 달 ' + missing + '개</span>' : ' <span style="color:#6a9a5a">· 빈 달 없음</span>') + '</div>' + grid + '</div>';
+    });
+    return '<div class="arc-cov-wrap" title="회의일 기준. 색칠된 달 = 회의록 있음, 빈 칸 = 회의록 없음(미수집)">' + out + '</div>';
+  }
   function renderArchiveList() {
     var box = document.getElementById("cloudArchiveList");
     if (!box) return;
@@ -26552,6 +26599,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + ["전체", "입대의", "임차"].map(function (b) {
       return '<button type="button" class="btn' + (archiveBodyFilter === b ? ' gold' : '') + '" style="padding:6px 12px;font-size:12px" onclick="Cloud.setArchiveBody(\'' + b + '\')">' + (b === "입대의" ? "◆ 입주자대표회의" : b === "임차" ? "◇ 임차인대표회의" : "전체") + '</button>';
     }).join("") + '</div>';
+    html += coverageHtml(listCache, isTenant, meetDate); // 기록 범위 (v47)
     if (!items.length) html += '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
     years.forEach(function (yr) {
       var rows = groups[yr].sort(function (a, b) { return (b.t - a.t) || String(b.it.updatedAt || "").localeCompare(String(a.it.updatedAt || "")); });
