@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v36</title>
+<title>산들마을 입주자대표회의 회의록 v37</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-GGDNLH6MCQ"; // 산들마을 GA4 (CommunityNotice와 같은 스트림 — 보고서에서 페이지 경로 /minutes/ 로 구분)
@@ -692,7 +692,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v36 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v37 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26384,24 +26384,32 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var qEl = document.getElementById("cloudSearch");
     var q = (qEl ? qEl.value : "").trim().toLowerCase();
     var items = listCache.filter(function (it) { return !q || String(it.name || "").toLowerCase().indexOf(q) >= 0; });
+    // 회의 날짜 기준으로 연도별 묶고, 같은 연도 안에서는 최신 회의가 위로 (v37). 날짜가 없으면 회의명의 연·월로 대체.
+    function meetDate(it) {
+      var d = it && it.date ? new Date(it.date) : null;
+      if (d && !isNaN(d.getTime())) return d;
+      var m = String((it && it.name) || "").match(/(\d{4})년\s*(\d{1,2})월/);
+      return m ? new Date(Number(m[1]), Number(m[2]) - 1, 1) : null;
+    }
+    function fmtDay(d) { var w = "일월화수목금토"; return d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate()) + ".(" + w[d.getDay()] + ")"; }
     var groups = {};
     items.forEach(function (it) {
-      var m = String(it.name || "").match(/(\d{4})년\s*(\d{1,2})월/);
-      var yr = m ? m[1] : "기타", mo = m ? parseInt(m[2], 10) : 0;
-      (groups[yr] = groups[yr] || []).push({ it: it, mo: mo });
+      var d = meetDate(it);
+      var yr = d ? String(d.getFullYear()) : "기타";
+      (groups[yr] = groups[yr] || []).push({ it: it, d: d, t: d ? d.getTime() : 0 });
     });
     var years = Object.keys(groups).sort(function (a, b) { return b.localeCompare(a); });
     var cur = (typeof state !== "undefined" && state.cloudId) || "";
     var html = "";
     if (!items.length) html = '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
     years.forEach(function (yr) {
-      var rows = groups[yr].sort(function (a, b) { return b.mo - a.mo; });
+      var rows = groups[yr].sort(function (a, b) { return (b.t - a.t) || String(b.it.updatedAt || "").localeCompare(String(a.it.updatedAt || "")); });
       html += '<div style="margin:16px 0 7px;font-weight:800;color:#5c5b56;font-size:13px">' + esc(yr) + '년 <span style="color:#aaa;font-weight:600">(' + rows.length + ')</span></div>';
       rows.forEach(function (r) {
         var it = r.it, active = it.id === cur;
         html += '<div onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
           '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + '</div>' +
-          '<div style="font-size:11px;color:#999">' + esc(fmtWhen(it.updatedAt)) + (active ? ' · 현재 열림' : '') + '</div></div>' +
+          '<div style="font-size:11px;color:#999">' + (r.d ? '<b style="color:#6b6656">회의일 ' + esc(fmtDay(r.d)) + '</b>' : '회의일 미정') + ' · 저장 ' + esc(fmtWhen(it.updatedAt)) + (active ? ' · <span style="color:#b07d10;font-weight:700">현재 열림</span>' : '') + '</div></div>' +
           '<span class="btn" style="pointer-events:none">열기</span>' +
           '<button class="btn danger" onclick="event.stopPropagation();Cloud._delArc(\'' + escAttr(it.id) + '\',\'' + escAttr(it.name || "") + '\')">삭제</button></div>';
       });
