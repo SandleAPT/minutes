@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v48</title>
+<title>산들마을 입주자대표회의 회의록 v49</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -720,7 +720,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v48 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v49 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -24127,6 +24127,32 @@ function termForDate(ymd){
   return TERM_ANCHOR.term;
 }
 function formatTermDate(ymd){ return ymd.replaceAll("-","."); }
+// 임차인대표회의 기수 기간표 (v49): 입대의(TERM_ANCHOR 2년 주기)와 기간이 다르다 — 선출 시부터 2년, 기수 사이 공백도 있다.
+// 자료로 확인된 기수만 적고 나머지는 "기간 미확인"으로 보여 준다. (새 기수 자료가 오면 여기에 추가)
+const TENANT_TERMS = {
+  5:{start:"2023-10-09", end:"2025-10-08", approx:true,  note:"2025.10 결과공고 댓글의 '임기 10월 8일 종료'에서 역산한 추정"},
+  6:{start:"2025-12-24", end:"2027-12-23", approx:false, note:"2025.12.24 선거(당선인 공고 12.26), 선출 시부터 2년"}
+};
+function termRangeFor(termNo, body){
+  if(body==="임차"){ const t=TENANT_TERMS[termNo]; return t ? {start:t.start, end:t.end, approx:!!t.approx, note:t.note||""} : null; }
+  return termRange(termNo);
+}
+function termOptionLabel(n, body){
+  const r=termRangeFor(n, body);
+  return r ? `제${n}기 (${formatTermDate(r.start)} ~ ${formatTermDate(r.end)}${r.approx?" 추정":""})` : `제${n}기 (기간 미확인)`;
+}
+// ②·③ 기수 선택지를 회의체에 맞는 기간 표기로 다시 채운다 (선택값 유지)
+function refreshTermSelects(){
+  const fill=(id, body)=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    if(sel.dataset.body===body) return;
+    const cur=sel.value;
+    sel.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}" title="${esc((termRangeFor(n,body)||{}).note||"")}">${termOptionLabel(n, body)}</option>`).join("");
+    sel.dataset.body=body; if(cur) sel.value=cur;
+  };
+  fill("termNo", typeof state!=="undefined"&&state ? bodyOf() : "입대의");
+  fill("rosterTermNo", typeof state!=="undefined"&&state ? rosterBody() : "입대의");
+}
 function defaultMeeting(){
   const today=localTodayString();
   const dt=new Date(today+"T00:00:00");
@@ -24181,7 +24207,7 @@ function applyBodyTheme(){
   const chip=document.getElementById("bodyChip");
   if(chip) chip.textContent=(b==="임차"?"◇ ":"◆ ")+bodyLabel(b);
   const help=document.getElementById("termHelp");
-  if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다(기수 기간표는 자료 확보 후 반영)." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
+  if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다. 기수 기간은 입대의와 다르며(선출 시부터 2년), 자료로 확인된 기수만 날짜를 표기하고 나머지는 "기간 미확인"으로 둡니다." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
 }
 // ③에서 보는 명단의 회의체 (v46): 현재 회의록의 회의체와 별개로 선택 가능. 미설정이면 현재 회의록의 회의체.
 function rosterBody(){ return (state && state.rosterBody==="임차") ? "임차" : (state && state.rosterBody==="입대의") ? "입대의" : bodyOf(); }
@@ -24454,10 +24480,8 @@ function updateTopbarSaveBtn(view){
 
 function initMeetingControls(){
   const term=document.getElementById("termNo");
-  term.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>{
-    const r=termRange(n);
-    return `<option value="${n}">제${n}기 (${formatTermDate(r.start)} ~ ${formatTermDate(r.end)})</option>`;
-  }).join("");
+  term.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}">${termOptionLabel(n,"입대의")}</option>`).join(""); // 회의체별 기간은 refreshTermSelects()가 다시 채움 (v49)
+  term.dataset.body="입대의";
 
   const month=document.getElementById("meetingMonth");
   month.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>
@@ -24509,10 +24533,8 @@ function initMeetingControls(){
   document.getElementById("place").addEventListener("input",e=>{state.meeting.place=e.target.value;saveState()});
 
   const rosterTerm=document.getElementById("rosterTermNo");
-  rosterTerm.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>{
-    const r=termRange(n);
-    return `<option value="${n}">제${n}기 (${formatTermDate(r.start)} ~ ${formatTermDate(r.end)})</option>`;
-  }).join("");
+  rosterTerm.innerHTML=Array.from({length:12},(_,i)=>i+1).map(n=>`<option value="${n}">${termOptionLabel(n,"입대의")}</option>`).join(""); // 회의체별 기간은 refreshTermSelects()가 다시 채움 (v49)
+  rosterTerm.dataset.body="입대의";
   rosterTerm.addEventListener("change",()=>{
     state.rosterTermNo=Number(rosterTerm.value);
     ensureRoster(state.rosterTermNo, rosterBody());
@@ -24539,6 +24561,7 @@ function renderMeetingControls(){
   if(el("generatedMeetingName")) el("generatedMeetingName").textContent=buildMeetingName();
   if(el("meetingBody")) el("meetingBody").value=bodyOf(m);
   applyBodyTheme();
+  refreshTermSelects(); // 기수 기간 표기를 회의체에 맞춤 (v49)
   if(el("termNo")) el("termNo").value=String(m.termNo);
   if(el("meetingYear")) el("meetingYear").value=m.year;
   if(el("meetingMonth")) el("meetingMonth").value=String(m.month);
@@ -24629,6 +24652,7 @@ function renderRepMaster(){
   const tb=document.getElementById("repMasterTable");
   if(!tb) return;
   const roster=displayedRoster();
+  refreshTermSelects(); // ③ 기수 선택지의 기간 표기를 명단 회의체에 맞춤 (v49)
   const head=tb.parentElement && tb.parentElement.querySelector("thead tr");
   if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); const th2=document.createElement("th"); th2.textContent="임기"; head.appendChild(th2); } // v40 변동, v44 임기
   const tenant=rosterBody()==="임차";
