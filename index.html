@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v38</title>
+<title>산들마을 입주자대표회의 회의록 v39</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -692,7 +692,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v38 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v39 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -902,12 +902,11 @@ td.center,th.center{text-align:center}
         <div class="card-title"><div><h3>주제별 보기</h3><small>클라우드 전체 안건을 주제로 묶어 조회</small></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input id="topicSearch" type="search" placeholder="안건명·내용 검색" oninput="Topic.search(this.value)" style="padding:9px 12px;border:1px solid var(--line);border-radius:12px;font-size:13px;min-width:200px">
-            <button class="btn" type="button" id="topicSortBtn" onclick="Topic.sort()" title="정렬 순서 바꾸기">오래된순 ↑</button>
             <button class="btn" type="button" onclick="Topic.reload()">새로고침</button>
           </div>
         </div>
         <div id="topicChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
-        <div id="topicSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+        <div id="topicSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"></div>
         <div id="topicFlow"></div>
         <div id="topicResult"></div>
       </div>
@@ -26605,7 +26604,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   window.autoTags = autoTags; window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
 
-  var cache = null, sel = [], query = "", sortDesc = false;
+  var cache = null, sel = [], query = "";
+  var sortDesc = (function () { try { return localStorage.getItem("sandle_topic_list_desc") !== "0"; } catch (e) { return true; } })(); // 안건 목록 정렬: 기본 최신순, 선택 기억 (v39)
   // ---- 시스템 레코드 (주제 흐름 요약 저장소) ----
   // 요약문은 기존 저장 API로 특수 레코드(id=topic_summaries_v1)에 보관한다. 회의록 목록·주제 집계에서는 제외. (v31)
   var SUM_ID = "topic_summaries_v1";
@@ -26900,12 +26900,11 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var d = String(a.mDate).localeCompare(String(b.mDate));
       return sortDesc ? -d : d;
     });
-    var sortBtn = document.getElementById("topicSortBtn");
-    if (sortBtn) sortBtn.textContent = sortDesc ? "최신순 ↓" : "오래된순 ↑";
     if (summary) {
       var what = sel.length ? "‘" + esc(sel[0]) + "’ 안건" : "전체 안건";
-      summary.innerHTML = what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '') +
-        (refreshing ? ' · <span style="color:#bbb">☁ 클라우드 변경분 확인 중…</span>' : (lastRefreshAt ? ' · <span style="color:#9aa68f">☁ 최신</span>' : ''));
+      summary.innerHTML = '<span>' + what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '') +
+        (refreshing ? ' · <span style="color:#bbb">☁ 클라우드 변경분 확인 중…</span>' : (lastRefreshAt ? ' · <span style="color:#9aa68f">☁ 최신</span>' : '')) + '</span>' +
+        (items.length > 1 ? '<span class="topic-sort"><span class="small">안건 목록 · ' + (sortDesc ? '최신순' : '오래된순') + '</span> <button type="button" class="btn tag-btn" onclick="Topic.sort()">' + (sortDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></span>' : '');
     }
     renderFlow();
     result.innerHTML = items.length ? items.map(function (x) {
@@ -26927,7 +26926,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     toggle: function (c) { sel = (sel.length && sel[0] === c) ? [] : [c]; if (sel.length && window.track) track("topic_pick", { topic: c, via: "chip" }); render(); }, // 단일 선택: 같은 주제를 다시 누르면 전체로
     clear: function () { sel = []; render(); },
     search: function (q) { query = String(q || "").trim(); render(); },
-    sort: function () { sortDesc = !sortDesc; render(); },
+    sort: function () { sortDesc = !sortDesc; try { localStorage.setItem("sandle_topic_list_desc", sortDesc ? "1" : "0"); } catch (e) {} render(); }, // 안건 목록 최신순/오래된순 (기억)
     flowOrder: function () { flowDesc = !flowDesc; try { localStorage.setItem(FLOW_ORDER_KEY, flowDesc ? "1" : "0"); } catch (e) {} render(); }, // 흐름 요약 타임라인 최신순/오래된순
     reload: function () { cache = null; render(); },
     knownTags: allTags
