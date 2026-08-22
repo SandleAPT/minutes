@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v47</title>
+<title>산들마을 입주자대표회의 회의록 v48</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -720,7 +720,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v47 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v48 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26877,6 +26877,29 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     Object.keys(recMap || {}).forEach(function (k) { pushRecord(out, recMap[k]); });
     cache = out;
   }
+  // 명단 색인 (v48): 전체 회의록(사본)의 기수별 명단에서 "성명 → 재임 기수"를 만든다. ③ 임기 회차 계산에 쓴다.
+  // 열린 회의록의 명단 스냅샷만 보면 다른 기수 재임을 놓치므로(임차 5기→6기 연임이 1회차로 보이던 문제) 전체 회의록을 본다.
+  var rosterIdx = null, rosterIdxSig = "";
+  function rosterIndex() {
+    var ids = Object.keys(recMap || {});
+    var sig = ids.map(function (k) { return k + "@" + (recMap[k].updatedAt || ""); }).join(",");
+    if (rosterIdx && sig === rosterIdxSig) return rosterIdx;
+    var idx = {}; // 성명 → { o:{기수:true}, t:{기수:true} }  (o=입대의, t=임차)
+    ids.forEach(function (k) {
+      var st; try { st = JSON.parse(recMap[k].json || "{}"); } catch (e) { return; }
+      var ro = st && st.rosters; if (!ro) return;
+      Object.keys(ro).forEach(function (rk) {
+        var tenant = rk.charAt(0) === "t"; var n = parseInt(rk.replace(/^t/, ""), 10); if (!n) return;
+        (ro[rk] || []).forEach(function (r) { var nm = String((r && r.name) || "").trim(); if (!nm) return; var e = idx[nm] = idx[nm] || { o: {}, t: {} }; (tenant ? e.t : e.o)[n] = true; });
+      });
+    });
+    rosterIdx = idx; rosterIdxSig = sig; return idx;
+  }
+  function termsOf(name, tenant) {
+    if (recMap === null) { try { quickBuild(); } catch (e) { return []; } }
+    var e = rosterIndex()[String(name || "").trim()];
+    return e ? Object.keys(tenant ? e.t : e.o).map(Number).sort(function (a, b) { return a - b; }) : [];
+  }
   // 사본(localStorage + data.json)만으로 즉시 구성
   function quickBuild() {
     if (recMap === null) {
@@ -27172,7 +27195,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     sort: function () { sortDesc = !sortDesc; try { localStorage.setItem("sandle_topic_list_desc", sortDesc ? "1" : "0"); } catch (e) {} render(); }, // 안건 목록 최신순/오래된순 (기억)
     flowOrder: function () { flowDesc = !flowDesc; try { localStorage.setItem(FLOW_ORDER_KEY, flowDesc ? "1" : "0"); } catch (e) {} render(); }, // 흐름 요약 타임라인 최신순/오래된순
     reload: function () { cache = null; render(); },
-    knownTags: allTags
+    knownTags: allTags,
+    termsOf: termsOf // 성명 → 재임 기수 (전체 회의록 명단 색인, v48)
   };
   // 자동 분류 함수(window.autoTags)가 준비된 뒤 ④ 안건 카드의 태그 표시를 갱신
   try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
@@ -27208,6 +27232,17 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
       if ((state.rosters[k] || []).some(function (r) { return String(r.name || "").trim() === name; })) out.push(n);
     });
+    // 전체 회의록 명단 색인(⑥ 사본) + 이 기기의 명단 마스터에서도 찾는다 (v48): 열린 회의록 스냅샷만 보면 다른 기수 재임을 놓친다
+    try { if (window.Topic && Topic.termsOf) Topic.termsOf(name, tenant).forEach(function (n) { if (out.indexOf(n) < 0) out.push(n); }); } catch (e) {}
+    try {
+      var rm = (typeof rosterMasterLoad === "function") ? rosterMasterLoad() : {};
+      Object.keys(rm).forEach(function (k) {
+        if ((k.charAt(0) === "t") !== tenant) return;
+        var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
+        var rows = (rm[k] && rm[k].rows) || (Array.isArray(rm[k]) ? rm[k] : []);
+        if (rows.some(function (r) { return String((r && r.name) || "").trim() === name; }) && out.indexOf(n) < 0) out.push(n);
+      });
+    } catch (e) {}
     // 이력 기반 보정: 산입 제외 플래그(countTerm===false)가 있는 기수 제거, 취임 기록만 있고 명단에 없는 기수 추가
     if (data && data.terms) Object.keys(data.terms).forEach(function (k) {
       if ((k.charAt(0) === "t") !== tenant) return;
