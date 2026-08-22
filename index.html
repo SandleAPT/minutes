@@ -3,7 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v35</title>
+<title>산들마을 입주자대표회의 회의록 v36</title>
+<!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
+<script>
+  window.GA_MEASUREMENT_ID = "G-GGDNLH6MCQ"; // 산들마을 GA4 (CommunityNotice와 같은 스트림 — 보고서에서 페이지 경로 /minutes/ 로 구분)
+  (function () {
+    var id = window.GA_MEASUREMENT_ID;
+    if (!id) return;
+    var s = document.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(id);
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag("js", new Date());
+    var admin = false; try { admin = !!localStorage.getItem("sandle_admin_key"); } catch (e) {}
+    gtag("set", "user_properties", { app_role: admin ? "admin" : "viewer" }); // 관리자 기기 조회는 탐색에서 분리해 볼 수 있게
+    gtag("config", id, { send_page_view: true });
+  })();
+  // 앱 내부 이벤트 전송(탭 이동·주제 선택·회의록 열기·내보내기). GA 미설정이면 무시.
+  window.track = function (name, params) { try { if (window.gtag && window.GA_MEASUREMENT_ID) gtag("event", name, params || {}); } catch (e) {} };
+</script>
 <style>
 :root{
   --bg:#fff;
@@ -674,7 +692,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v35 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v36 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -24302,6 +24320,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
+    if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
   });
 });
 // ② 회의 설정, ④ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
@@ -25231,6 +25250,7 @@ function modalStatus(message,type=""){
 }
 
 function openExportModal(type){
+  if(window.track) track("export_open",{type:String(type||"")});
   const backdrop=document.getElementById("exportModalBackdrop");
   const title=document.getElementById("exportModalTitle");
   const content=document.getElementById("exportModalContent");
@@ -26251,6 +26271,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     closeOverlay();
     renderArchiveList();
     toast("불러오기 완료: " + (item.name || ""));
+    try { if (window.track) track("open_minutes", { name: item.name || "", id: item.id || "" }); } catch (e) {}
   }
   function doLoad(cfg, id) {
     var sd = staticFresh(id);
@@ -26894,8 +26915,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   window.Topic = {
     render: render,
-    pick: function (c) { sel = c ? [c] : []; render(); },                               // 한 주제만 보기
-    toggle: function (c) { sel = (sel.length && sel[0] === c) ? [] : [c]; render(); }, // 단일 선택: 같은 주제를 다시 누르면 전체로
+    pick: function (c) { sel = c ? [c] : []; if (c && window.track) track("topic_pick", { topic: c, via: "card" }); render(); },                             // 한 주제만 보기
+    toggle: function (c) { sel = (sel.length && sel[0] === c) ? [] : [c]; if (sel.length && window.track) track("topic_pick", { topic: c, via: "chip" }); render(); }, // 단일 선택: 같은 주제를 다시 누르면 전체로
     clear: function () { sel = []; render(); },
     search: function (q) { query = String(q || "").trim(); render(); },
     sort: function () { sortDesc = !sortDesc; render(); },
