@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v40</title>
+<title>산들마을 입주자대표회의 회의록 v41</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -699,7 +699,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v40 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v41 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -887,7 +887,8 @@ td.center,th.center{text-align:center}
           <input type="date" id="rhDate" title="날짜">
           <select id="rhDong" title="동"></select>
           <input id="rhName" placeholder="성명" style="width:110px">
-          <select id="rhRole" title="직책"><option>대표</option><option>회장</option><option>감사</option><option>이사</option></select>
+          <select id="rhFromRole" title="이전 직책(선출·직책변경 시)"><option value="">이전 직책(선택)</option><option>대표</option><option>회장</option><option>감사</option><option>이사</option></select>
+          <select id="rhRole" title="직책(변동 후)"><option>대표</option><option>회장</option><option>감사</option><option>이사</option></select>
           <select id="rhEvent" title="변동"><option>취임</option><option>보궐취임</option><option>사퇴</option><option>직책변경</option><option>선출</option><option>기타</option></select>
           <input id="rhNote" placeholder="비고 (예: 3/11 일괄 사퇴 처리)" style="flex:1;min-width:160px">
           <button class="btn soft" type="button" onclick="RosterHistory.add()">+ 추가</button>
@@ -27027,12 +27028,14 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     });
   }
   function fmtDate(d) { if (!d) return ""; var m = String(d).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/); if (!m) return esc(d); return m[1] + "." + m[2] + (m[3] ? "." + m[3] : ""); }
-  function eventClass(ev) { return ev === "사퇴" ? "rh-out" : (/취임|선출/.test(ev) ? "rh-in" : "rh-etc"); }
+  function eventClass(ev) { return ev === "사퇴" ? "rh-out" : (/취임|선출|직책변경/.test(ev) ? "rh-in" : "rh-etc"); }
+  // 표시용 문구: 선출·직책변경은 "대표→이사 선출"처럼 이전 직책을 함께 보여준다 (v41)
+  function eventLabel(e) { var ev = e.event || ""; var from = (e.fromRole || "").trim(), to = (e.role || "").trim(); if (/선출|직책변경|취임/.test(ev) && from && to && from !== to) return from + "→" + to + " " + ev; if (/선출|취임/.test(ev) && to) return to + " " + ev; return ev; }
   // 명단 표 '변동' 칸: 해당 동의 최근 변동 1~2건
   function badge(t, dong) {
     var list = sorted(t).filter(function (e) { return Number(e.dong) === Number(dong); });
     if (!list.length) return "";
-    return list.slice(-2).map(function (e) { return '<span class="rh-badge ' + eventClass(e.event) + '" title="' + esc(e.note || "") + '">' + esc(fmtDate(e.date)) + ' ' + esc(e.event) + (e.name ? ' · ' + esc(e.name) : '') + '</span>'; }).join(" ");
+    return list.slice(-2).map(function (e) { return '<span class="rh-badge ' + eventClass(e.event) + '" title="' + esc(e.note || "") + '">' + esc(fmtDate(e.date)) + ' ' + esc(eventLabel(e)) + (e.name ? ' · ' + esc(e.name) : '') + '</span>'; }).join(" ");
   }
   function renderTable() {
     var tb = document.getElementById("rosterHistoryTable"); if (!tb) return;
@@ -27042,7 +27045,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var list = sorted(t);
     tb.innerHTML = list.length ? list.map(function (e) {
       return '<tr><td>' + esc(fmtDate(e.date)) + '</td><td class="center">' + esc(e.dong) + '동</td><td>' + esc(e.name || "") + '</td><td>' + esc(e.role || "") + '</td>' +
-        '<td><span class="rh-badge ' + eventClass(e.event) + '">' + esc(e.event) + '</span></td><td style="white-space:pre-wrap">' + esc(e.note || "") + '</td>' +
+        '<td><span class="rh-badge ' + eventClass(e.event) + '">' + esc(eventLabel(e)) + '</span></td><td style="white-space:pre-wrap">' + esc(e.note || "") + '</td>' +
         '<td><button class="btn danger tag-btn" type="button" onclick="RosterHistory.remove(\'' + esc(e.id) + '\')">삭제</button></td></tr>';
     }).join("") : '<tr><td colspan="7" style="color:#999;text-align:center;padding:16px">기록이 없습니다. 아래에서 추가하세요.</td></tr>';
     var dongSel = document.getElementById("rhDong");
@@ -27066,11 +27069,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var dong = parseInt((document.getElementById("rhDong") || {}).value, 10);
       var name = ((document.getElementById("rhName") || {}).value || "").trim();
       var role = (document.getElementById("rhRole") || {}).value || "";
+      var fromRole = (document.getElementById("rhFromRole") || {}).value || "";
       var event = (document.getElementById("rhEvent") || {}).value || "";
       var note = ((document.getElementById("rhNote") || {}).value || "").trim();
       if (!date || !dong) { if (typeof showToast === "function") showToast("날짜와 동을 입력하세요", "error"); return; }
       if (data === null) data = { terms: {} };
-      entries().push({ id: uid(), date: date, dong: dong, name: name, role: role, event: event, note: note });
+      entries().push({ id: uid(), date: date, dong: dong, name: name, role: role, fromRole: fromRole, event: event, note: note });
       dirty = true; saveCache(); renderTable();
       var n = document.getElementById("rhName"); if (n) n.value = ""; var nt = document.getElementById("rhNote"); if (nt) nt.value = "";
     },
