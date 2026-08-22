@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v29</title>
+<title>산들마을 입주자대표회의 회의록 v30</title>
 <style>
 :root{
   --bg:#fff;
@@ -270,6 +270,21 @@ td.center,th.center{text-align:center}
 .generated-title small{display:block;margin-bottom:4px;color:#817354;font-size:10px;font-weight:700}
 .readonly-cell{color:#3c403b;font-weight:700}
 .mini-help{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45}
+/* 주제 태그 (v30) */
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 6px 4px 10px;border-radius:999px;background:#eef2ea;color:#3f5a3a;font-size:12px;font-weight:700;border:1px solid #d3dccd;line-height:1.3}
+.tag-chip.auto{background:#fff;color:#6b6656;border-style:dashed}
+.tag-auto-mark{font-size:10px;font-weight:600;color:#a09a8a;margin-left:2px}
+.tag-chip button{border:0;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;color:inherit;opacity:.6}
+.tag-chip button:hover{opacity:1;color:var(--red)}
+.tag-add{display:inline-flex;gap:6px;align-items:center}
+.tag-add select,.tag-add input{padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;background:#fff}
+.tag-add input{width:120px}
+.btn.tag-btn{padding:5px 9px;font-size:12px;border-radius:8px}
+.topic-tags{display:inline-flex;flex-wrap:wrap;gap:4px}
+.topic-tag{border:1px solid #d3dccd;background:#eef2ea;color:#3f5a3a;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;line-height:1.4}
+.topic-tag.on{background:var(--gold);border-color:var(--gold);color:#2f2b20}
+.topic-tag:hover{filter:brightness(.96)}
 
 
 /* 참석/서명 표현 */
@@ -643,7 +658,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v29 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v30 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -845,14 +860,20 @@ td.center,th.center{text-align:center}
 
     <section id="topicView" class="view">
       <div class="help">
-        모든 회의록의 안건을 <b>주제(카테고리)별로 모아</b> 시간순으로 이어봅니다. 주제를 고르면 관련 안건만 쭉 나옵니다.
-        분류는 안건명 기준 <b>자동</b>이며, 안건별로 카테고리를 직접 바꾸면(④ 안건·발언) 그 값이 우선합니다.
+        모든 회의록의 안건을 <b>주제(태그)별로 모아</b> 시간순으로 이어봅니다. 안건 하나가 여러 주제에 속할 수 있습니다.
+        주제를 하나 고르면 그 주제 안건만, <b>여러 개 고르면 고른 주제를 모두 포함하는 안건만</b> 나옵니다. 안건 카드의 태그를 누르면 그 주제로 바로 이동합니다.
+        분류는 안건명 기준 <b>자동</b>이며, 안건별로 태그를 직접 지정하면(④ 안건·발언) 그 값이 우선합니다.
       </div>
       <div class="card">
         <div class="card-title"><div><h3>주제별 보기</h3><small>클라우드 전체 안건을 주제로 묶어 조회</small></div>
-          <button class="btn" type="button" onclick="Topic.reload()">새로고침</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input id="topicSearch" type="search" placeholder="안건명·내용 검색" oninput="Topic.search(this.value)" style="padding:9px 12px;border:1px solid var(--line);border-radius:12px;font-size:13px;min-width:200px">
+            <button class="btn" type="button" id="topicSortBtn" onclick="Topic.sort()" title="정렬 순서 바꾸기">오래된순 ↑</button>
+            <button class="btn" type="button" onclick="Topic.reload()">새로고침</button>
+          </div>
         </div>
-        <div id="topicChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+        <div id="topicChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+        <div id="topicSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
         <div id="topicResult"></div>
       </div>
     </section>
@@ -24553,13 +24574,62 @@ function outputAgendaItems(){
   others.forEach((agenda,index)=>items.push({agenda,label:`제${regular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length}));
   return items;
 }
-const AGENDA_CATS=["헬스장","도서관","커뮤니티센터","주차","수광선","LH·관리이관","회계·결산","관리비","잡수입·예산","관리규약","선거·임원","장기수선","승강기","화재·소방","조경·환경","지원사업","저수조·청소","교통·버스","기타"];
-function categoryOptions(a){
-  const auto=(window.autoCategory?window.autoCategory(a):"기타");
-  const cur=a.category&&String(a.category).trim()?a.category:"";
-  let opts=`<option value="">자동 (${esc(auto)})</option>`;
-  opts+=AGENDA_CATS.map(c=>`<option value="${esc(c)}" ${cur===c?"selected":""}>${esc(c)}</option>`).join("");
-  return opts;
+const AGENDA_CATS=["헬스장","도서관","커뮤니티센터","주차","수광선","LH·관리이관","회계·결산","관리비","잡수입·예산","관리규약","선거·임원","장기수선","승강기","화재·소방","조경·환경","지원사업","저수조·청소","교통·버스","전기·설비","기타"];
+// ---- 주제 태그 (v30) ----
+// 안건 하나가 여러 주제에 속할 수 있다. a.tags(직접 지정)가 비어 있으면 자동 분류(window.autoTags)를 따른다.
+function normTag(t){ return String(t==null?"":t).trim().replace(/\s+/g," "); }
+function escJs(s){ return String(s==null?"":s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
+function agendaManualTags(a){
+  if(!Array.isArray(a.tags)) a.tags=(a.category&&String(a.category).trim())?[String(a.category).trim()]:[];
+  return a.tags;
+}
+function agendaAutoTags(a){ return window.autoTags ? window.autoTags(a) : ["기타"]; }
+function agendaEffectiveTags(a){ const m=agendaManualTags(a); return m.length ? m.slice() : agendaAutoTags(a); }
+function knownTags(){
+  const s=new Set(AGENDA_CATS);
+  state.agendas.forEach(a=>agendaManualTags(a).forEach(t=>s.add(t)));
+  try{ if(window.Topic && Topic.knownTags) Topic.knownTags().forEach(t=>s.add(t)); }catch(e){}
+  return [...s];
+}
+function setAgendaTags(id,tags){
+  const a=state.agendas.find(x=>x.id===id); if(!a) return;
+  a.tags=[...new Set(tags.map(normTag).filter(Boolean))];
+  a.category=a.tags[0]||""; // 이전 버전 호환용 대표 카테고리
+  persistOnly(); renderAgendaTagEditor(id);
+}
+function addAgendaTag(id,tag){
+  tag=normTag(tag); if(!tag) return;
+  const a=state.agendas.find(x=>x.id===id); if(!a) return;
+  const cur=agendaEffectiveTags(a);
+  if(cur.includes(tag)){ renderAgendaTagEditor(id); return; }
+  setAgendaTags(id, cur.concat([tag]));
+}
+function removeAgendaTag(id,tag){
+  const a=state.agendas.find(x=>x.id===id); if(!a) return;
+  const cur=agendaEffectiveTags(a).filter(t=>t!==tag);
+  setAgendaTags(id, cur.length?cur:["기타"]); // 전부 빼면 '기타'로 (비우면 자동 분류로 되돌아가므로)
+}
+function resetAgendaTags(id){ setAgendaTags(id,[]); }
+function tagEditorHTML(a){
+  const manual=agendaManualTags(a); const isAuto=!manual.length; const tags=agendaEffectiveTags(a);
+  const chips=tags.map(t=>`<span class="tag-chip${isAuto?" auto":""}" title="${isAuto?"자동 분류 (×로 빼거나 ＋로 더하면 직접 지정으로 바뀜)":"직접 지정"}">${esc(t)}${isAuto?'<span class="tag-auto-mark">자동</span>':""}<button type="button" aria-label="주제 제거" onclick="removeAgendaTag('${a.id}','${escJs(t)}')">×</button></span>`).join("");
+  const opts=knownTags().filter(t=>!tags.includes(t)).map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  return `<div class="tag-row" id="agenda-tags-${a.id}">${chips}
+    <span class="tag-add">
+      <select aria-label="주제 추가" onchange="if(this.value==='__custom'){const c=document.getElementById('agenda-tag-custom-${a.id}');c.style.display='inline-flex';document.getElementById('agenda-tag-custom-input-${a.id}').focus();}else if(this.value){addAgendaTag('${a.id}',this.value);} this.value='';">
+        <option value="">＋ 주제 추가</option>${opts}<option value="__custom">직접 입력…</option>
+      </select>
+      <span id="agenda-tag-custom-${a.id}" class="tag-add" style="display:none">
+        <input id="agenda-tag-custom-input-${a.id}" placeholder="새 주제명" onkeydown="if(event.key==='Enter'){event.preventDefault();addAgendaTag('${a.id}',this.value);}else if(event.key==='Escape'){this.parentNode.style.display='none';}">
+        <button type="button" class="btn soft tag-btn" onclick="addAgendaTag('${a.id}',document.getElementById('agenda-tag-custom-input-${a.id}').value)">추가</button>
+      </span>
+      ${isAuto?"":`<button type="button" class="btn soft tag-btn" title="직접 지정을 지우고 안건명 기준 자동 분류로 되돌림" onclick="resetAgendaTags('${a.id}')">자동 분류로</button>`}
+    </span></div>`;
+}
+function renderAgendaTagEditor(id){
+  const a=state.agendas.find(x=>x.id===id); if(!a) return;
+  const el=document.getElementById(`agenda-tags-${id}`); if(!el) return;
+  el.outerHTML=tagEditorHTML(a);
 }
 function newAgenda(){
   return {
@@ -24605,6 +24675,8 @@ function normalizeRemarks(a){
   if(!a.remarks || typeof a.remarks!=="object") a.remarks={};
   if(typeof a.isOther!=="boolean") a.isOther=false;
   if(typeof a.noRemarks!=="boolean") a.noRemarks=true;
+  // v30: 단일 category → 다중 태그(tags). 비어 있으면 자동 분류를 따른다.
+  if(!Array.isArray(a.tags)) a.tags=(a.category&&String(a.category).trim())?[String(a.category).trim()]:[];
 
   // 예전 버전의 '이름' 키를 현재 동 번호 키로 변환
   const converted={};
@@ -24848,8 +24920,8 @@ function renderAgendas(){
             <div class="field"><label>안건명 <b>*</b></label><input id="agenda-title-input-${a.id}" value="${esc(a.title)}" placeholder="예: 관리비 부과 내역서 심의 건" oninput="setAgenda('${a.id}','title',this.value)"></div>
             <div class="field"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
           </div>
-          <div class="field" style="max-width:340px;margin-top:8px"><label>카테고리 <span class="small">(자동 분류 · 직접 변경 가능)</span></label>
-            <select onchange="setAgenda('${a.id}','category',this.value)">${categoryOptions(a)}</select></div>
+          <div class="field" style="margin-top:8px"><label>주제 태그 <span class="small">(여러 개 가능 · 안건명 기준 자동 분류, ×로 빼거나 ＋로 더하면 직접 지정 · ⑥ 주제별 보기에서 모아봄)</span></label>
+            ${tagEditorHTML(a)}</div>
           <div class="subsection">
             <div class="subsection-head">
               <div>
@@ -26454,24 +26526,35 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     { key: "승강기", kw: ["승강기", "엘리베이터"] },
     { key: "화재·소방", kw: ["화재", "소화기", "스프링클러", "소방"] },
     { key: "조경·환경", kw: ["철쭉", "회양목", "조경", "고사목", "금연", "불법소각", "묘목", "식재"] },
-    { key: "지원사업", kw: ["지원사업", "공모사업", "성남시", "지원 사업"] },
-    { key: "저수조·청소", kw: ["저수조", "청소용역", "청소 용역"] },
-    { key: "교통·버스", kw: ["버스", "회차지", "셔틀", "불법차량"] }
+    { key: "지원사업", kw: ["지원사업", "공모사업", "성남시", "지원 사업", "공동체활성화", "공동체 활성화"] },
+    { key: "저수조·청소", kw: ["저수조", "청소용역", "청소 용역", "청소미화", "미화원", "미화 인력"] },
+    { key: "교통·버스", kw: ["버스", "회차지", "셔틀", "불법차량"] },
+    { key: "전기·설비", kw: ["전기안전", "직무고시", "기계설비", "승압", "변압기", "수변전"] }
   ];
-  // 안건명을 먼저 보고(정확도 높음), 없으면 의결·요지 본문에서 찾는다.
-  function scanCat(t) {
-    for (var i = 0; i < DEFS.length; i++) for (var j = 0; j < DEFS[i].kw.length; j++) if (t.indexOf(DEFS[i].kw[j]) >= 0) return DEFS[i].key;
-    return null;
+  // 안건명을 먼저 보고(정확도 높음), 없으면 의결·요지 본문에서 찾는다. 일치하는 주제를 모두 돌려준다. (v30: 다중 태그)
+  function scanTags(t) {
+    var out = [];
+    for (var i = 0; i < DEFS.length; i++) {
+      for (var j = 0; j < DEFS[i].kw.length; j++) if (t.indexOf(DEFS[i].kw[j]) >= 0) { out.push(DEFS[i].key); break; }
+    }
+    return out;
   }
-  function autoCat(a) {
-    var byTitle = scanCat(a.title || "");
-    if (byTitle) return byTitle;
-    return scanCat((a.decision || "") + " " + (a.summary || "")) || "기타";
+  function autoTags(a) {
+    var byTitle = scanTags(a.title || "");
+    if (byTitle.length) return byTitle;
+    var byBody = scanTags((a.decision || "") + " " + (a.summary || ""));
+    return byBody.length ? byBody : ["기타"];
   }
-  function catOf(a) { return (a.category && String(a.category).trim()) ? a.category : autoCat(a); }
-  window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
+  function autoCat(a) { return autoTags(a)[0]; }
+  // 안건의 실제 주제 목록: 직접 지정(tags) > 이전 버전의 단일 category > 자동 분류
+  function tagsOf(a) {
+    if (Array.isArray(a.tags) && a.tags.length) return a.tags.map(function (t) { return String(t).trim(); }).filter(Boolean);
+    if (a.category && String(a.category).trim()) return [String(a.category).trim()];
+    return autoTags(a);
+  }
+  window.autoTags = autoTags; window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
 
-  var cache = null, curCat = null;
+  var cache = null, sel = [], query = "", sortDesc = false;
   function pushRecord(out, rec, fallbackName) {
     try {
       var st = JSON.parse(rec.json || "{}");
@@ -26514,25 +26597,73 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       }).catch(function () { if (--pending === 0) { cache = out; cb(); } });
     });
   }
-  function render() {
-    var chips = document.getElementById("topicChips"), result = document.getElementById("topicResult");
-    if (!chips) return;
-    if (cache === null) { chips.innerHTML = ""; result.innerHTML = '<div style="padding:24px;color:#999;text-align:center">전체 회의록에서 안건을 모으는 중…</div>'; loadAll(render); return; }
-    var counts = {};
-    cache.forEach(function (x) { var c = catOf(x.agenda); counts[c] = (counts[c] || 0) + 1; });
-    var cats = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
-    if (!curCat || !counts[curCat]) curCat = cats[0] || null;
-    chips.innerHTML = cats.map(function (c) { var on = c === curCat; return '<button class="btn' + (on ? ' gold' : '') + '" onclick="Topic.pick(this.getAttribute(\'data-c\'))" data-c="' + esc(c) + '">' + esc(c) + ' <b>' + counts[c] + '</b></button>'; }).join("");
-    var items = cache.filter(function (x) { return catOf(x.agenda) === curCat; }).sort(function (a, b) { return String(a.mDate).localeCompare(String(b.mDate)); });
-    result.innerHTML = items.length ? items.map(function (x) {
-      var a = x.agenda;
-      return '<div style="border:1px solid #e7e2d8;border-left:4px solid #7f927a;border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:9px">' +
-        '<div style="font-size:11px;color:#8a8f86;font-weight:700;margin-bottom:3px">' + esc(x.mName) + ' · ' + esc(x.mDate) + '</div>' +
-        '<div style="font-weight:800;margin-bottom:4px">' + esc(a.title || "") + '</div>' +
-        '<div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap">' + esc(a.decision || "") + '</div></div>';
-    }).join("") : '<div style="padding:20px;color:#999">해당 주제 안건이 없습니다.</div>';
+  function allTags() {
+    var s = {};
+    (cache || []).forEach(function (x) { tagsOf(x.agenda).forEach(function (t) { s[t] = 1; }); });
+    return Object.keys(s);
   }
-  window.Topic = { render: render, pick: function (c) { curCat = c; render(); }, reload: function () { cache = null; curCat = null; render(); } };
+  function matchesQuery(x) {
+    if (!query) return true;
+    var a = x.agenda, q = query.toLowerCase();
+    return [a.title || "", a.summary || "", a.decision || "", x.mName || ""].join(" ").toLowerCase().indexOf(q) >= 0;
+  }
+  function tagChip(t, on) {
+    return '<button type="button" class="topic-tag' + (on ? ' on' : '') + '" onclick="Topic.pick(this.getAttribute(\'data-c\'))" data-c="' + esc(t) + '">' + esc(t) + '</button>';
+  }
+  function render() {
+    var chips = document.getElementById("topicChips"), result = document.getElementById("topicResult"), summary = document.getElementById("topicSummary");
+    if (!chips) return;
+    if (cache === null) { chips.innerHTML = ""; if (summary) summary.textContent = ""; result.innerHTML = '<div style="padding:24px;color:#999;text-align:center">전체 회의록에서 안건을 모으는 중…</div>'; loadAll(render); return; }
+    // 주제별 건수 (한 안건이 여러 주제에 속하면 각 주제에 모두 센다)
+    var counts = {};
+    cache.forEach(function (x) { tagsOf(x.agenda).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; }); });
+    var tags = Object.keys(counts).sort(function (a, b) { return (counts[b] - counts[a]) || a.localeCompare(b); });
+    sel = sel.filter(function (t) { return counts[t]; });
+    var html = '<button type="button" class="btn' + (sel.length ? '' : ' gold') + '" onclick="Topic.clear()">전체 <b>' + cache.length + '</b></button>';
+    html += tags.map(function (t) {
+      var on = sel.indexOf(t) >= 0;
+      return '<button type="button" class="btn' + (on ? ' gold' : '') + '" onclick="Topic.toggle(this.getAttribute(\'data-c\'))" data-c="' + esc(t) + '" title="' + (on ? '선택 해제' : '클릭: 이 주제 추가 선택 (여러 개 선택 시 모두 포함하는 안건만 표시)') + '">' + esc(t) + ' <b>' + counts[t] + '</b></button>';
+    }).join("");
+    chips.innerHTML = html;
+    var items = cache.filter(function (x) {
+      var ts = tagsOf(x.agenda);
+      for (var i = 0; i < sel.length; i++) if (ts.indexOf(sel[i]) < 0) return false;
+      return matchesQuery(x);
+    }).sort(function (a, b) {
+      var d = String(a.mDate).localeCompare(String(b.mDate));
+      return sortDesc ? -d : d;
+    });
+    var sortBtn = document.getElementById("topicSortBtn");
+    if (sortBtn) sortBtn.textContent = sortDesc ? "최신순 ↓" : "오래된순 ↑";
+    if (summary) {
+      var what = sel.length ? sel.map(function (t) { return "‘" + esc(t) + "’"; }).join(" + ") + (sel.length > 1 ? " 을(를) 모두 포함하는 안건" : " 안건") : "전체 안건";
+      summary.innerHTML = what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '') + (sel.length > 1 ? ' <span style="color:#aaa">— 주제를 하나씩 더 누르면 범위가 좁혀집니다</span>' : '');
+    }
+    result.innerHTML = items.length ? items.map(function (x) {
+      var a = x.agenda, ts = tagsOf(x.agenda);
+      var body = a.decision || "";
+      var extra = "";
+      if (!body && a.summary) body = a.summary; // 회의 전(의결 없음)에는 요지를 본문으로
+      else if (a.summary) extra = '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:#777">안건 요지 보기</summary><div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap;margin-top:4px">' + esc(a.summary) + '</div></details>';
+      return '<div style="border:1px solid #e7e2d8;border-left:4px solid #7f927a;border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:9px">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:4px"><span style="font-size:11px;color:#8a8f86;font-weight:700">' + esc(x.mName) + ' · ' + esc(x.mDate) + '</span>' +
+          '<span class="topic-tags">' + ts.map(function (t) { return tagChip(t, sel.indexOf(t) >= 0); }).join("") + '</span></div>' +
+        '<div style="font-weight:800;margin-bottom:4px">' + esc(a.title || "") + '</div>' +
+        '<div style="font-size:13px;line-height:1.55;color:#3a3f39;white-space:pre-wrap">' + esc(body) + '</div>' + extra + '</div>';
+    }).join("") : '<div style="padding:20px;color:#999">' + (query || sel.length ? '조건에 맞는 안건이 없습니다.' : '안건이 없습니다.') + '</div>';
+  }
+  window.Topic = {
+    render: render,
+    pick: function (c) { sel = c ? [c] : []; render(); },                               // 한 주제만 보기
+    toggle: function (c) { var i = sel.indexOf(c); if (i >= 0) sel.splice(i, 1); else sel.push(c); render(); }, // 여러 주제 AND
+    clear: function () { sel = []; render(); },
+    search: function (q) { query = String(q || "").trim(); render(); },
+    sort: function () { sortDesc = !sortDesc; render(); },
+    reload: function () { cache = null; render(); },
+    knownTags: allTags
+  };
+  // 자동 분류 함수(window.autoTags)가 준비된 뒤 ④ 안건 카드의 태그 표시를 갱신
+  try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
 })();
 </script>
 </body>
