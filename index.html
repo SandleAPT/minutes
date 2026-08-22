@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v44</title>
+<title>산들마을 입주자대표회의 회의록 v45</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -331,6 +331,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .body-chip{display:inline-block;margin:6px 0 0;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;background:var(--gold);color:#2f2b20}html[data-body="임차"] .body-chip{color:#fff}
 .body-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid #9fc1d6;background:#e3eef5;color:#2f5f80;margin-left:6px;vertical-align:1px}
 .body-badge.owner{border-color:#e0c98a;background:#fbf3dc;color:#7a5a12}
+.doc-body-mark{text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;color:#2f5f80;margin:0 0 6px}.doc-body-mark.owner{color:#7a5a12}
 
 
 /* 참석/서명 표현 */
@@ -704,7 +705,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v44 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v45 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -24143,6 +24144,13 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 function bodyOf(m){ m=m||(state&&state.meeting)||{}; return m.body==="임차" ? "임차" : "입대의"; }
 function bodyLabel(b){ return (b||bodyOf())==="임차" ? "임차인대표회의" : "입주자대표회의"; }
 function docTitle(){ return `산들마을 ${bodyLabel()} 회의록`; }
+// 출력물 머리표시 (v45): 제목 위에 ◆/◇ + 회의체명 한 줄 — 화면·Word 공통, 흑백 인쇄에서도 구분
+function bodyMark(){ return (bodyOf()==="임차" ? "◇ 임차인대표회의" : "◆ 입주자대표회의"); }
+function bodyMarkHtml(mode){
+  const tenant=bodyOf()==="임차";
+  if(mode==="word") return `<div style="text-align:center;font-size:9pt;font-weight:bold;letter-spacing:.08em;color:${tenant?"#2f5f80":"#7a5a12"};margin:0 0 4pt">${bodyMark()}</div>`;
+  return `<div class="doc-body-mark${tenant?"":" owner"}">${bodyMark()}</div>`;
+}
 // 명단 저장 키: 입대의는 "5", 임차는 "t6"처럼 회의체별로 분리
 function rosterKeyFor(termNo, body){ const n=String(Number(termNo)); return (body||bodyOf())==="임차" ? "t"+n : n; }
 function applyBodyTheme(){
@@ -25215,7 +25223,7 @@ function coverHtml(totalPages){
   const absentCount=namedReps.length-presentCount;
   const sequenceRows=sequenceItems().map((s,i)=>`<div><b>${i+1}.</b> ${esc(s)}</div>`).join("")||`<div style="color:#777">진행순서를 입력하세요.</div>`;
   return `<section class="paper cover-page">
-    <div class="doc-title">${docTitle()}</div>
+    ${bodyMarkHtml()}<div class="doc-title">${docTitle()}</div>
     <table class="doc-table cover-meta-table">
       <colgroup><col style="width:12%"><col style="width:45%"><col style="width:11%"><col style="width:32%"></colgroup>
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
@@ -25592,7 +25600,7 @@ function wordDocumentHtml(){
     : `<tr><th>-</th><td>등록된 안건이 없습니다.</td></tr>`;
 
   const cover=`<div class="page Section1">
-    <div class="word-title">${docTitle()}</div>
+    ${bodyMarkHtml("word")}<div class="word-title">${docTitle()}</div>
     <table class="grid meta"><colgroup><col style="width:14%"><col style="width:41%"><col style="width:12%"><col style="width:33%"></colgroup>
       <tr><th>회의명</th><td colspan="3">${esc(buildMeetingName())}</td></tr>
       <tr><th>일시</th><td>${esc(formattedMeetingDateTime())}</td><th>장소</th><td>${esc(state.meeting.place)}</td></tr>
@@ -25626,7 +25634,7 @@ function wordDocumentHtml(){
          <tr><th>반대(${vote.againstCount})</th><td>${esc(voteNames(a,"against"))||"&nbsp;"}</td></tr>
          ${vote.incomplete?`<tr><th class="incomplete">미선택(${vote.incomplete})</th><td>표결 선택이 완료되지 않았습니다.</td></tr>`:""}`;
     return `<div class="word-page-break">&nbsp;</div><div class="page Section1">
-      <div class="word-title">${docTitle()}</div>
+      ${bodyMarkHtml("word")}<div class="word-title">${docTitle()}</div>
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
       ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
@@ -26884,7 +26892,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     fetchSummaries(render);
   }
   function itemsFor(tag) {
-    return (cache || []).filter(function (x) { return tag === "__all__" || tagsOf(x.agenda).indexOf(tag) >= 0; })
+    return (cache || []).filter(function (x) { return tag === "__all__" || (tag === "__tenant__" ? (x.body || "입대의") === "임차" : tagsOf(x.agenda).indexOf(tag) >= 0); })
       .sort(function (a, b) { return String(a.mDate).localeCompare(String(b.mDate)); });
   }
   // 안건 내용 지문: 회의 전 안건명만 있다가 나중에 요지·의결이 채워지는 경우도 '변경'으로 잡기 위함
@@ -26956,8 +26964,9 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     if (!flow) return;
     if (sel.length > 1 || query) { flow.innerHTML = ""; return; }
     if (summaries === null) { flow.innerHTML = '<div class="topic-flow empty">주제 흐름 요약 불러오는 중…</div>'; loadSummaries(render); return; }
-    var tag = sel.length ? sel[0] : "__all__";
-    var label = sel.length ? sel[0] : "전체";
+    // 회의체 필터가 '임차'이면 임차 전용 개요 키(__tenant__)를 쓴다 (v45). 주제별 요약은 회의체 공통.
+    var tag = sel.length ? sel[0] : (bodyFilter === "임차" ? "__tenant__" : "__all__");
+    var label = sel.length ? sel[0] : (bodyFilter === "임차" ? "임차인대표회의 전체" : "전체");
     var info = staleInfo(tag);
     var hint = 'Claude Code(PC)에서 <b>“요약 갱신해줘”</b>라고 하면 새 안건만 반영해 갱신됩니다.';
     if (!info.has) {
