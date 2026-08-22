@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v45</title>
+<title>산들마을 입주자대표회의 회의록 v46</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -705,7 +705,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v45 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v46 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -857,6 +857,13 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
         </div>
 
         <div class="roster-toolbar">
+          <div class="field">
+            <label>명단 회의체</label>
+            <select id="rosterBodySel">
+              <option value="입대의">◆ 입주자대표회의</option>
+              <option value="임차">◇ 임차인대표회의</option>
+            </select>
+          </div>
           <div class="field">
             <label>명단 기수</label>
             <select id="rosterTermNo"></select>
@@ -24161,12 +24168,27 @@ function applyBodyTheme(){
   const help=document.getElementById("termHelp");
   if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다(기수 기간표는 자료 확보 후 반영)." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
 }
-function ensureRoster(termNo){
-  const key=rosterKeyFor(termNo);
+// ③에서 보는 명단의 회의체 (v46): 현재 회의록의 회의체와 별개로 선택 가능. 미설정이면 현재 회의록의 회의체.
+function rosterBody(){ return (state && state.rosterBody==="임차") ? "임차" : (state && state.rosterBody==="입대의") ? "입대의" : bodyOf(); }
+// 명단 마스터 (v46): 회의록마다 명단 스냅샷을 따로 갖기 때문에, 다른 회의체/기수 명단은 이 기기에 모아둔 사본(마스터)에서 채운다.
+// 이름이 있는 명단이 로드·수정될 때마다 마스터에 반영되고, 현재 회의록에 없는 키를 열면 마스터에서 가져온다.
+const ROSTER_MASTER_KEY="sandle_roster_master_v1";
+function rosterMasterLoad(){ try{ return JSON.parse(localStorage.getItem(ROSTER_MASTER_KEY))||{}; }catch(e){ return {}; } }
+function rosterMasterPut(key, roster){
+  if(!roster || !roster.some(r=>String(r.name||"").trim())) return;
+  // 같은 키(기수)라도 회의록 시점에 따라 명단이 다를 수 있으므로, 회의 날짜가 더 최근인 것만 마스터로 삼는다
+  try{ const m=rosterMasterLoad(); const d=String((state&&state.meeting&&state.meeting.date)||""); const cur=m[key]; if(cur && cur.date && d && d<cur.date) return; m[key]={date:d, rows:roster.map(r=>({dong:r.dong,role:r.role,name:r.name,unit:r.unit||""}))}; localStorage.setItem(ROSTER_MASTER_KEY, JSON.stringify(m)); }catch(e){}
+}
+function ensureRoster(termNo, body){
+  const key=rosterKeyFor(termNo, body);
   if(!state.rosters) state.rosters={};
   // 임차(키 "t…")는 동이 아니라 1~16 번호를 키로 쓴다(동은 unit에 선택 기재). (v44)
   const seats = key.startsWith("t") ? Array.from({length:16},(_,i)=>i+1) : dongList;
-  if(!state.rosters[key]) state.rosters[key]=seats.map(d=>({dong:d,role:"대표",name:""}));
+  if(!state.rosters[key]){
+    const fm=rosterMasterLoad()[key]; const fromMaster=fm && Array.isArray(fm.rows) ? fm.rows : (Array.isArray(fm)?fm:null);
+    state.rosters[key]=Array.isArray(fromMaster)&&fromMaster.length ? fromMaster.map(r=>({dong:r.dong,role:r.role||"대표",name:r.name||"",unit:r.unit||""})) : seats.map(d=>({dong:d,role:"대표",name:""}));
+  }
+  rosterMasterPut(key, state.rosters[key]);
   // guarantee 16 rows
   if(state.rosters[key].length!==16 || state.rosters[key].some((r,i)=>Number(r.dong)!==seats[i])){
     const existing=state.rosters[key]||[];
@@ -24181,7 +24203,7 @@ function currentRoster(){
   return ensureRoster(state.meeting.termNo);
 }
 function displayedRoster(){
-  return ensureRoster(state.rosterTermNo||state.meeting.termNo);
+  return ensureRoster(state.rosterTermNo||state.meeting.termNo, rosterBody());
 }
 function currentAttendees(){
   const att=state.meeting.attendance||{};
@@ -24444,6 +24466,7 @@ function initMeetingControls(){
       state.meeting.body=next;
       state.meeting.attendance={};
       state.rosterTermNo=state.meeting.termNo;
+      state.rosterBody=next; // ③ 명단 회의체도 따라감 (v46)
       ensureRoster(state.meeting.termNo);
     }
     applyBodyTheme();
@@ -24477,7 +24500,15 @@ function initMeetingControls(){
   }).join("");
   rosterTerm.addEventListener("change",()=>{
     state.rosterTermNo=Number(rosterTerm.value);
-    ensureRoster(state.rosterTermNo);
+    ensureRoster(state.rosterTermNo, rosterBody());
+    persistOnly();
+    renderRepMaster();
+  });
+  // ③ 명단 회의체 선택 (v46): 현재 회의록과 무관하게 입대의/임차 명단을 볼 수 있다
+  const rosterBodySel=document.getElementById("rosterBodySel");
+  if(rosterBodySel) rosterBodySel.addEventListener("change",()=>{
+    state.rosterBody=rosterBodySel.value==="임차"?"임차":"입대의";
+    ensureRoster(state.rosterTermNo||state.meeting.termNo, rosterBody());
     persistOnly();
     renderRepMaster();
   });
@@ -24501,6 +24532,7 @@ function renderMeetingControls(){
   if(el("meetingTime")) el("meetingTime").value=m.time;
   if(el("place")) el("place").value=m.place;
   if(el("rosterTermNo")) el("rosterTermNo").value=String(state.rosterTermNo||m.termNo);
+  if(el("rosterBodySel")) el("rosterBodySel").value=rosterBody();
   renderMeetingExtras();
 }
 
@@ -24584,9 +24616,9 @@ function renderRepMaster(){
   const roster=displayedRoster();
   const head=tb.parentElement && tb.parentElement.querySelector("thead tr");
   if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); const th2=document.createElement("th"); th2.textContent="임기"; head.appendChild(th2); } // v40 변동, v44 임기
-  const tenant=bodyOf()==="임차";
+  const tenant=rosterBody()==="임차";
   if(head && head.children[0]) head.children[0].textContent = tenant ? "번호 · 동" : "동";
-  const termKey=rosterKeyFor(state.rosterTermNo||state.meeting.termNo);
+  const termKey=rosterKeyFor(state.rosterTermNo||state.meeting.termNo, rosterBody());
   tb.innerHTML=roster.map((r,i)=>`
     <tr>
       <td class="center">${tenant
@@ -24625,7 +24657,7 @@ function renderAttendance(){
   }).join("") : `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--muted)">제${state.meeting.termNo}기 동대표 명단을 먼저 입력하세요.</td></tr>`;
 }
 function updateRosterField(termNo,index,key,val,rerenderAfter){
-  const roster=ensureRoster(termNo);
+  const roster=ensureRoster(termNo, rosterBody());
   roster[index][key]=val;
   persistOnly();
 
@@ -24653,7 +24685,8 @@ function updateAttendance(dong,checked){
 }
 function goToMeetingTermRoster(){
   state.rosterTermNo=state.meeting.termNo;
-  ensureRoster(state.rosterTermNo);
+  state.rosterBody=bodyOf(); // 현재 회의록의 회의체로 (v46)
+  ensureRoster(state.rosterTermNo, rosterBody());
   persistOnly();
   renderMeetingControls();
   renderRepMaster();
@@ -24661,11 +24694,12 @@ function goToMeetingTermRoster(){
 function copyPreviousRoster(){
   const target=Number(state.rosterTermNo||state.meeting.termNo);
   if(target<=1){ alert("이전 기수가 없습니다."); return; }
-  const prev=ensureRoster(target-1);
-  const current=ensureRoster(target);
+  const rb=rosterBody();
+  const prev=ensureRoster(target-1, rb);
+  const current=ensureRoster(target, rb);
   const hasData=current.some(r=>r.name.trim());
   if(hasData && !confirm(`제${target}기 명단에 입력된 내용이 있습니다. 이전 기수 명단으로 덮어쓰시겠습니까?`)) return;
-  state.rosters[rosterKeyFor(target)]=prev.map(r=>({dong:r.dong,role:r.role,name:r.name}));
+  state.rosters[rosterKeyFor(target, rb)]=prev.map(r=>({dong:r.dong,role:r.role,name:r.name,unit:r.unit||""}));
   persistOnly();
   renderRepMaster();
   if(target===state.meeting.termNo) syncRosterViews();
@@ -27111,7 +27145,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function termNo() { return (typeof state !== "undefined" && (state.rosterTermNo || (state.meeting && state.meeting.termNo))) || 5; }
   // 이력 키 (v44): 입대의 "5", 임차 "t5" — 명단 저장 키와 동일
-  function termKey(k) { if (k != null && k !== "") return String(k); return (typeof rosterKeyFor === "function") ? rosterKeyFor(termNo()) : String(termNo()); }
+  function termKey(k) { if (k != null && k !== "") return String(k); return (typeof rosterKeyFor === "function") ? rosterKeyFor(termNo(), (typeof rosterBody === "function" ? rosterBody() : undefined)) : String(termNo()); }
   function keyLabel(k) { k = String(k); return (k.charAt(0) === "t" ? "임차인대표회의 제" + k.slice(1) + "기" : "입주자대표회의 제" + k + "기"); }
   function entries(t) { t = termKey(t); if (!data) return []; if (!data.terms) data.terms = {}; if (!data.terms[t]) data.terms[t] = []; return data.terms[t]; }
   function sorted(t) { return entries(t).slice().sort(function (a, b) { return String(a.date || "").localeCompare(String(b.date || "")) || (a.dong - b.dong); }); }
