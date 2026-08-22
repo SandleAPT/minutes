@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v43</title>
+<title>산들마을 입주자대표회의 회의록 v44</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -704,7 +704,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v43 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v44 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -892,7 +892,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:110px">날짜</th><th class="center" style="width:70px">동</th><th style="width:110px">성명</th><th style="width:90px">직책</th><th style="width:110px">변동</th><th>비고</th><th style="width:60px"></th></tr></thead>
+            <thead><tr><th style="width:110px">날짜</th><th class="center" style="width:70px">동/번호</th><th style="width:110px">성명</th><th style="width:90px">직책</th><th style="width:130px">변동</th><th>비고</th><th class="center" style="width:60px">산입</th><th style="width:60px"></th></tr></thead>
             <tbody id="rosterHistoryTable"></tbody>
           </table>
         </div>
@@ -904,6 +904,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <select id="rhRole" title="직책(변동 후)"><option>대표</option><option>회장</option><option>감사</option><option>이사</option></select>
           <select id="rhEvent" title="변동"><option>취임</option><option>보궐취임</option><option>사퇴</option><option>직책변경</option><option>선출</option><option>기타</option></select>
           <input id="rhNote" placeholder="비고 (예: 3/11 일괄 사퇴 처리)" style="flex:1;min-width:160px">
+          <label class="small" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="취임·선출 기록을 임기 회차 계산에 넣을지 (보궐로 들어와 잔여임기 6개월 미만이면 끄세요)"><input type="checkbox" id="rhCount" checked> 임기 산입</label>
           <button class="btn soft" type="button" onclick="RosterHistory.add()">+ 추가</button>
         </div>
       </div>
@@ -24155,13 +24156,15 @@ function applyBodyTheme(){
 function ensureRoster(termNo){
   const key=rosterKeyFor(termNo);
   if(!state.rosters) state.rosters={};
-  if(!state.rosters[key]) state.rosters[key]=emptyRoster();
+  // 임차(키 "t…")는 동이 아니라 1~16 번호를 키로 쓴다(동은 unit에 선택 기재). (v44)
+  const seats = key.startsWith("t") ? Array.from({length:16},(_,i)=>i+1) : dongList;
+  if(!state.rosters[key]) state.rosters[key]=seats.map(d=>({dong:d,role:"대표",name:""}));
   // guarantee 16 rows
-  if(state.rosters[key].length!==16){
+  if(state.rosters[key].length!==16 || state.rosters[key].some((r,i)=>Number(r.dong)!==seats[i])){
     const existing=state.rosters[key]||[];
-    state.rosters[key]=dongList.map(d=>{
+    state.rosters[key]=seats.map(d=>{
       const found=existing.find(r=>Number(r.dong)===d);
-      return found?{dong:d,role:found.role||"대표",name:found.name||""}:{dong:d,role:"대표",name:""};
+      return found?{dong:d,role:found.role||"대표",name:found.name||"",unit:found.unit||""}:{dong:d,role:"대표",name:""};
     });
   }
   return state.rosters[key];
@@ -24179,11 +24182,17 @@ function currentAttendees(){
 function actorKey(rep){
   return String(rep.dong);
 }
-function actorLabel(rep){
+// 좌석 표기 (v44): 입대의는 "204동", 임차는 동을 알면 "204동", 모르면 "3번"(명단 번호)
+function seatLabel(rep){
+  if(!rep) return "";
+  if(bodyOf()==="임차"){ const u=String(rep.unit||"").trim(); return u ? `${u}동` : `${rep.dong}번`; }
   return `${rep.dong}동`;
 }
+function actorLabel(rep){
+  return `${seatLabel(rep)}`;
+}
 function actorFullLabel(rep){
-  return `${rep.dong}동 ${rep.name||"성명 미입력"}${rep.role?`(${rep.role})`:""}`;
+  return `${seatLabel(rep)} ${rep.name||"성명 미입력"}${rep.role?`(${rep.role})`:""}`;
 }
 function guestActorKey(guest){
   return `guest:${guest.id}`;
@@ -24566,10 +24575,15 @@ function renderRepMaster(){
   if(!tb) return;
   const roster=displayedRoster();
   const head=tb.parentElement && tb.parentElement.querySelector("thead tr");
-  if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); } // v40: 동별 최근 변동 표시
+  if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); const th2=document.createElement("th"); th2.textContent="임기"; head.appendChild(th2); } // v40 변동, v44 임기
+  const tenant=bodyOf()==="임차";
+  if(head && head.children[0]) head.children[0].textContent = tenant ? "번호 · 동" : "동";
+  const termKey=rosterKeyFor(state.rosterTermNo||state.meeting.termNo);
   tb.innerHTML=roster.map((r,i)=>`
     <tr>
-      <td class="center">${r.dong}동</td>
+      <td class="center">${tenant
+        ? `<span class="small">${r.dong}번</span> <input class="rep-input" style="width:64px" value="${esc(r.unit||"")}" placeholder="동" title="동(선택)" oninput="updateRosterField(${state.rosterTermNo},${i},'unit',this.value,false)" onchange="syncRosterViews()">`
+        : `${r.dong}동`}</td>
       <td>
         <select class="rep-input" onchange="updateRosterField(${state.rosterTermNo},${i},'role',this.value,true)">
           ${roleOptions(r.role)}
@@ -24580,7 +24594,8 @@ function renderRepMaster(){
           oninput="updateRosterField(${state.rosterTermNo},${i},'name',this.value,false)"
           onchange="syncRosterViews()">
       </td>
-      <td class="roster-change-cell">${window.RosterHistory ? RosterHistory.badge(state.rosterTermNo, r.dong) : ""}</td>
+      <td class="roster-change-cell">${window.RosterHistory ? RosterHistory.badge(termKey, r.dong) : ""}</td>
+      <td class="roster-term-cell">${window.RosterHistory && r.name ? RosterHistory.termsLabel(r.name, termKey) : ""}</td>
     </tr>
   `).join("");
   if(window.RosterHistory) RosterHistory.render();
@@ -24594,7 +24609,7 @@ function renderAttendance(){
   tb.innerHTML=existing.length ? existing.map((r)=>{
     const i=roster.indexOf(r);
     return `<tr>
-      <td class="center readonly-cell">${r.dong}동</td>
+      <td class="center readonly-cell">${seatLabel(r)}</td>
       <td class="readonly-cell">${esc(r.role)}</td>
       <td class="readonly-cell">${esc(r.name)}</td>
       <td class="center"><input class="attend" type="checkbox" ${att[String(r.dong)]?"checked":""} onchange="updateAttendance(${r.dong},this.checked)"></td>
@@ -24649,7 +24664,7 @@ function copyPreviousRoster(){
 }
 function attendeeOptions(selected=""){
   return currentAttendees().map(r=>{
-    const label=`${r.dong}동 ${r.name}${r.role?` · ${r.role}`:""}`;
+    const label=`${seatLabel(r)} ${r.name}${r.role?` · ${r.role}`:""}`;
     return `<option value="${esc(r.name)}" ${selected===r.name?"selected":""}>${esc(label)}</option>`;
   }).join("");
 }
@@ -25175,7 +25190,7 @@ function coverHtml(totalPages){
     const attended=!!attendance[String(r.dong)];
     return `
     <div class="cover-rep ${attended?"attended":"absent"}">
-      <span>${r.dong}동</span>
+      <span>${seatLabel(r)}</span>
       <span>${esc(r.role||"대표")}</span>
       <span>${esc(r.name)}</span>
       <span class="signature-cell" aria-label="${attended?"서명란":"미참석"}"></span>
@@ -25559,7 +25574,7 @@ function wordDocumentHtml(){
     if(!r) return `<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>`;
     const attended=!!attendance[String(r.dong)];
     const cls=attended?"":" class=\"absent\"";
-    return `<td${cls}>${r.dong}동</td><td${cls}>${esc(r.role||"대표")}</td><td${cls}>${esc(r.name)}</td><td class="${attended?"signature":"absent"}">${attended?"<span class=\"sign-line\">&nbsp;</span>":"미참석"}</td>`;
+    return `<td${cls}>${seatLabel(r)}</td><td${cls}>${esc(r.role||"대표")}</td><td${cls}>${esc(r.name)}</td><td class="${attended?"signature":"absent"}">${attended?"<span class=\"sign-line\">&nbsp;</span>":"미참석"}</td>`;
   };
   const rosterRows=Array.from({length:rowCount},(_,i)=>`<tr>${repCells(left[i])}${repCells(right[i])}</tr>`).join("");
   const guests=(state.meeting.guests||[]).filter(g=>g.name.trim()||g.position.trim());
@@ -25744,7 +25759,7 @@ function docxDocumentXml(){
       const attended=!!attendance[String(rep.dong)];
       const shade=attended?"FFFFFF":"F3F2EE";
       const color=attended?"2F332F":"888888";
-      cells.push({text:`${rep.dong}동`,index:start,size:18,shade,color,align:"center"});
+      cells.push({text:`${seatLabel(rep)}`,index:start,size:18,shade,color,align:"center"});
       cells.push({text:rep.role||"대표",index:start+1,size:18,shade,color,align:"center"});
       cells.push({text:rep.name,index:start+2,size:18,shade,color,align:"center"});
       cells.push({text:attended?"─────":"미참석",index:start+3,size:17,shade,color,align:"center"});
@@ -25943,7 +25958,7 @@ async function buildDocxBlob(){
   const rosterRows=[["동","직책","성명","서명","동","직책","성명","서명"].map((v,i)=>cell(p(v,{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),rosterWidths[i],{compact:true}))];
   for(let i=0;i<Math.max(left.length,right.length,1);i++){
     const row=[];[left[i],right[i]].forEach((rep,side)=>{
-      const values=rep?[`${rep.dong}동`,rep.role||"대표",rep.name,attendance[String(rep.dong)]?"":"미참석"]:[" "," "," "," "];
+      const values=rep?[`${seatLabel(rep)}`,rep.role||"대표",rep.name,attendance[String(rep.dong)]?"":"미참석"]:[" "," "," "," "];
       values.forEach((v,j)=>row.push(cell(p(v,{size:24,alignment:AlignmentType.CENTER,after:0,line:280,color:rep&&!attendance[String(rep.dong)]?"888888":INK}),rosterWidths[side*4+j],{shade:"FFFFFF",compact:true})));
     });rosterRows.push(row);
   }
@@ -27086,8 +27101,42 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function termNo() { return (typeof state !== "undefined" && (state.rosterTermNo || (state.meeting && state.meeting.termNo))) || 5; }
-  function entries(t) { t = String(t || termNo()); if (!data) return []; if (!data.terms) data.terms = {}; if (!data.terms[t]) data.terms[t] = []; return data.terms[t]; }
+  // 이력 키 (v44): 입대의 "5", 임차 "t5" — 명단 저장 키와 동일
+  function termKey(k) { if (k != null && k !== "") return String(k); return (typeof rosterKeyFor === "function") ? rosterKeyFor(termNo()) : String(termNo()); }
+  function keyLabel(k) { k = String(k); return (k.charAt(0) === "t" ? "임차인대표회의 제" + k.slice(1) + "기" : "입주자대표회의 제" + k + "기"); }
+  function entries(t) { t = termKey(t); if (!data) return []; if (!data.terms) data.terms = {}; if (!data.terms[t]) data.terms[t] = []; return data.terms[t]; }
   function sorted(t) { return entries(t).slice().sort(function (a, b) { return String(a.date || "").localeCompare(String(b.date || "")) || (a.dong - b.dong); }); }
+  // 임기 회차 (v44): 같은 회의체의 기수별 명단(state.rosters)에서 이름이 실린 기수를 모으고,
+  // 이력에서 '임기 산입 제외'(보궐 잔여임기 6개월 미만 등)로 표시된 기수는 뺀다.
+  function termsServed(name, key) {
+    name = String(name || "").trim(); if (!name || typeof state === "undefined" || !state.rosters) return [];
+    var tenant = String(termKey(key)).charAt(0) === "t";
+    var out = [];
+    Object.keys(state.rosters).forEach(function (k) {
+      if ((k.charAt(0) === "t") !== tenant) return;
+      var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
+      if ((state.rosters[k] || []).some(function (r) { return String(r.name || "").trim() === name; })) out.push(n);
+    });
+    // 이력 기반 보정: 산입 제외 플래그(countTerm===false)가 있는 기수 제거, 취임 기록만 있고 명단에 없는 기수 추가
+    if (data && data.terms) Object.keys(data.terms).forEach(function (k) {
+      if ((k.charAt(0) === "t") !== tenant) return;
+      var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
+      (data.terms[k] || []).forEach(function (e) {
+        if (String(e.name || "").trim() !== name) return;
+        if (e.countTerm === false) out = out.filter(function (x) { return x !== n; });
+        else if (/취임|선출/.test(e.event || "") && out.indexOf(n) < 0) out.push(n);
+      });
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+  function termsLabel(name, key) {
+    var ts = termsServed(name, key); if (!ts.length) return "";
+    var cur = parseInt(String(termKey(key)).replace(/^t/, ""), 10);
+    var idx = ts.indexOf(cur); var nth = idx >= 0 ? idx + 1 : ts.length;
+    var cls = nth >= 2 ? "rh-badge rh-etc" : "rh-badge rh-in";
+    var tip = "재임 기수: " + ts.map(function (n) { return "제" + n + "기"; }).join(", ") + (nth >= 2 ? " (중임 1회 — 연임 한도 도달)" : "");
+    return '<span class="' + cls + '" title="' + esc(tip) + '">' + nth + '회차' + (ts.length > 1 ? ' (제' + ts.join('·') + '기)' : '') + (nth >= 2 ? ' · 연임 한도' : '') + '</span>';
+  }
   function loadCache() { try { var c = JSON.parse(localStorage.getItem(CACHE_KEY)); if (c && c.data) { data = c.data; updatedAt = c.updatedAt || null; return true; } } catch (e) {} return false; }
   function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: updatedAt, data: data })); } catch (e) {} }
   function fetchCloud(cb) {
@@ -27112,17 +27161,23 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   function renderTable() {
     var tb = document.getElementById("rosterHistoryTable"); if (!tb) return;
-    var t = termNo();
-    var label = document.getElementById("rosterHistoryTermLabel"); if (label) label.textContent = "제" + t + "기 — 사퇴·보궐·직책 변경 기록 (" + entries(t).length + "건)";
+    var t = termKey();
+    var label = document.getElementById("rosterHistoryTermLabel"); if (label) label.textContent = keyLabel(t) + " — 사퇴·보궐·직책 변경 기록 (" + entries(t).length + "건)";
     var status = document.getElementById("rosterHistoryStatus"); if (status) status.innerHTML = dirty ? '<span style="color:#b07d10;font-weight:700">저장 안 된 변경 있음</span>' : (updatedAt ? '☁ ' + esc(fmtDate(String(updatedAt).slice(0, 10))) + ' 저장본' : (loading ? '불러오는 중…' : ''));
     var list = sorted(t);
     tb.innerHTML = list.length ? list.map(function (e) {
       return '<tr><td>' + esc(fmtDate(e.date)) + '</td><td class="center">' + esc(e.dong) + '동</td><td>' + esc(e.name || "") + '</td><td>' + esc(e.role || "") + '</td>' +
         '<td><span class="rh-badge ' + eventClass(e.event) + '">' + esc(eventLabel(e)) + '</span></td><td style="white-space:pre-wrap">' + esc(e.note || "") + '</td>' +
+        '<td class="center" title="임기 회차 산입 여부 (보궐 잔여임기 6개월 미만 등은 미산입)">' + (e.countTerm === false ? '<span class="small" style="color:#b85c52">미산입</span>' : (/취임|선출/.test(e.event || "") ? '<span class="small">산입</span>' : '')) + '</td>' +
         '<td><button class="btn danger tag-btn" type="button" onclick="RosterHistory.remove(\'' + esc(e.id) + '\')">삭제</button></td></tr>';
-    }).join("") : '<tr><td colspan="7" style="color:#999;text-align:center;padding:16px">기록이 없습니다. 아래에서 추가하세요.</td></tr>';
+    }).join("") : '<tr><td colspan="8" style="color:#999;text-align:center;padding:16px">기록이 없습니다. 아래에서 추가하세요.</td></tr>';
     var dongSel = document.getElementById("rhDong");
-    if (dongSel && !dongSel.options.length) { for (var d = 201; d <= 216; d++) { var o = document.createElement("option"); o.value = d; o.textContent = d + "동"; dongSel.appendChild(o); } }
+    var tenantKey = String(t).charAt(0) === "t";
+    if (dongSel && (dongSel.getAttribute("data-mode") !== (tenantKey ? "t" : "d"))) {
+      dongSel.innerHTML = ""; dongSel.setAttribute("data-mode", tenantKey ? "t" : "d");
+      if (tenantKey) { for (var s = 1; s <= 16; s++) { var o1 = document.createElement("option"); o1.value = s; o1.textContent = s + "번"; dongSel.appendChild(o1); } }
+      else { for (var d = 201; d <= 216; d++) { var o = document.createElement("option"); o.value = d; o.textContent = d + "동"; dongSel.appendChild(o); } }
+    }
     // 명단 표의 변동 칸 갱신
     document.querySelectorAll("#repMasterTable tr").forEach(function (tr) {
       var cell = tr.querySelector(".roster-change-cell"); var dongTxt = tr.querySelector("td") && tr.querySelector("td").textContent;
@@ -27136,6 +27191,9 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   window.RosterHistory = {
     render: render,
     badge: badge,
+    termsServed: termsServed,
+    termsLabel: termsLabel,
+    keyLabel: keyLabel,
     entries: function (t) { return sorted(t); },
     add: function () {
       // 공개 사이트: 이력 추가도 관리자 확인 후 진행 (v42)
@@ -27147,9 +27205,10 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var fromRole = (document.getElementById("rhFromRole") || {}).value || "";
       var event = (document.getElementById("rhEvent") || {}).value || "";
       var note = ((document.getElementById("rhNote") || {}).value || "").trim();
-      if (!date || !dong) { if (typeof showToast === "function") showToast("날짜와 동을 입력하세요", "error"); return; }
+      var countEl = document.getElementById("rhCount"); var countTerm = countEl ? !!countEl.checked : true; // 임기 산입 (v44)
+      if (!date || !dong) { if (typeof showToast === "function") showToast("날짜와 동(번호)을 입력하세요", "error"); return; }
       if (data === null) data = { terms: {} };
-      entries().push({ id: uid(), date: date, dong: dong, name: name, role: role, fromRole: fromRole, event: event, note: note });
+      entries().push({ id: uid(), date: date, dong: dong, name: name, role: role, fromRole: fromRole, event: event, note: note, countTerm: countTerm });
       dirty = true; saveCache(); renderTable();
       var n = document.getElementById("rhName"); if (n) n.value = ""; var nt = document.getElementById("rhNote"); if (nt) nt.value = "";
     },
