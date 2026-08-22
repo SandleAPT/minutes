@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v30</title>
+<title>산들마을 입주자대표회의 회의록 v31</title>
 <style>
 :root{
   --bg:#fff;
@@ -285,6 +285,19 @@ td.center,th.center{text-align:center}
 .topic-tag{border:1px solid #d3dccd;background:#eef2ea;color:#3f5a3a;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;line-height:1.4}
 .topic-tag.on{background:var(--gold);border-color:var(--gold);color:#2f2b20}
 .topic-tag:hover{filter:brightness(.96)}
+/* 주제 흐름 요약 (v31) */
+.topic-flow{border:1px solid #d9d4c8;border-left:5px solid #7f927a;border-radius:12px;background:#f7f9f4;padding:14px 16px;margin-bottom:14px;font-size:13px;line-height:1.6}
+.topic-flow.stale{border-left-color:#d8a944;background:#fcf8ec}
+.topic-flow.empty{background:#faf8f3;color:#6b6656;border-left-color:#c9c2b2}
+.topic-flow-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px}
+.topic-flow-head b{font-size:14px}
+.topic-flow-ok{color:#4f7a47;font-weight:700}
+.topic-flow-text p{margin:0 0 8px}
+.topic-flow-text ul{margin:0 0 8px 18px;padding:0}
+.topic-flow-text li{margin:2px 0}
+.topic-flow-h{font-weight:800;margin:10px 0 4px;color:#3f5a3a}
+.topic-flow-stale{margin-top:10px;padding:9px 12px;border-radius:9px;background:#fff3cd;border:1px solid #eacb74;color:#5c4a12;font-size:12px}
+.topic-flow-stale ul{margin:6px 0 0 18px;padding:0}
 
 
 /* 참석/서명 표현 */
@@ -658,7 +671,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v30 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v31 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -874,6 +887,7 @@ td.center,th.center{text-align:center}
         </div>
         <div id="topicChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
         <div id="topicSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+        <div id="topicFlow"></div>
         <div id="topicResult"></div>
       </div>
     </section>
@@ -26308,18 +26322,20 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
 
   var listCache = null;
+  // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
+  function isSysRecord(it) { return !!it && String(it.id || "").indexOf("topic_summaries") === 0; }
   function staticListFallback() {
     var m = window.StaticData && window.StaticData.map;
     if (!m) return [];
     return Object.keys(m).map(function (k) {
       var it = m[k];
       return { id: it.id, name: it.name, date: it.date, updatedAt: it.updatedAt };
-    });
+    }).filter(function (it) { return !isSysRecord(it); });
   }
   function fetchList(cb) {
     var cfg = loadCfg();
     apiGet(cfg, { action: "list", token: cfg.token }).then(function (res) {
-      listCache = (res && res.ok) ? (res.items || []) : staticListFallback();
+      listCache = ((res && res.ok) ? (res.items || []) : staticListFallback()).filter(function (it) { return !isSysRecord(it); });
       updateCloudLatestInfo();
       if (cb) cb();
     }).catch(function () { listCache = staticListFallback(); updateCloudLatestInfo(); if (cb) cb(); });
@@ -26555,14 +26571,24 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   window.autoTags = autoTags; window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
 
   var cache = null, sel = [], query = "", sortDesc = false;
+  // ---- 시스템 레코드 (주제 흐름 요약 저장소) ----
+  // 요약문은 기존 저장 API로 특수 레코드(id=topic_summaries_v1)에 보관한다. 회의록 목록·주제 집계에서는 제외. (v31)
+  var SUM_ID = "topic_summaries_v1";
+  function isSystemRecord(it) { return !!it && String(it.id || "").indexOf("topic_summaries") === 0; }
+  window.isSystemRecord = isSystemRecord;
+  function apiPost(payload) { var c = cfg(); payload.token = c.token; return fetch(c.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); }); }
+
   function pushRecord(out, rec, fallbackName) {
+    if (isSystemRecord(rec)) return;
     try {
       var st = JSON.parse(rec.json || "{}");
       var mn = (st.meeting && st.meeting.name) || rec.name || fallbackName || "";
       var md = (st.meeting && st.meeting.date) || rec.date || "";
-      (st.agendas || []).forEach(function (a) { out.push({ mName: mn, mDate: md, agenda: a }); });
+      (st.agendas || []).forEach(function (a, i) { out.push({ mId: rec.id || "", mName: mn, mDate: md, agenda: a, idx: i }); });
     } catch (e) {}
   }
+  // 안건 고유 키: 회의록 id + 안건 id. 요약이 어떤 안건까지 반영했는지 기록하는 데 쓴다.
+  function agendaKey(x) { return (x.mId || "") + "/" + (x.agenda && x.agenda.id ? x.agenda.id : ("i" + x.idx)); }
   // 확정분은 data.json에서 즉시 사용, data.json에 없거나 클라우드에서 더 최근에
   // 수정된 회의록만 클라우드에서 개별로 받아온다. (10년치가 쌓여도 요청 수는 일정)
   function loadAll(cb) {
@@ -26582,6 +26608,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       cache = out; cb(); return;
     }
     var toFetch = [];
+    items = items.filter(function (it) { return !isSystemRecord(it); });
     items.forEach(function (it) {
       var s = sd[it.id];
       var cloudNewer = s && it.updatedAt && s.updatedAt && (new Date(it.updatedAt) - new Date(s.updatedAt) > 1000);
@@ -26607,6 +26634,115 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     var a = x.agenda, q = query.toLowerCase();
     return [a.title || "", a.summary || "", a.decision || "", x.mName || ""].join(" ").toLowerCase().indexOf(q) >= 0;
   }
+  // ---- 주제 흐름 요약 (v31) ----
+  // summaries = { version, updatedAt, topics: { "<주제>" | "__all__": { text, basedOn:[안건키...], count, updatedAt, by } } }
+  // 요약문은 Claude Code가 작성해 TopicSummaries.save()로 저장한다. 앱은 표시와 "이후 추가된 안건(미반영)" 판정만 담당.
+  var summaries = null, summariesLoading = false;
+  function loadSummaries(cb) {
+    if (summariesLoading) return;
+    summariesLoading = true;
+    apiGet({ action: "get", id: SUM_ID }).then(function (r) {
+      var s = null;
+      try { if (r && r.ok && r.item) s = JSON.parse(r.item.json || "{}"); } catch (e) {}
+      summaries = (s && s.topics) ? s : { version: 1, topics: {} };
+      summariesLoading = false; if (cb) cb();
+    }).catch(function () { summaries = { version: 1, topics: {} }; summariesLoading = false; if (cb) cb(); });
+  }
+  function itemsFor(tag) {
+    return (cache || []).filter(function (x) { return tag === "__all__" || tagsOf(x.agenda).indexOf(tag) >= 0; })
+      .sort(function (a, b) { return String(a.mDate).localeCompare(String(b.mDate)); });
+  }
+  function keysFor(tag) { return itemsFor(tag).map(agendaKey); }
+  function staleInfo(tag) {
+    var s = summaries && summaries.topics && summaries.topics[tag];
+    var cur = itemsFor(tag);
+    if (!s) return { has: false, total: cur.length, added: cur, removed: [] };
+    var based = {}; (s.basedOn || []).forEach(function (k) { based[k] = 1; });
+    var curSet = {}; cur.forEach(function (x) { curSet[agendaKey(x)] = 1; });
+    return {
+      has: true, s: s, total: cur.length,
+      added: cur.filter(function (x) { return !based[agendaKey(x)]; }),
+      removed: (s.basedOn || []).filter(function (k) { return !curSet[k]; })
+    };
+  }
+  function fmtDate(iso) { if (!iso) return ""; var d = new Date(iso); if (isNaN(d.getTime())) return String(iso).slice(0, 10); var p = function (n) { return String(n).padStart(2, "0"); }; return d.getFullYear() + "." + p(d.getMonth() + 1) + "." + p(d.getDate()); }
+  // 요약문 간이 서식: "## " 소제목, "- " 글머리, 빈 줄 = 문단 구분
+  function fmtText(t) {
+    var lines = String(t || "").split(/\r?\n/), html = "", inList = false;
+    var closeList = function () { if (inList) { html += "</ul>"; inList = false; } };
+    lines.forEach(function (ln) {
+      var s = ln.trim();
+      if (!s) { closeList(); return; }
+      if (s.indexOf("## ") === 0) { closeList(); html += '<div class="topic-flow-h">' + esc(s.slice(3)) + '</div>'; return; }
+      if (/^[-•·] /.test(s)) { if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + esc(s.slice(2)) + "</li>"; return; }
+      closeList(); html += "<p>" + esc(s) + "</p>";
+    });
+    closeList();
+    return html;
+  }
+  function renderFlow() {
+    var flow = document.getElementById("topicFlow");
+    if (!flow) return;
+    if (sel.length > 1 || query) { flow.innerHTML = ""; return; }
+    if (summaries === null) { flow.innerHTML = '<div class="topic-flow empty">주제 흐름 요약 불러오는 중…</div>'; loadSummaries(render); return; }
+    var tag = sel.length ? sel[0] : "__all__";
+    var label = sel.length ? sel[0] : "전체";
+    var info = staleInfo(tag);
+    var hint = 'Claude Code(PC)에서 <b>“요약 갱신해줘”</b>라고 하면 새 안건만 반영해 갱신됩니다.';
+    if (!info.has) {
+      flow.innerHTML = '<div class="topic-flow empty"><b>주제 흐름 요약 — ' + esc(label) + '</b><span class="small"> · 안건 ' + info.total + '건</span><div style="margin-top:4px">아직 이 주제의 흐름 요약이 없습니다. ' + hint + '</div></div>';
+      return;
+    }
+    var s = info.s;
+    var stale = "";
+    if (info.added.length || info.removed.length) {
+      var list = info.added.slice(0, 6).map(function (x) { return '<li>' + esc(x.mDate) + ' · ' + esc(x.agenda.title || "(제목 없음)") + '</li>'; }).join("");
+      if (info.added.length > 6) list += '<li>… 외 ' + (info.added.length - 6) + '건</li>';
+      stale = '<div class="topic-flow-stale">⚠ 요약 작성 이후 ' +
+        (info.added.length ? '안건 <b>' + info.added.length + '건이 추가</b>됨' : '') +
+        (info.added.length && info.removed.length ? ', ' : '') +
+        (info.removed.length ? '반영됐던 안건 ' + info.removed.length + '건이 삭제·변경됨' : '') +
+        ' — <b>요약 미반영</b>. ' + hint + (list ? '<ul>' + list + '</ul>' : '') + '</div>';
+    }
+    flow.innerHTML = '<div class="topic-flow' + (stale ? ' stale' : '') + '">' +
+      '<div class="topic-flow-head"><b>주제 흐름 요약 — ' + esc(label) + '</b>' +
+        '<span class="small">기준 안건 ' + (s.count != null ? s.count : (s.basedOn || []).length) + '건 · ' + esc(fmtDate(s.updatedAt)) + ' 작성' + (s.by ? ' · ' + esc(s.by) : '') + (stale ? '' : ' · <span class="topic-flow-ok">최신</span>') + '</span></div>' +
+      '<div class="topic-flow-text">' + fmtText(s.text) + '</div>' + stale + '</div>';
+  }
+  window.TopicSummaries = {
+    id: SUM_ID,
+    // 데이터(안건 전체 + 요약)가 준비되면 cb 실행
+    ready: function (cb) { var go = function () { if (summaries === null) loadSummaries(cb); else if (cb) cb(); }; if (cache === null) loadAll(go); else go(); },
+    get: function () { return summaries; },
+    tags: function () { return allTags(); },
+    keysFor: keysFor,
+    // 주제별 현황: {has, total, added, removed} (added/removed는 건수)
+    stale: function () { var out = {}; allTags().concat(["__all__"]).forEach(function (t) { var i = staleInfo(t); out[t] = { has: i.has, total: i.total, added: i.added.length, removed: i.removed.length, updatedAt: i.has ? i.s.updatedAt : null }; }); return out; },
+    // 요약 작성용 원문: 주제의 안건을 시간순으로. onlyNew=true면 요약 이후 추가된 안건만
+    dump: function (tag, onlyNew) {
+      var info = staleInfo(tag);
+      var arr = onlyNew ? info.added : itemsFor(tag);
+      return arr.map(function (x) { return { key: agendaKey(x), meeting: x.mName, date: x.mDate, title: x.agenda.title || "", tags: tagsOf(x.agenda), summary: x.agenda.summary || "", decision: x.agenda.decision || "", followup: x.agenda.followup || "" }; });
+    },
+    // 저장: topics = { "<주제>": "요약문" | {text:"요약문"} }. basedOn/count/updatedAt은 현재 안건 기준으로 자동 기록. 관리자 비밀번호 필요.
+    save: function (topics, by) {
+      var key = ""; try { key = localStorage.getItem("sandle_admin_key") || ""; } catch (e) {}
+      if (!key) return Promise.reject(new Error("관리자 비밀번호가 이 기기에 없습니다"));
+      var cur = summaries || { version: 1, topics: {} };
+      var now = new Date().toISOString();
+      Object.keys(topics || {}).forEach(function (t) {
+        var v = topics[t]; var text = (v && typeof v === "object") ? String(v.text || "") : String(v || "");
+        var keys = keysFor(t);
+        cur.topics[t] = { text: text, basedOn: keys, count: keys.length, updatedAt: now, by: by || "Claude Code" };
+      });
+      cur.version = 1; cur.updatedAt = now;
+      var record = { id: SUM_ID, name: "주제 흐름 요약 (시스템)", date: "", json: JSON.stringify(cur) };
+      return apiPost({ action: "save", record: record, adminKey: key }).then(function (res) {
+        if (!(res && res.ok)) throw new Error((res && res.error) || "저장 실패");
+        summaries = cur; render(); return res;
+      });
+    }
+  };
   function tagChip(t, on) {
     return '<button type="button" class="topic-tag' + (on ? ' on' : '') + '" onclick="Topic.pick(this.getAttribute(\'data-c\'))" data-c="' + esc(t) + '">' + esc(t) + '</button>';
   }
@@ -26639,6 +26775,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var what = sel.length ? sel.map(function (t) { return "‘" + esc(t) + "’"; }).join(" + ") + (sel.length > 1 ? " 을(를) 모두 포함하는 안건" : " 안건") : "전체 안건";
       summary.innerHTML = what + " <b>" + items.length + "건</b>" + (query ? ' · 검색 “' + esc(query) + '”' : '') + (sel.length > 1 ? ' <span style="color:#aaa">— 주제를 하나씩 더 누르면 범위가 좁혀집니다</span>' : '');
     }
+    renderFlow();
     result.innerHTML = items.length ? items.map(function (x) {
       var a = x.agenda, ts = tagsOf(x.agenda);
       var body = a.decision || "";
