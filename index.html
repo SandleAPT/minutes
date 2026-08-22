@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v41</title>
+<title>산들마을 입주자대표회의 회의록 v42</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -699,7 +699,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v41 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v42 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -26576,7 +26576,16 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     apiGet(cfg, { action: "get", token: cfg.token, id: id }).then(function (r) { cb((r && r.ok && r.item) ? r.item : null); }).catch(function () { cb(null); });
   }
 
+  // 관리자 확인 게이트 (v42): 공개 사이트이므로 수정·삭제성 동작은 먼저 관리자 비밀번호를 요구한다. cb(true)면 진행.
+  function requireAdmin(cb) {
+    var k = getAdminKey(true);
+    if (k) { cb(true); return; }
+    if (promptUnsupported) { askAdminKeyDialog(function () { cb(true); }); return; }
+    toast("관리자 비밀번호가 필요합니다"); cb(false);
+  }
+
   window.Cloud = {
+    requireAdmin: requireAdmin,
     saveSystemRecord: saveSystemRecord,
     getSystemRecord: getSystemRecord,
     openMenu: openMenu,
@@ -27065,6 +27074,8 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     badge: badge,
     entries: function (t) { return sorted(t); },
     add: function () {
+      // 공개 사이트: 이력 추가도 관리자 확인 후 진행 (v42)
+      if (window.Cloud && Cloud.requireAdmin && !RosterHistory._adminOk) { Cloud.requireAdmin(function (ok) { if (!ok) return; RosterHistory._adminOk = true; RosterHistory.add(); RosterHistory._adminOk = false; }); return; }
       var date = (document.getElementById("rhDate") || {}).value || "";
       var dong = parseInt((document.getElementById("rhDong") || {}).value, 10);
       var name = ((document.getElementById("rhName") || {}).value || "").trim();
@@ -27079,8 +27090,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var n = document.getElementById("rhName"); if (n) n.value = ""; var nt = document.getElementById("rhNote"); if (nt) nt.value = "";
     },
     remove: function (id) {
+      // 공개 사이트: 삭제는 관리자 확인 후 진행 (v42)
+      if (window.Cloud && Cloud.requireAdmin && !RosterHistory._adminOk) { Cloud.requireAdmin(function (ok) { if (!ok) return; RosterHistory._adminOk = true; RosterHistory.remove(id); RosterHistory._adminOk = false; }); return; }
       var list = entries(); var i = list.findIndex(function (e) { return e.id === id; });
-      if (i < 0) return; if (!confirm("이 이력을 삭제할까요?")) return;
+      if (i < 0) return;
+      var sure = true; try { sure = confirm("이 이력을 삭제할까요? (☁ 이력 저장을 눌러야 클라우드에 반영됩니다)"); } catch (e) { sure = true; }
+      if (!sure) return;
       list.splice(i, 1); dirty = true; saveCache(); renderTable();
     },
     // 외부(Claude Code 등)에서 일괄 설정: RosterHistory.setEntries(5, [...]) 후 save()
