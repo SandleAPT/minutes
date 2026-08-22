@@ -24207,7 +24207,7 @@ function applyBodyTheme(){
   const chip=document.getElementById("bodyChip");
   if(chip) chip.textContent=(b==="임차"?"◇ ":"◆ ")+bodyLabel(b);
   const help=document.getElementById("termHelp");
-  if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다. 기수 기간은 입대의와 다르며(선출 시부터 2년), 자료로 확인된 기수만 날짜를 표기하고 나머지는 "기간 미확인"으로 둡니다." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
+  if(help) help.textContent = b==="임차" ? "임차인대표회의는 기수를 직접 선택합니다. 기수 기간은 입대의와 다르며(선출 시부터 2년), 자료로 확인된 기수만 날짜를 표기하고 나머지는 「기간 미확인」으로 둡니다." : "오늘 날짜를 기준으로 기수가 자동 선택됩니다. 직접 변경할 수 있습니다.";
 }
 // ③에서 보는 명단의 회의체 (v46): 현재 회의록의 회의체와 별개로 선택 가능. 미설정이면 현재 회의록의 회의체.
 function rosterBody(){ return (state && state.rosterBody==="임차") ? "임차" : (state && state.rosterBody==="입대의") ? "입대의" : bodyOf(); }
