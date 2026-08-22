@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v39</title>
+<title>산들마을 입주자대표회의 회의록 v40</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -319,6 +319,13 @@ td.center,th.center{text-align:center}
 .topic-flow-status{background:#fff;border:1px solid #cfd9c9;border-left:4px solid #4f7a47;border-radius:10px;padding:9px 12px;margin:0 0 10px;font-weight:600;line-height:1.55}
 .topic-flow-status-label{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:#4f7a47;border-radius:6px;padding:1px 7px;margin-right:8px;vertical-align:1px}
 .topic-flow-tl-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0 4px}
+/* 명단 변동 이력 (v40) */
+.roster-history-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:#fbfaf6}
+.roster-history-add input,.roster-history-add select{padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
+.rh-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid #d8d3c8;background:#f3f1ea;color:#5c5b56;margin:1px 2px 1px 0;white-space:nowrap}
+.rh-badge.rh-out{background:#fbeaea;border-color:#e7b8b3;color:#8a433d}
+.rh-badge.rh-in{background:#e9f3e6;border-color:#bfd8b7;color:#3f6b37}
+.roster-change-cell{font-size:11px;max-width:260px}
 
 
 /* 참석/서명 표현 */
@@ -692,7 +699,7 @@ td.center,th.center{text-align:center}
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v39 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v40 · 2026.08.22 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -854,6 +861,36 @@ td.center,th.center{text-align:center}
             <thead><tr><th class="center">동</th><th>직책</th><th>성명</th></tr></thead>
             <tbody id="repMasterTable"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 명단 변동 이력 (v40): 기수 안에서 사퇴·보궐·직책 변경을 시간순으로 기록. 클라우드 공용 저장(관리자만 저장). -->
+      <div class="card" id="rosterHistoryCard">
+        <div class="card-title">
+          <div><h3>명단 변동 이력</h3><small id="rosterHistoryTermLabel">선택한 기수의 사퇴·보궐·직책 변경 기록</small></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="small" id="rosterHistoryStatus"></span>
+            <button class="btn gold" type="button" onclick="RosterHistory.save()">☁ 이력 저장</button>
+          </div>
+        </div>
+        <div class="mini-help" style="margin-bottom:10px">
+          회의록마다 그 시점의 명단이 함께 저장되므로 이 이력은 <b>누가 언제 바뀌었는지</b>를 한눈에 보기 위한 기록입니다.
+          위 명단 표의 <b>변동</b> 칸에도 동별 최근 변동이 표시됩니다. 저장하면 모든 기기·열람자에게 반영됩니다.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:110px">날짜</th><th class="center" style="width:70px">동</th><th style="width:110px">성명</th><th style="width:90px">직책</th><th style="width:110px">변동</th><th>비고</th><th style="width:60px"></th></tr></thead>
+            <tbody id="rosterHistoryTable"></tbody>
+          </table>
+        </div>
+        <div class="roster-history-add">
+          <input type="date" id="rhDate" title="날짜">
+          <select id="rhDong" title="동"></select>
+          <input id="rhName" placeholder="성명" style="width:110px">
+          <select id="rhRole" title="직책"><option>대표</option><option>회장</option><option>감사</option><option>이사</option></select>
+          <select id="rhEvent" title="변동"><option>취임</option><option>보궐취임</option><option>사퇴</option><option>직책변경</option><option>선출</option><option>기타</option></select>
+          <input id="rhNote" placeholder="비고 (예: 3/11 일괄 사퇴 처리)" style="flex:1;min-width:160px">
+          <button class="btn soft" type="button" onclick="RosterHistory.add()">+ 추가</button>
         </div>
       </div>
     </section>
@@ -24319,6 +24356,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
+    if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
   });
 });
@@ -24480,6 +24518,8 @@ function renderRepMaster(){
   const tb=document.getElementById("repMasterTable");
   if(!tb) return;
   const roster=displayedRoster();
+  const head=tb.parentElement && tb.parentElement.querySelector("thead tr");
+  if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); } // v40: 동별 최근 변동 표시
   tb.innerHTML=roster.map((r,i)=>`
     <tr>
       <td class="center">${r.dong}동</td>
@@ -24493,8 +24533,10 @@ function renderRepMaster(){
           oninput="updateRosterField(${state.rosterTermNo},${i},'name',this.value,false)"
           onchange="syncRosterViews()">
       </td>
+      <td class="roster-change-cell">${window.RosterHistory ? RosterHistory.badge(state.rosterTermNo, r.dong) : ""}</td>
     </tr>
   `).join("");
+  if(window.RosterHistory) RosterHistory.render();
 }
 function renderAttendance(){
   const tb=document.getElementById("attendanceTable");
@@ -26346,7 +26388,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
 
   var listCache = null, rawListCache = null, rawListAt = 0;
   // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
-  function isSysRecord(it) { return !!it && String(it.id || "").indexOf("topic_summaries") === 0; }
+  function isSysRecord(it) { return !!it && /^(topic_summaries|roster_history)/.test(String(it.id || "")); }
   function staticListFallback() {
     var m = window.StaticData && window.StaticData.map;
     if (!m) return [];
@@ -26514,7 +26556,28 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     return true;
   }
 
+  // 시스템 레코드(명단 변동 이력 등) 저장 — 관리자 비밀번호 필요. cb(ok, errorMessage) (v40)
+  function saveSystemRecord(id, name, json, cb, retried) {
+    var key = getAdminKey(true);
+    if (!key) {
+      if (promptUnsupported) { askAdminKeyDialog(function () { saveSystemRecord(id, name, json, cb, retried); }); return; }
+      toast("저장 취소됨 — 관리자 비밀번호가 필요합니다"); if (cb) cb(false, "no_key"); return;
+    }
+    toast("클라우드에 저장 중...");
+    apiPost(loadCfg(), { action: "save", record: { id: id, name: name, date: "", json: json }, adminKey: key }).then(function (res) {
+      if (res && res.ok) { toast("클라우드 저장 완료"); if (cb) cb(true); }
+      else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); if (!retried) saveSystemRecord(id, name, json, cb, true); else if (cb) cb(false, "admin_required"); }
+      else { toast("저장 실패: " + ((res && res.error) || "알 수 없음")); if (cb) cb(false, res && res.error); }
+    }).catch(function (e) { toast("저장 오류: " + e.message); if (cb) cb(false, e.message); });
+  }
+  function getSystemRecord(id, cb) {
+    var cfg = loadCfg();
+    apiGet(cfg, { action: "get", token: cfg.token, id: id }).then(function (r) { cb((r && r.ok && r.item) ? r.item : null); }).catch(function () { cb(null); });
+  }
+
   window.Cloud = {
+    saveSystemRecord: saveSystemRecord,
+    getSystemRecord: getSystemRecord,
     openMenu: openMenu,
     saveNow: function () { doSave(); },
     _save: function () { closeOverlay(); doSave(); },
@@ -26609,7 +26672,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   // ---- 시스템 레코드 (주제 흐름 요약 저장소) ----
   // 요약문은 기존 저장 API로 특수 레코드(id=topic_summaries_v1)에 보관한다. 회의록 목록·주제 집계에서는 제외. (v31)
   var SUM_ID = "topic_summaries_v1";
-  function isSystemRecord(it) { return !!it && String(it.id || "").indexOf("topic_summaries") === 0; }
+  function isSystemRecord(it) { return !!it && /^(topic_summaries|roster_history)/.test(String(it.id || "")); }
   window.isSystemRecord = isSystemRecord;
   function apiPost(payload) { var c = cfg(); payload.token = c.token; return fetch(c.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); }); }
 
@@ -26935,6 +26998,98 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
   // ⑥을 열기 전에 미리 준비(사본 즉시 구성 + 클라우드 변경분 확인 + 요약 사본). 열 때 바로 그려진다. (v34)
   setTimeout(function () { if (cache === null) loadAll(function () { loadSummaries(function () {}); }); }, 1500);
+})();
+</script>
+
+<script>
+// ---- 명단 변동 이력 (v40) ----
+// 기수별로 사퇴·보궐취임·직책변경을 시간순 기록. 클라우드 시스템 레코드(roster_history_v1)에 공용 저장, 이 브라우저에 사본 캐시.
+// 회의록마다 저장되는 명단 스냅샷은 그대로 두고, "누가 언제 바뀌었는지"를 한눈에 보기 위한 보조 기록.
+(function () {
+  "use strict";
+  var REC_ID = "roster_history_v1", CACHE_KEY = "sandle_roster_history_cache_v1";
+  var data = null, dirty = false, loading = false, updatedAt = null; // data = { terms: { "5": [entry...] } }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function termNo() { return (typeof state !== "undefined" && (state.rosterTermNo || (state.meeting && state.meeting.termNo))) || 5; }
+  function entries(t) { t = String(t || termNo()); if (!data) return []; if (!data.terms) data.terms = {}; if (!data.terms[t]) data.terms[t] = []; return data.terms[t]; }
+  function sorted(t) { return entries(t).slice().sort(function (a, b) { return String(a.date || "").localeCompare(String(b.date || "")) || (a.dong - b.dong); }); }
+  function loadCache() { try { var c = JSON.parse(localStorage.getItem(CACHE_KEY)); if (c && c.data) { data = c.data; updatedAt = c.updatedAt || null; return true; } } catch (e) {} return false; }
+  function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: updatedAt, data: data })); } catch (e) {} }
+  function fetchCloud(cb) {
+    if (loading || !window.Cloud || !Cloud.getSystemRecord) { if (cb) cb(); return; }
+    loading = true;
+    Cloud.getSystemRecord(REC_ID, function (item) {
+      loading = false;
+      if (item) { try { var d = JSON.parse(item.json || "{}"); if (d && d.terms) { if (!dirty) { data = d; updatedAt = item.updatedAt || null; saveCache(); } } } catch (e) {} }
+      if (data === null) data = { terms: {} };
+      if (cb) cb();
+    });
+  }
+  function fmtDate(d) { if (!d) return ""; var m = String(d).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/); if (!m) return esc(d); return m[1] + "." + m[2] + (m[3] ? "." + m[3] : ""); }
+  function eventClass(ev) { return ev === "사퇴" ? "rh-out" : (/취임|선출/.test(ev) ? "rh-in" : "rh-etc"); }
+  // 명단 표 '변동' 칸: 해당 동의 최근 변동 1~2건
+  function badge(t, dong) {
+    var list = sorted(t).filter(function (e) { return Number(e.dong) === Number(dong); });
+    if (!list.length) return "";
+    return list.slice(-2).map(function (e) { return '<span class="rh-badge ' + eventClass(e.event) + '" title="' + esc(e.note || "") + '">' + esc(fmtDate(e.date)) + ' ' + esc(e.event) + (e.name ? ' · ' + esc(e.name) : '') + '</span>'; }).join(" ");
+  }
+  function renderTable() {
+    var tb = document.getElementById("rosterHistoryTable"); if (!tb) return;
+    var t = termNo();
+    var label = document.getElementById("rosterHistoryTermLabel"); if (label) label.textContent = "제" + t + "기 — 사퇴·보궐·직책 변경 기록 (" + entries(t).length + "건)";
+    var status = document.getElementById("rosterHistoryStatus"); if (status) status.innerHTML = dirty ? '<span style="color:#b07d10;font-weight:700">저장 안 된 변경 있음</span>' : (updatedAt ? '☁ ' + esc(fmtDate(String(updatedAt).slice(0, 10))) + ' 저장본' : (loading ? '불러오는 중…' : ''));
+    var list = sorted(t);
+    tb.innerHTML = list.length ? list.map(function (e) {
+      return '<tr><td>' + esc(fmtDate(e.date)) + '</td><td class="center">' + esc(e.dong) + '동</td><td>' + esc(e.name || "") + '</td><td>' + esc(e.role || "") + '</td>' +
+        '<td><span class="rh-badge ' + eventClass(e.event) + '">' + esc(e.event) + '</span></td><td style="white-space:pre-wrap">' + esc(e.note || "") + '</td>' +
+        '<td><button class="btn danger tag-btn" type="button" onclick="RosterHistory.remove(\'' + esc(e.id) + '\')">삭제</button></td></tr>';
+    }).join("") : '<tr><td colspan="7" style="color:#999;text-align:center;padding:16px">기록이 없습니다. 아래에서 추가하세요.</td></tr>';
+    var dongSel = document.getElementById("rhDong");
+    if (dongSel && !dongSel.options.length) { for (var d = 201; d <= 216; d++) { var o = document.createElement("option"); o.value = d; o.textContent = d + "동"; dongSel.appendChild(o); } }
+    // 명단 표의 변동 칸 갱신
+    document.querySelectorAll("#repMasterTable tr").forEach(function (tr) {
+      var cell = tr.querySelector(".roster-change-cell"); var dongTxt = tr.querySelector("td") && tr.querySelector("td").textContent;
+      if (cell && dongTxt) cell.innerHTML = badge(t, parseInt(dongTxt, 10));
+    });
+  }
+  function render() {
+    if (data === null) { if (!loadCache()) data = { terms: {} }; fetchCloud(renderTable); }
+    renderTable();
+  }
+  window.RosterHistory = {
+    render: render,
+    badge: badge,
+    entries: function (t) { return sorted(t); },
+    add: function () {
+      var date = (document.getElementById("rhDate") || {}).value || "";
+      var dong = parseInt((document.getElementById("rhDong") || {}).value, 10);
+      var name = ((document.getElementById("rhName") || {}).value || "").trim();
+      var role = (document.getElementById("rhRole") || {}).value || "";
+      var event = (document.getElementById("rhEvent") || {}).value || "";
+      var note = ((document.getElementById("rhNote") || {}).value || "").trim();
+      if (!date || !dong) { if (typeof showToast === "function") showToast("날짜와 동을 입력하세요", "error"); return; }
+      if (data === null) data = { terms: {} };
+      entries().push({ id: uid(), date: date, dong: dong, name: name, role: role, event: event, note: note });
+      dirty = true; saveCache(); renderTable();
+      var n = document.getElementById("rhName"); if (n) n.value = ""; var nt = document.getElementById("rhNote"); if (nt) nt.value = "";
+    },
+    remove: function (id) {
+      var list = entries(); var i = list.findIndex(function (e) { return e.id === id; });
+      if (i < 0) return; if (!confirm("이 이력을 삭제할까요?")) return;
+      list.splice(i, 1); dirty = true; saveCache(); renderTable();
+    },
+    // 외부(Claude Code 등)에서 일괄 설정: RosterHistory.setEntries(5, [...]) 후 save()
+    setEntries: function (t, list) { if (data === null) data = { terms: {} }; data.terms[String(t)] = (list || []).map(function (e) { return Object.assign({ id: uid() }, e); }); dirty = true; saveCache(); renderTable(); },
+    save: function (cb) {
+      if (data === null) data = { terms: {} };
+      if (!window.Cloud || !Cloud.saveSystemRecord) return;
+      Cloud.saveSystemRecord(REC_ID, "명단 변동 이력 (시스템)", JSON.stringify(data), function (ok) { if (ok) { dirty = false; updatedAt = new Date().toISOString(); saveCache(); renderTable(); } if (cb) cb(ok); });
+    },
+    get: function () { return data; }
+  };
+  // 접속 후 미리 준비(사본 즉시, 클라우드 대조는 백그라운드) → 명단 표 변동 칸이 바로 채워진다
+  setTimeout(function () { if (data === null) { if (!loadCache()) data = { terms: {} }; fetchCloud(function () { if (typeof renderRepMaster === "function") renderRepMaster(); }); if (typeof renderRepMaster === "function") renderRepMaster(); } }, 1800);
 })();
 </script>
 </body>
