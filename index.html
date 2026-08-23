@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v57</title>
+<title>산들마을 입주자대표회의 회의록 v58</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -218,6 +218,7 @@ td.center,th.center{text-align:center}
   white-space:pre-wrap
 }
 .decision-box{min-height:22mm}
+.decision-box.pending{color:#8a8476;font-style:italic}
 .follow-box{min-height:15mm}
 .remark-table{width:100%;border-collapse:collapse}
 .remark-table th,.remark-table td{border:1px solid #9d978c;padding:8px 9px;font-size:11pt;line-height:1.55;vertical-align:top}
@@ -792,7 +793,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v57 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v58 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -24883,8 +24884,13 @@ function agendaMissingFields(agenda){
   return missing;
 }
 function isAgendaComplete(agenda){ return agendaMissingFields(agenda).length===0; }
-function printableRegularAgendas(){ return regularAgendas().filter(isAgendaComplete); }
-function printableOtherAgendas(){ return otherAgendas().filter(isAgendaComplete); }
+// 출력 대상 (v58): 안건명만 있어도 미리보기·출력물에 싣는다(회의 전 상정 안건). 의결·표결이 비면 '의결 전' 표시로 대신한다.
+function isAgendaPrintable(agenda){ return !!String(agenda.title||"").trim(); }
+function printableRegularAgendas(){ return regularAgendas().filter(isAgendaPrintable); }
+function printableOtherAgendas(){ return otherAgendas().filter(isAgendaPrintable); }
+const DECISION_PENDING_TEXT="의결 전 — 안건 상정 단계(회의 결과 미기입)";
+function decisionForOutput(agenda){ const d=String(agenda.decision||"").trim(); return d || DECISION_PENDING_TEXT; }
+function voteIsBlank(agenda){ const v=voteStatus(agenda); return currentAttendees().length===0 || (v.forCount+v.againstCount)===0; }
 function agendaNumberAt(index){
   const agenda=state.agendas[index];
   return agenda?.isOther ? otherAgendaNumber() : regularAgendas().indexOf(agenda)+1;
@@ -25330,7 +25336,7 @@ function voteStatus(a){
 function requireCompleteVotes(){
   const pending=state.agendas.filter(a=>!isAgendaComplete(a));
   if(pending.length){
-    const message=`필수항목이 미완성인 안건 ${pending.length}건은 미리보기와 출력물에서 제외됩니다.`;
+    const message=`의결사항·표결이 비어 있는 안건 ${pending.length}건은 '의결 전(결과 미기입)'으로 표시됩니다.`;
     modalStatus(message,"warn");
     showToast(message,"warn");
   }
@@ -25448,7 +25454,9 @@ function agendaPageHtml(item,currentPage,totalPages){
   const a=item.agenda;
   normalizeRemarks(a);
   const vote=voteStatus(a);
-  const voteHtml=vote.unanimous
+  const voteHtml=voteIsBlank(a)
+    ? `<div class="vote-consensus" style="background:#f6f4ee;border-color:#ddd6c7"><b>표결 미기입</b><span>의결 전 상정 안건</span></div>`
+    : vote.unanimous
     ? `<div class="vote-consensus"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
     : `<div class="vote-split-grid">
          <div class="vote-card for"><div class="vote-card-head"><b>찬성</b><span>${vote.forCount}명</span></div><div class="vote-card-body ${vote.forCount?"":"empty"}">${esc(voteNames(a,"for")||"없음")}</div></div>
@@ -25484,7 +25492,7 @@ function agendaPageHtml(item,currentPage,totalPages){
     ${remarks}
 
     <div class="section-band">의결사항</div>
-    <div class="decision-box">${nl2br(a.decision,{autoBullets:true})}</div>
+    <div class="decision-box${String(a.decision||"").trim()?"":" pending"}">${nl2br(decisionForOutput(a),{autoBullets:true})}</div>
 
     <div class="section-band">표결</div>
     <div class="vote-summary-list">${voteHtml}</div>
@@ -25816,7 +25824,9 @@ function wordDocumentHtml(){
             return `<tr><th>${esc(remarkSpeakerLabel(key))}</th><td>${nl2br(text,{autoBullets:true})}</td></tr>`;
           }).join("")
         : `<tr><td colspan="2" class="center muted">주요 발언 기록 전</td></tr>`;
-    const voteRows=vote.unanimous
+    const voteRows=voteIsBlank(a)
+      ? `<tr><th>표결</th><td class="muted">미기입 — 의결 전 상정 안건</td></tr>`
+      : vote.unanimous
       ? `<tr><th class="unanimous">만장일치</th><td>${esc(vote.detail)}</td></tr>`
       : `<tr><th>찬성(${vote.forCount})</th><td>${esc(voteNames(a,"for"))||"&nbsp;"}</td></tr>
          <tr><th>반대(${vote.againstCount})</th><td>${esc(voteNames(a,"against"))||"&nbsp;"}</td></tr>
@@ -25826,7 +25836,7 @@ function wordDocumentHtml(){
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
       ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
-      ${sectionTitle("의결사항")}${contentBox(nl2br(a.decision),"decision")}
+      ${sectionTitle("의결사항")}${contentBox(nl2br(decisionForOutput(a)),"decision")}
       ${sectionTitle("표결")}<table class="grid votes">${voteRows}</table>
       ${sectionTitle("후속조치")}${contentBox(nl2br(a.followup),"followup")}
     </div>`;
@@ -26031,9 +26041,11 @@ function docxDocumentXml(){
       });
       body+=wTable(remarkRows,[2340,7820],{cellMargin:85,after:10});
     }
-    body+=wSectionTitle("의결사항")+wContentBox(a.decision||" ");
+    body+=wSectionTitle("의결사항")+wContentBox(decisionForOutput(a));
     body+=wSectionTitle("표결");
-    const voteRows=vote.unanimous
+    const voteRows=voteIsBlank(a)
+      ? [[{text:"표결",index:0,bold:true,align:"center",shade:"F4F6F2"},{text:"미기입 — 의결 전 상정 안건",index:1}]]
+      : vote.unanimous
       ? [[{text:"만장일치",index:0,bold:true,align:"center",shade:"E8EFE5"},{text:vote.detail,index:1}]]
       : [
           [{text:`찬성(${vote.forCount})`,index:0,bold:true,align:"center",shade:"F4F6F2"},{text:voteNames(a,"for")||" ",index:1}],
@@ -26202,8 +26214,10 @@ async function buildDocxBlob(){
       children.push(sectionTitle("주요 발언"));
       children.push(table(filled.map(([key,text])=>[cell(p(remarkSpeakerLabel(key),{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),2800),cell(formatted(text,{autoBullets:true,size:24}),7360)]),[2800,7360]));
     }
-    children.push(sectionTitle("의결사항"),contentBox(a.decision,true),sectionTitle("표결"));
-    if(vote.unanimous){
+    children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true),sectionTitle("표결"));
+    if(voteIsBlank(a)){
+      children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
+    }else if(vote.unanimous){
       children.push(table([[cell(p("만장일치",{bold:true,size:25,alignment:AlignmentType.CENTER,after:0}),1500,{shade:"E8EFE5",compact:true}),cell(p(vote.detail,{size:26,after:0,line:290}),8660,{compact:true})]],[1500,8660]));
     }else{
       const voteCard=(label,count,names,shade)=>cell([
