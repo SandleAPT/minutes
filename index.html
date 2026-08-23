@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v50</title>
+<title>산들마을 입주자대표회의 회의록 v51</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -318,7 +318,31 @@ td.center,th.center{text-align:center}
 .topic-flow-stale ul{margin:6px 0 0 18px;padding:0}
 .topic-flow-status{background:#fff;border:1px solid #cfd9c9;border-left:4px solid #4f7a47;border-radius:10px;padding:9px 12px;margin:0 0 10px;font-weight:600;line-height:1.55}
 .topic-flow-status-label{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:#4f7a47;border-radius:6px;padding:1px 7px;margin-right:8px;vertical-align:1px}
-.topic-flow-tl-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0 4px}
+.topic-flow-tl-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0 4px;flex-wrap:wrap}
+/* 주제 흐름 요약 읽기 구조 (v51): 요점 / 연도별 접기 / 글머리 2줄 접기 */
+.topic-flow-h.key{color:#7a5a12}
+.tl-key{margin:0 0 10px 18px;padding:0}
+.tl-key li{margin:3px 0}
+.tl-list{margin:0 0 6px 0;padding:0;list-style:none}
+li.tl-li{position:relative;margin:4px 0;padding:6px 9px 6px 10px;border-radius:8px;background:#fff;border:1px solid #e6e4dc;cursor:pointer;line-height:1.55}
+li.tl-li:hover{border-color:#c9c2b2}
+.tl-date{display:inline-block;font-size:11px;font-weight:800;color:#3f5a3a;background:#e8efe4;border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:1px;white-space:nowrap}
+html[data-body="임차"] .tl-date{color:#2f5f80;background:#e3eef5}
+.tl-body{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+li.tl-li.open .tl-body{display:block;overflow:visible}
+.tl-more{display:none;font-size:11px;color:#8a7a4a;margin-left:6px;white-space:nowrap}
+.tl-more::before{content:"더보기 ▾"}
+li.tl-li.open .tl-more::before{content:"접기 ▴"}
+li.tl-li.clampable .tl-more,li.tl-li.open .tl-more{display:inline}
+details.tl-year{border:1px solid #dfe5d9;border-radius:10px;background:#fbfcf9;margin:6px 0;padding:0 10px}
+details.tl-year>summary{cursor:pointer;padding:8px 0;list-style:none;display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
+details.tl-year>summary::-webkit-details-marker{display:none}
+details.tl-year>summary::before{content:"▸";font-size:12px;color:#7f927a}
+details.tl-year[open]>summary::before{content:"▾"}
+.tl-year-peek{font-size:11px;color:#999;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.tl-year[open] .tl-year-peek{display:none}
+details.tl-year>.tl-list{margin:0 0 8px 0}
+.tl-misc{margin-top:6px}
 /* 명단 변동 이력 (v40) */
 .roster-history-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:#fbfaf6}
 .roster-history-add input,.roster-history-add select{padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
@@ -720,7 +744,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v50 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v51 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -27049,49 +27073,85 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   // 주제 흐름 요약 본문 렌더 (v35): '현재 상태' 줄을 맨 위에 강조하고, 날짜 글머리 타임라인은 최신순/오래된순 선택
   var FLOW_ORDER_KEY = "sandle_topic_flow_desc";
   var flowDesc = (function () { try { return localStorage.getItem(FLOW_ORDER_KEY) !== "0"; } catch (e) { return true; } })(); // 기본: 최신순
-  function renderFlowText(text) {
+  // 주제 흐름 요약 렌더링 (v51): 읽기 쉬운 3단 구조 + 펼치기
+  //  ① 현재 상태(상자) ② "## 요점" 구간(항상 펼침, 3~5줄) ③ 시간 흐름 — 날짜 글머리("YY.MM …")를 연도별로 묶어
+  //     <details>로 접고, 가장 최근 연도만 펼친다. 글머리 하나하나는 2줄로 접어 두고(긴 문장) 누르면 펼친다.
+  //  날짜 글머리가 아닌 구간(전체 요약의 연도별 서술 등)은 그대로 목록으로 보이되 역시 2줄 접기 적용.
+  var FLOW_OPEN_KEY = "sandle_topic_flow_open_v1"; // 연도 그룹 펼침 상태 기억 {tag: {year: true}}
+  function flowOpenState() { try { return JSON.parse(localStorage.getItem(FLOW_OPEN_KEY)) || {}; } catch (e) { return {}; } }
+  function flowItemHtml(b) {
+    // "25.06 정기: 내용" → 날짜·회의 종류를 칩으로, 나머지를 본문으로
+    var m = String(b).match(/^(\d{2}\.\d{2}(?:\s*[^:：]{0,14})?)\s*[:：]\s*([\s\S]*)$/);
+    var chip = m ? m[1] : "", body = m ? m[2] : String(b);
+    return '<li class="tl-li" onclick="Topic.flowToggleItem(event,this)">' + (chip ? '<span class="tl-date">' + esc(chip) + '</span>' : '') +
+      '<span class="tl-body">' + esc(body) + '</span><span class="tl-more" title="펼치기/접기"></span></li>';
+  }
+  function flowListHtml(bullets) { return '<ul class="tl-list">' + bullets.map(flowItemHtml).join("") + '</ul>'; }
+  function renderFlowText(text, tag) {
+    tag = tag || "";
     var lines = String(text || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-    var status = [], heads = [], bullets = [], paras = [];
+    var status = [], sections = [], cur = { head: "", paras: [], bullets: [] };
     lines.forEach(function (s) {
       if (/^(?:[-•·]\s*)?현재\s*상태\s*[:：]/.test(s)) { status.push(s.replace(/^(?:[-•·]\s*)?현재\s*상태\s*[:：]\s*/, "")); return; }
-      if (s.indexOf("## ") === 0) { heads.push(s.slice(3)); return; }
-      if (/^[-•·] /.test(s)) { bullets.push(s.slice(2)); return; }
-      paras.push(s);
+      if (s.indexOf("## ") === 0) { if (cur.head || cur.paras.length || cur.bullets.length) sections.push(cur); cur = { head: s.slice(3), paras: [], bullets: [] }; return; }
+      if (/^[-•·] /.test(s)) { cur.bullets.push(s.slice(2)); return; }
+      cur.paras.push(s);
     });
-    // 소제목("## ")이 2개 이상이면 구간(섹션)별로 나눠 문서 순서대로 그린다 (v50) — 전체 요약처럼
-    // '2025 입대의 / 임차 / 2026 입대의' 식으로 나뉜 요약에서 소제목이 모두 위로 몰리던 문제 해결.
-    // 구간 안의 날짜 글머리는 구간별로 최신순/오래된순 정렬.
-    var isSortable = function (bs) { var d = bs.filter(function (b) { return /^\d{2}\.\d{2}/.test(b); }).length; return bs.length >= 2 && d >= Math.ceil(bs.length * 0.6); };
-    var sections = [];
-    if (heads.length >= 2) {
-      var cur = { head: "", paras: [], bullets: [] };
-      lines.forEach(function (s) {
-        if (/^(?:[-•·]\s*)?현재\s*상태\s*[:：]/.test(s)) return;
-        if (s.indexOf("## ") === 0) { if (cur.head || cur.paras.length || cur.bullets.length) sections.push(cur); cur = { head: s.slice(3), paras: [], bullets: [] }; return; }
-        if (/^[-•·] /.test(s)) { cur.bullets.push(s.slice(2)); return; }
-        cur.paras.push(s);
-      });
-      sections.push(cur);
-    } else {
-      sections.push({ head: heads.join(" · "), paras: paras, bullets: bullets });
-    }
-    var anySortable = sections.some(function (sc) { return isSortable(sc.bullets); });
+    sections.push(cur);
+    var isDated = function (b) { return /^\d{2}\.\d{2}/.test(b); };
+    var isTimeline = function (bs) { var d = bs.filter(isDated).length; return bs.length >= 2 && d >= Math.ceil(bs.length * 0.6); };
+    var anyTimeline = sections.some(function (sc) { return isTimeline(sc.bullets); });
+    var openMap = flowOpenState()[tag] || null; // null = 기본(최근 연도만)
     var html = "";
     if (status.length) html += '<div class="topic-flow-status"><span class="topic-flow-status-label">현재 상태</span>' + status.map(esc).join("<br>") + '</div>';
-    if (anySortable) {
-      html += '<div class="topic-flow-tl-head"><span class="small">시간 흐름 · ' + (flowDesc ? '최신순 (아래로 갈수록 과거)' : '오래된순 (아래로 갈수록 최근)') + '</span>' +
-        '<button type="button" class="btn tag-btn" onclick="Topic.flowOrder()">' + (flowDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></div>';
+    if (anyTimeline) {
+      html += '<div class="topic-flow-tl-head"><span class="small">시간 흐름 · 연도별로 접혀 있습니다 · ' + (flowDesc ? '최신순' : '오래된순') + '</span><span style="display:flex;gap:4px;flex-wrap:wrap">' +
+        '<button type="button" class="btn tag-btn" onclick="Topic.flowOpenAll(true)">모두 펼치기</button>' +
+        '<button type="button" class="btn tag-btn" onclick="Topic.flowOpenAll(false)">모두 접기</button>' +
+        '<button type="button" class="btn tag-btn" onclick="Topic.flowOrder()">' + (flowDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></span></div>';
     }
-    var secs = (anySortable && flowDesc && sections.length > 1) ? sections.slice().reverse() : sections; // 최신순이면 구간 순서도 뒤집는다
+    var secs = (anyTimeline && flowDesc && sections.length > 1) ? sections.slice().reverse() : sections; // 최신순이면 구간 순서도 뒤집는다
     secs.forEach(function (sc) {
-      if (sc.head) html += '<div class="topic-flow-h">' + esc(sc.head) + '</div>';
+      var isKey = /^(요점|핵심|한눈에)/.test(sc.head);
+      if (sc.head) html += '<div class="topic-flow-h' + (isKey ? ' key' : '') + '">' + esc(sc.head) + '</div>';
       sc.paras.forEach(function (p) { html += '<p>' + esc(p) + '</p>'; });
-      if (sc.bullets.length) {
-        var ordered = (isSortable(sc.bullets) && flowDesc) ? sc.bullets.slice().reverse() : sc.bullets;
-        html += '<ul>' + ordered.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join("") + '</ul>';
-      }
+      if (!sc.bullets.length) return;
+      if (isKey) { html += '<ul class="tl-key">' + sc.bullets.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join("") + '</ul>'; return; }
+      if (!isTimeline(sc.bullets)) { html += '<div class="tl-plain">' + flowListHtml(sc.bullets) + '</div>'; return; }
+      // 연도별 묶기 (YY.MM → 20YY). 날짜 없는 글머리는 '관련' 묶음으로 맨 뒤.
+      var groups = {}, order = [], misc = [];
+      sc.bullets.forEach(function (b) {
+        var m = b.match(/^(\d{2})\.(\d{2})/);
+        if (!m) { misc.push(b); return; }
+        var y = "20" + m[1];
+        if (!groups[y]) { groups[y] = []; order.push(y); }
+        groups[y].push(b);
+      });
+      order.sort(); if (flowDesc) order.reverse();
+      var latest = order.length ? (flowDesc ? order[0] : order[order.length - 1]) : "";
+      order.forEach(function (y) {
+        var bs = flowDesc ? groups[y].slice().reverse() : groups[y];
+        var open = openMap ? !!openMap[y] : (y === latest);
+        html += '<details class="tl-year"' + (open ? ' open' : '') + ' data-year="' + y + '" ontoggle="Topic.flowYearToggle(this)"><summary><b>' + y + '년</b> <span class="small">' + bs.length + '건</span>' +
+          '<span class="tl-year-peek">' + esc(peekOf(bs)) + '</span></summary>' + flowListHtml(bs) + '</details>';
+      });
+      if (misc.length) html += '<div class="tl-misc"><div class="small" style="font-weight:700;margin:6px 0 2px">관련·참고</div>' + flowListHtml(misc) + '</div>';
     });
-    return '<div class="topic-flow-text">' + html + '</div>';
+    return '<div class="topic-flow-text" data-tag="' + esc(tag) + '">' + html + '</div>';
+  }
+  // 접힌 연도 요약줄: 그 해 글머리의 월 칩만 나열 (예: 01·02 임시·03 …)
+  function peekOf(bs) {
+    var chips = bs.map(function (b) { var m = b.match(/^\d{2}\.(\d{2})(?:\s*([^:：]{0,6}))?\s*[:：]/); return m ? (m[1] + (m[2] ? " " + m[2].trim() : "")) : ""; }).filter(Boolean);
+    var s = chips.join(" · "); return s.length > 70 ? s.slice(0, 70) + "…" : s;
+  }
+  // 렌더 후: 2줄을 넘는 글머리에만 '더보기' 표시
+  function applyFlowClamp(root) {
+    if (!root) return;
+    root.querySelectorAll("li.tl-li").forEach(function (li) {
+      var body = li.querySelector(".tl-body"); if (!body) return;
+      li.classList.remove("clampable");
+      if (body.scrollHeight > body.clientHeight + 2) li.classList.add("clampable");
+    });
   }
   // 요약문 간이 서식: "## " 소제목, "- " 글머리, 빈 줄 = 문단 구분
   function fmtText(t) {
@@ -27137,8 +27197,11 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     flow.innerHTML = '<div class="topic-flow' + (stale ? ' stale' : '') + '">' +
       '<div class="topic-flow-head"><b>주제 흐름 요약 — ' + esc(label) + '</b>' +
         '<span class="small">기준 안건 ' + (s.count != null ? s.count : (s.basedOn || []).length) + '건 · ' + esc(fmtDate(s.updatedAt)) + ' 작성' + (s.by ? ' · ' + esc(s.by) : '') + (stale ? '' : ' · <span class="topic-flow-ok">최신</span>') + '</span></div>' +
-      renderFlowText(s.text) + stale + '</div>';
+      renderFlowText(s.text, tag) + stale + '</div>';
+    flowRenderedAt = Date.now();
+    applyFlowClamp(flow); // 2줄 넘는 글머리에만 '더보기' (v51)
   }
+  var flowRenderedAt = 0;
   window.TopicSummaries = {
     id: SUM_ID,
     // 데이터(안건 전체 + 요약)가 준비되면 cb 실행
@@ -27147,7 +27210,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     tags: function () { return allTags(); },
     keysFor: keysFor,
     // 주제별 현황: {has, total, added, removed} (added/removed는 건수)
-    stale: function () { var out = {}; allTags().concat(["__all__"]).forEach(function (t) { var i = staleInfo(t); out[t] = { has: i.has, total: i.total, added: i.added.length, changed: i.changed.length, removed: i.removed.length, updatedAt: i.has ? i.s.updatedAt : null }; }); return out; },
+    stale: function () { var out = {}; allTags().concat(["__all__", "__tenant__"]).forEach(function (t) { var i = staleInfo(t); out[t] = { has: i.has, total: i.total, added: i.added.length, changed: i.changed.length, removed: i.removed.length, updatedAt: i.has ? i.s.updatedAt : null }; }); return out; },
     // 요약 작성용 원문: 주제의 안건을 시간순으로. onlyNew=true면 요약 이후 추가·내용변경된 안건만
     dump: function (tag, onlyNew) {
       var info = staleInfo(tag);
@@ -27239,7 +27302,17 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     flowOrder: function () { flowDesc = !flowDesc; try { localStorage.setItem(FLOW_ORDER_KEY, flowDesc ? "1" : "0"); } catch (e) {} render(); }, // 흐름 요약 타임라인 최신순/오래된순
     reload: function () { cache = null; render(); },
     knownTags: allTags,
-    termsOf: termsOf // 성명 → 재임 기수 (전체 회의록 명단 색인, v48)
+    termsOf: termsOf, // 성명 → 재임 기수 (전체 회의록 명단 색인, v48)
+    // 흐름 요약 펼치기 (v51)
+    flowToggleItem: function (ev, li) { if (ev && ev.target && ev.target.closest && ev.target.closest("a,button")) return; if (!li.classList.contains("clampable") && !li.classList.contains("open")) return; li.classList.toggle("open"); },
+    flowYearToggle: function (d) {
+      if (Date.now() - flowRenderedAt < 400) { if (d.open) applyFlowClamp(d); return; } // 렌더 직후 초기 open 이벤트는 무시
+      var root = d.closest(".topic-flow-text"); var tag = root ? root.getAttribute("data-tag") : "";
+      var st = flowOpenState(); var m = {}; (root || d).querySelectorAll("details.tl-year").forEach(function (x) { m[x.getAttribute("data-year")] = !!x.open; }); st[tag] = m;
+      try { localStorage.setItem(FLOW_OPEN_KEY, JSON.stringify(st)); } catch (e) {}
+      if (d.open) applyFlowClamp(d);
+    },
+    flowOpenAll: function (open) { var root = document.getElementById("topicFlow"); if (!root) return; root.querySelectorAll("details.tl-year").forEach(function (x) { x.open = !!open; }); applyFlowClamp(root); }
   };
   // 자동 분류 함수(window.autoTags)가 준비된 뒤 ④ 안건 카드의 태그 표시를 갱신
   try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
