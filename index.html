@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v56</title>
+<title>산들마을 입주자대표회의 회의록 v57</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -73,6 +73,16 @@ button{cursor:pointer}
 }
 .nav button.active{background:var(--gold-soft);font-weight:800}
 .nav button:hover{background:#f2eee5}
+/* 메뉴 묶음 (v57) */
+.nav-group{display:grid;gap:6px}
+.nav-group+.nav-group{margin-top:6px}
+.nav-group-title{font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a937f;padding:4px 6px 0}
+.nav button.nav-group-title{background:transparent;border:1px dashed #ddd6c7;color:#8a8476;font-size:12px;font-weight:800;padding:7px 12px;text-align:left;letter-spacing:.04em}
+.nav button.nav-group-title:hover{background:#f7f4ec}
+.nav-arrow{float:right;transition:transform .15s}
+#navEditGroup.open .nav-arrow{transform:rotate(90deg)}
+#navEditGroup .nav-group-body{display:none;gap:6px}
+#navEditGroup.open .nav-group-body{display:grid}
 .sidebar .note{
   margin-top:24px;padding:14px;border-radius:14px;background:var(--ivory);
   border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.55;
@@ -343,7 +353,7 @@ details.tl-year[open]>summary::before{content:"▾"}
 details.tl-year[open] .tl-year-peek{display:none}
 details.tl-year>.tl-list{margin:0 0 8px 0}
 .tl-misc{margin-top:6px}
-/* ⑦ 하자판결금 수령 현황 (v54) */
+/* ④ 하자판결금 수령 현황 (v54) */
 .haja-lookup{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfaf6;margin-bottom:12px}
 .haja-lookup select,.haja-lookup input{padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
 .haja-lookup input{width:110px}
@@ -368,6 +378,11 @@ details.haja-dong[open]>summary::before{content:"▾"}
 .haja-ho{min-width:52px;padding:3px 6px;border-radius:7px;font-size:12px;text-align:center;border:1px solid #e6e4dc;background:#f6f4ee;color:#666}
 .haja-ho.ok{background:#e6f0e1;border-color:#b9d3ae;color:#2f5128}
 .haja-ho.pending{background:#fde9e6;border-color:#efb8b0;color:#8a2a20;font-weight:700}
+.haja-ho small{display:block;font-size:10px;font-weight:600;line-height:1.2;margin-top:1px;color:#5c7a55;white-space:nowrap}
+.haja-ho.pending small{color:#a8453a}
+.haja-ho.p-before4{background:#dceed5;border-color:#a9c99b}
+.haja-ho.p-r4to5{background:#e9f2e3}
+.haja-ho.p-r5to6{background:#f2f7ee;border-color:#cfe0c6}
 .haja-legend{font-size:12px;color:#666;margin:4px 0 10px;display:flex;gap:12px;flex-wrap:wrap}
 .haja-legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .haja-legend .l-ok::before{background:#b9d3ae}.haja-legend .l-pending::before{background:#efb8b0}
@@ -385,7 +400,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .body-chip{display:inline-block;margin:6px 0 0;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;background:var(--gold);color:#2f2b20}html[data-body="임차"] .body-chip{color:#fff}
 .body-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;border:1px solid #9fc1d6;background:#e3eef5;color:#2f5f80;margin-left:6px;vertical-align:1px}
 .body-badge.owner{border-color:#e0c98a;background:#fbf3dc;color:#7a5a12}
-/* ⑤ 기록 범위 (v47): 회의체별 첫~마지막 회의, 연도별 월 보유 현황 */
+/* ② 기록 범위 (v47): 회의체별 첫~마지막 회의, 연도별 월 보유 현황 */
 .arc-cov-wrap{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
 .arc-cov{flex:1 1 280px;border:1px solid #e7e2d8;border-radius:12px;padding:10px 12px;background:#fffdf8}
 .arc-cov.tenant{background:#f6fafc;border-color:#cfe0ea}
@@ -737,7 +752,10 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 @media(max-width:980px){
   .app{grid-template-columns:1fr}
   .sidebar{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}
-  .nav{grid-template-columns:repeat(3,1fr)}
+  .nav{grid-template-columns:1fr}
+  .nav-group{grid-template-columns:repeat(2,1fr)}
+  .nav-group-title{grid-column:1/-1}
+  #navEditGroup .nav-group-body{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}
   .main{padding:18px}
   .grid.four{grid-template-columns:1fr 1fr}
   .remark-row{grid-template-columns:1fr}
@@ -774,20 +792,29 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v56 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v57 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
-      <button class="active" data-view="previewView">① 회의록 미리보기</button>
-      <button data-view="setupView">② 회의 설정</button>
-      <button data-view="repsView">③ 동대표 명단</button>
-      <button data-view="agendaView">④ 안건 · 발언</button>
-      <button data-view="archiveView">⑤ 이전 회의록</button>
-      <button data-view="topicView">⑥ 주제별 보기</button>
-      <button data-view="hajaView">⑦ 하자판결금</button>
+      <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
+      <div class="nav-group">
+        <div class="nav-group-title">보기</div>
+        <button class="active" data-view="previewView">① 회의록 미리보기</button>
+        <button data-view="archiveView">② 이전 회의록</button>
+        <button data-view="topicView">③ 주제별 보기</button>
+        <button data-view="hajaView">④ 하자판결금</button>
+      </div>
+      <div class="nav-group" id="navEditGroup">
+        <button type="button" class="nav-group-title toggle" onclick="toggleNavGroup()">작성 · 관리자 <span class="nav-arrow">▸</span></button>
+        <div class="nav-group-body">
+          <button data-view="setupView">⑤ 회의 설정</button>
+          <button data-view="repsView">⑥ 동대표 명단</button>
+          <button data-view="agendaView">⑦ 안건 · 발언</button>
+        </div>
+      </div>
     </div>
     <div class="note">
       입력한 내용은 현재 브라우저에 자동 저장됩니다.<br>
-      완성한 회의록은 <b>⑤ 이전 회의록 → ☁ 현재 회의록 저장</b>으로 클라우드에 올립니다.
+      완성한 회의록은 <b>② 이전 회의록 → ☁ 현재 회의록 저장</b>으로 클라우드에 올립니다.
     </div>
   </aside>
 
@@ -1026,7 +1053,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
       <div class="help">
         모든 회의록의 안건을 <b>주제(태그)별로 모아</b> 시간순으로 이어봅니다. 안건 하나가 여러 주제에 속할 수 있습니다.
         주제를 고르면 그 주제 안건만 나옵니다(한 번에 하나, 같은 주제를 다시 누르면 전체). 안건 카드의 태그를 누르면 그 주제로 바로 이동합니다.
-        분류는 안건명 기준 <b>자동</b>이며, 안건별로 태그를 직접 지정하면(④ 안건·발언) 그 값이 우선합니다.
+        분류는 안건명 기준 <b>자동</b>이며, 안건별로 태그를 직접 지정하면(⑦ 안건·발언) 그 값이 우선합니다.
       </div>
       <div class="card">
         <div class="card-title"><div><h3>주제별 보기</h3><small>클라우드 전체 안건을 주제로 묶어 조회</small></div>
@@ -1042,7 +1069,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
       </div>
     </section>
 
-    <!-- ⑦ 하자판결금 수령 현황 (v54): 하자소송 판결금 세대분배 안내문(1~6차) 명단을 모아 세대별 수령/미수령과 수령 시기(공고 차수 사이 구간)를 보여 준다. 데이터: haja.json -->
+    <!-- ④ 하자판결금 수령 현황 (v54): 하자소송 판결금 세대분배 안내문(1~6차) 명단을 모아 세대별 수령/미수령과 수령 시기(공고 차수 사이 구간)를 보여 준다. 데이터: haja.json -->
     <section id="hajaView" class="view">
       <div class="help">
         2017년부터 진행된 <b>하자소송</b>의 판결금(전유부분) 세대 배당 현황입니다. 입주자대표회의가 카페에 올린 <b>세대분배 안내문(1~6차)</b>의 첨부 명단을 모아,
@@ -24213,7 +24240,7 @@ function termOptionLabel(n, body){
   const r=termRangeFor(n, body);
   return r ? `제${n}기 (${formatTermDate(r.start)} ~ ${formatTermDate(r.end)}${r.approx?" 추정":""})` : `제${n}기 (기간 미확인)`;
 }
-// ②·③ 기수 선택지를 회의체에 맞는 기간 표기로 다시 채운다 (선택값 유지)
+// ②·⑥ 기수 선택지를 회의체에 맞는 기간 표기로 다시 채운다 (선택값 유지)
 function refreshTermSelects(){
   const fill=(id, body)=>{
     const sel=document.getElementById(id); if(!sel) return;
@@ -24464,7 +24491,7 @@ function saveState(){
   renderPreview();
 }
 function startNewMeeting(){
-  if(!confirm("새 회의록을 만들까요?\n지금 열려 있는 회의록에 저장하지 않은 수정이 있다면, 먼저 ⑤ 이전 회의록에서 '☁ 현재 회의록 저장'을 눌러 주세요.")) return;
+  if(!confirm("새 회의록을 만들까요?\n지금 열려 있는 회의록에 저장하지 않은 수정이 있다면, 먼저 ② 이전 회의록에서 '☁ 현재 회의록 저장'을 눌러 주세요.")) return;
   const keepRosters=state.rosters||{};
   const keepTerm=state.rosterTermNo;
   const fresh=defaultState();
@@ -24530,10 +24557,24 @@ const viewNames={
   topicView:"주제별 보기",
   hajaView:"하자판결금 수령 현황"
 };
-document.querySelectorAll(".nav button").forEach(btn=>{
+// 작성·관리자 메뉴 묶음 접기/펼치기 (v57): 관리자 비밀번호가 있는 기기나 한 번 펼친 기기는 펼친 채로 기억
+const NAV_EDIT_KEY="sandle_nav_edit_open";
+function setNavGroup(open, remember){
+  const g=document.getElementById("navEditGroup"); if(!g) return;
+  g.classList.toggle("open", !!open);
+  if(remember){ try{ localStorage.setItem(NAV_EDIT_KEY, open?"1":"0"); }catch(e){} }
+}
+function toggleNavGroup(){ const g=document.getElementById("navEditGroup"); setNavGroup(!(g&&g.classList.contains("open")), true); }
+(function(){
+  let open=false;
+  try{ const v=localStorage.getItem(NAV_EDIT_KEY); if(v==="1") open=true; else if(v===null && localStorage.getItem("sandle_admin_key")) open=true; }catch(e){}
+  setNavGroup(open,false);
+})();
+document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".nav button[data-view]").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
+    if(btn.closest("#navEditGroup")) setNavGroup(true,false); // 묶음 안의 화면이 열리면 묶음도 펼친다
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     document.getElementById(btn.dataset.view).classList.add("active");
     document.getElementById("viewTitle").textContent=viewNames[btn.dataset.view];
@@ -24541,12 +24582,12 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
-    if(btn.dataset.view==="hajaView" && window.Haja) Haja.render(); // ⑦ 하자판결금 (v54)
+    if(btn.dataset.view==="hajaView" && window.Haja) Haja.render(); // ④ 하자판결금 (v54)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
   });
 });
-// ② 회의 설정, ④ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
+// ⑤ 회의 설정, ⑦ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
 function updateTopbarSaveBtn(view){
   const el=document.getElementById("topbarSaveBtn");
   if(el) el.style.display=(view==="setupView"||view==="agendaView")?"":"none";
@@ -24579,7 +24620,7 @@ function initMeetingControls(){
       state.meeting.body=next;
       state.meeting.attendance={};
       state.rosterTermNo=state.meeting.termNo;
-      state.rosterBody=next; // ③ 명단 회의체도 따라감 (v46)
+      state.rosterBody=next; // ⑥ 명단 회의체도 따라감 (v46)
       ensureRoster(state.meeting.termNo);
     }
     applyBodyTheme();
@@ -24615,7 +24656,7 @@ function initMeetingControls(){
     persistOnly();
     renderRepMaster();
   });
-  // ③ 명단 회의체 선택 (v46): 현재 회의록과 무관하게 입대의/임차 명단을 볼 수 있다
+  // ⑥ 명단 회의체 선택 (v46): 현재 회의록과 무관하게 입대의/임차 명단을 볼 수 있다
   const rosterBodySel=document.getElementById("rosterBodySel");
   if(rosterBodySel) rosterBodySel.addEventListener("change",()=>{
     state.rosterBody=rosterBodySel.value==="임차"?"임차":"입대의";
@@ -24726,7 +24767,7 @@ function renderRepMaster(){
   const tb=document.getElementById("repMasterTable");
   if(!tb) return;
   const roster=displayedRoster();
-  refreshTermSelects(); // ③ 기수 선택지의 기간 표기를 명단 회의체에 맞춤 (v49)
+  refreshTermSelects(); // ⑥ 기수 선택지의 기간 표기를 명단 회의체에 맞춤 (v49)
   const head=tb.parentElement && tb.parentElement.querySelector("thead tr");
   if(head && head.children.length===3){ const th=document.createElement("th"); th.textContent="변동"; head.appendChild(th); const th2=document.createElement("th"); th2.textContent="임기"; head.appendChild(th2); } // v40 변동, v44 임기
   const tenant=rosterBody()==="임차";
@@ -25214,7 +25255,7 @@ function renderAgendas(){
             <div class="field"><label>안건명 <b>*</b></label><input id="agenda-title-input-${a.id}" value="${esc(a.title)}" placeholder="예: 관리비 부과 내역서 심의 건" oninput="setAgenda('${a.id}','title',this.value)"></div>
             <div class="field"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
           </div>
-          <div class="field" style="margin-top:8px"><label>주제 태그 <span class="small">(여러 개 가능 · 안건명 기준 자동 분류, ×로 빼거나 ＋로 더하면 직접 지정 · ⑥ 주제별 보기에서 모아봄)</span></label>
+          <div class="field" style="margin-top:8px"><label>주제 태그 <span class="small">(여러 개 가능 · 안건명 기준 자동 분류, ×로 빼거나 ＋로 더하면 직접 지정 · ③ 주제별 보기에서 모아봄)</span></label>
             ${tagEditorHTML(a)}</div>
           <div class="subsection">
             <div class="subsection-head">
@@ -26604,7 +26645,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
 
   var listCache = null, rawListCache = null, rawListAt = 0;
-  var archiveBodyFilter = "전체"; // ⑤ 회의체 필터 (v43)
+  var archiveBodyFilter = "전체"; // ② 회의체 필터 (v43)
   // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
   function isSysRecord(it) { return !!it && /^(topic_summaries|roster_history)/.test(String(it.id || "")); }
   function staticListFallback() {
@@ -26933,7 +26974,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   }
   window.autoTags = autoTags; window.autoCategory = autoCat; window.TOPIC_KEYS = DEFS.map(function (d) { return d.key; }).concat(["기타"]);
 
-  var cache = null, sel = [], query = "", bodyFilter = "전체"; // bodyFilter: ⑥ 회의체 필터 (v43)
+  var cache = null, sel = [], query = "", bodyFilter = "전체"; // bodyFilter: ③ 회의체 필터 (v43)
   var sortDesc = (function () { try { return localStorage.getItem("sandle_topic_list_desc") !== "0"; } catch (e) { return true; } })(); // 안건 목록 정렬: 기본 최신순, 선택 기억 (v39)
   // ---- 시스템 레코드 (주제 흐름 요약 저장소) ----
   // 요약문은 기존 저장 API로 특수 레코드(id=topic_summaries_v1)에 보관한다. 회의록 목록·주제 집계에서는 제외. (v31)
@@ -26975,7 +27016,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     Object.keys(recMap || {}).forEach(function (k) { pushRecord(out, recMap[k]); });
     cache = out;
   }
-  // 명단 색인 (v48): 전체 회의록(사본)의 기수별 명단에서 "성명 → 재임 기수"를 만든다. ③ 임기 회차 계산에 쓴다.
+  // 명단 색인 (v48): 전체 회의록(사본)의 기수별 명단에서 "성명 → 재임 기수"를 만든다. ⑥ 임기 회차 계산에 쓴다.
   // 열린 회의록의 명단 스냅샷만 보면 다른 기수 재임을 놓치므로(임차 5기→6기 연임이 1회차로 보이던 문제) 전체 회의록을 본다.
   var rosterIdx = null, rosterIdxSig = "";
   function rosterIndex() {
@@ -27136,7 +27177,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   var FLOW_ORDER_KEY = "sandle_topic_flow_desc";
   var flowDesc = (function () { try { return localStorage.getItem(FLOW_ORDER_KEY) !== "0"; } catch (e) { return true; } })(); // 기본: 최신순
   // 주제 흐름 요약 렌더링 (v51): 읽기 쉬운 3단 구조 + 펼치기
-  //  ① 현재 상태(상자) ② "## 요점" 구간(항상 펼침, 3~5줄) ③ 시간 흐름 — 날짜 글머리("YY.MM …")를 연도별로 묶어
+  //  ① 현재 상태(상자) ⑤ "## 요점" 구간(항상 펼침, 3~5줄) ⑥ 시간 흐름 — 날짜 글머리("YY.MM …")를 연도별로 묶어
   //     <details>로 접고, 가장 최근 연도만 펼친다. 글머리 하나하나는 2줄로 접어 두고(긴 문장) 누르면 펼친다.
   //  날짜 글머리가 아닌 구간(전체 요약의 연도별 서술 등)은 그대로 목록으로 보이되 역시 2줄 접기 적용.
   var FLOW_OPEN_KEY = "sandle_topic_flow_open_v1"; // 연도 그룹 펼침 상태 기억 {tag: {year: true}}
@@ -27395,7 +27436,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     },
     flowOpenAll: function (open) { var root = document.getElementById("topicFlow"); if (!root) return; root.querySelectorAll("details.tl-year").forEach(function (x) { x.open = !!open; }); applyFlowClamp(root); }
   };
-  // 자동 분류 함수(window.autoTags)가 준비된 뒤 ④ 안건 카드의 태그 표시를 갱신
+  // 자동 분류 함수(window.autoTags)가 준비된 뒤 ⑦ 안건 카드의 태그 표시를 갱신
   try { if (typeof renderAgendas === "function") renderAgendas(); } catch (e) {}
   // ⑥을 열기 전에 미리 준비(사본 즉시 구성 + 클라우드 변경분 확인 + 요약 사본). 열 때 바로 그려진다. (v34)
   setTimeout(function () { if (cache === null) loadAll(function () { loadSummaries(function () {}); }); }, 1500);
@@ -27403,7 +27444,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
 </script>
 
 <script>
-// ---- ⑦ 하자판결금 수령 현황 (v54) ----
+// ---- ④ 하자판결금 수령 현황 (v54) ----
 // haja.json(저장소 정적 파일)을 읽어 세대별 수령/미수령과 수령 시기(공고 차수 사이 구간)를 보여 준다.
 // 새 차수 공고가 나오면 haja.json의 pendingByRound/receivedAsOf6/rounds/asOf 를 갱신한다(Claude Code 작업).
 (function () {
@@ -27442,6 +27483,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     } catch (e) {}
   }
   function periodLabel(per) { var p = (data.periods || {})[per]; return p ? p.label : per; }
+  function periodShort(per) { var p = (data.periods || {})[per]; return p ? (p.short || p.label) : per; } // 칸 안 짧은 표기 (v57)
   function periodRange(per) { var p = (data.periods || {})[per]; return p ? p.range : ""; }
   function render() {
     var sub = document.getElementById("hajaSub"); if (!sub) return;
@@ -27465,12 +27507,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       '<div class="haja-stat"><b>' + Math.round(ok / Math.max(1, ok + pend) * 100) + '%</b><span class="small">수령률</span></div></div>' +
       '<div class="small" style="color:#666;margin:-4px 0 10px">수령 시기 추정: ' + ["before4", "r4to5", "r5to6"].map(function (p) { return periodLabel(p) + " " + (perCount[p] || 0) + "세대"; }).join(" · ") + '</div>';
     // 동별 표
-    var html = '<div class="haja-legend"><span class="l-ok">수령 완료</span><span class="l-pending">미수령</span><span>— 칸을 누르면 상세</span></div>';
+    var html = '<div class="haja-legend"><span class="l-ok">수령 완료 (칸 아래 작은 글씨 = 수령 시기 추정)</span><span class="l-pending">미수령</span><span>— 칸을 누르면 상세</span></div>';
     dongs.forEach(function (d) {
       var list = (data.participants[d] || []).slice().sort(function (a, b) { return a - b; });
       var o = list.filter(function (h) { return idx[d + "-" + h].status === "ok"; }).length, pn = list.length - o;
       html += '<details class="haja-dong"><summary><span>' + d + '동</span><span class="small" style="font-weight:600;color:#666">참여 ' + list.length + ' · 수령 ' + o + ' · 미수령 ' + pn + '</span><span class="haja-bar" title="수령률 ' + Math.round(o / list.length * 100) + '%"><i style="width:' + Math.round(o / list.length * 100) + '%"></i></span></summary>' +
-        '<div class="haja-grid">' + list.map(function (h) { var x = idx[d + "-" + h]; return '<span class="haja-ho ' + x.status + '" title="' + (x.status === "ok" ? "수령 완료 · " + periodLabel(x.period) : "미수령") + '" onclick="Haja.show(\'' + d + '\',' + h + ')">' + h + '</span>'; }).join("") + '</div></details>';
+        '<div class="haja-grid">' + list.map(function (h) { var x = idx[d + "-" + h]; return '<span class="haja-ho ' + x.status + ' p-' + x.period + '" title="' + (x.status === "ok" ? "수령 완료 · " + periodLabel(x.period) : "미수령") + '" onclick="Haja.show(\'' + d + '\',' + h + ')">' + h + '<small>' + (x.status === "ok" ? esc(periodShort(x.period)) : "미수령") + '</small></span>'; }).join("") + '</div></details>';
     });
     document.getElementById("hajaTables").innerHTML = html;
     // 출처·제출 서류
@@ -27534,7 +27576,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
       if ((state.rosters[k] || []).some(function (r) { return String(r.name || "").trim() === name; })) out.push(n);
     });
-    // 전체 회의록 명단 색인(⑥ 사본) + 이 기기의 명단 마스터에서도 찾는다 (v48): 열린 회의록 스냅샷만 보면 다른 기수 재임을 놓친다
+    // 전체 회의록 명단 색인(③ 사본) + 이 기기의 명단 마스터에서도 찾는다 (v48): 열린 회의록 스냅샷만 보면 다른 기수 재임을 놓친다
     try { if (window.Topic && Topic.termsOf) Topic.termsOf(name, tenant).forEach(function (n) { if (out.indexOf(n) < 0) out.push(n); }); } catch (e) {}
     try {
       var rm = (typeof rosterMasterLoad === "function") ? rosterMasterLoad() : {};
