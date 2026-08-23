@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v62</title>
+<title>산들마을 입주자대표회의 회의록 v63</title>
 <script>/* 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨긴다(깜빡임 방지를 위해 가장 먼저) */try{if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("embedded");}catch(e){}</script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
@@ -807,7 +807,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v62 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v63 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -27303,6 +27303,33 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       '<span class="tl-body">' + esc(body) + '</span><span class="tl-more" title="펼치기/접기"></span></li>';
   }
   function flowListHtml(bullets) { return '<ul class="tl-list">' + bullets.map(flowItemHtml).join("") + '</ul>'; }
+  // 회의체 필터에 맞춰 요약을 줄 단위로 거른다 (v63): 날짜 글머리("- YY.MM …:")의 회의 표시(첫 콜론 앞)를 보고
+  // 임차만 적힌 줄은 입대의 화면에서, 임차가 없는 줄은 임차 화면에서 숨긴다("25.02 정기 / 25.02 임차" 병행 줄은 둘 다 표시).
+  // "## " 소제목 구간도 한쪽 회의체 전용(임차/입대의 표기)이면 통째로 숨긴다. 요점·현재 상태 줄은 공통이라 그대로 둔다.
+  function flowBodyFilter(text) {
+    if (bodyFilter === "전체") return text;
+    var tenantMode = bodyFilter === "임차";
+    var out = [], skipSec = false;
+    String(text || "").split(/\r?\n/).forEach(function (line) {
+      var s = line.trim();
+      if (s.indexOf("## ") === 0) {
+        var head = s.slice(3), headT = /임차/.test(head), headA = /입대의|입주자대표/.test(head);
+        skipSec = tenantMode ? (headA && !headT) : (headT && !headA);
+        if (!skipSec) out.push(line);
+        return;
+      }
+      if (skipSec) return;
+      var m = s.match(/^[-•·]\s*(\d{2}\.\d{2}[^:：]*)[:：]/);
+      if (m) {
+        var segs = m[1].replace(/\([^)]*\)/g, "").split("/");
+        var hasT = segs.some(function (x) { return /임차/.test(x); });
+        var hasA = segs.some(function (x) { return !/임차/.test(x); });
+        if (tenantMode ? !hasT : !hasA) return;
+      }
+      out.push(line);
+    });
+    return out.join("\n");
+  }
   function renderFlowText(text, tag) {
     tag = tag || "";
     var lines = String(text || "").split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
@@ -27394,6 +27421,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     // 회의체 필터가 '임차'이면 임차 전용 개요 키(__tenant__)를 쓴다 (v45). 주제별 요약은 회의체 공통.
     var tag = sel.length ? sel[0] : (bodyFilter === "임차" ? "__tenant__" : "__all__");
     var label = sel.length ? sel[0] : (bodyFilter === "임차" ? "임차인대표회의 전체" : "전체");
+    if (bodyFilter !== "전체" && (sel.length || bodyFilter === "입대의")) label += " — " + bodyFilter + " 회의만 표시"; // 회의체 필터 연동 (v63)
     var info = staleInfo(tag);
     var hint = 'Claude Code(PC)에서 <b>“요약 갱신해줘”</b>라고 하면 새 안건만 반영해 갱신됩니다.';
     if (!info.has) {
@@ -27416,7 +27444,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     flow.innerHTML = '<div class="topic-flow' + (stale ? ' stale' : '') + '">' +
       '<div class="topic-flow-head"><b>주제 흐름 요약 — ' + esc(label) + '</b>' +
         '<span class="small">기준 안건 ' + (s.count != null ? s.count : (s.basedOn || []).length) + '건 · ' + esc(fmtDate(s.updatedAt)) + ' 작성' + (s.by ? ' · ' + esc(s.by) : '') + (stale ? '' : ' · <span class="topic-flow-ok">최신</span>') + '</span></div>' +
-      renderFlowText(s.text, tag) + stale + '</div>';
+      renderFlowText(flowBodyFilter(s.text), tag) + stale + '</div>'; // 회의체 필터 적용 (v63)
     flowRenderedAt = Date.now();
     applyFlowClamp(flow); // 2줄 넘는 글머리에만 '더보기' (v51)
   }
