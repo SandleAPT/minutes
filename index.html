@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v60</title>
+<title>산들마을 입주자대표회의 회의록 v61</title>
+<script>/* 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨긴다(깜빡임 방지를 위해 가장 먼저) */try{if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("embedded");}catch(e){}</script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -48,6 +49,10 @@ body{
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
 .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+/* 포털 끼움 모드 (v61): 왼쪽 메뉴는 포털 사이드바가 대신한다 */
+html.embedded .sidebar{display:none}
+html.embedded .app{grid-template-columns:1fr;min-height:auto}
+html.embedded .main{padding:20px 24px}
 .sidebar{
   padding:24px 20px;
   background:#fff;
@@ -754,6 +759,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 
 @media(max-width:980px){
   .app{grid-template-columns:1fr}
+  html.embedded .main{padding:12px}
   .sidebar{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}
   .nav{grid-template-columns:1fr}
   .nav-group{grid-template-columns:repeat(2,1fr)}
@@ -795,7 +801,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v60 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v61 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -5212,8 +5218,7 @@ var __async = (__this, __arguments, generator) => {
       var debugEnvRegex = /^$/;
       if (process$1.env.NODE_DEBUG) {
         var debugEnv = process$1.env.NODE_DEBUG;
-        debugEnv = debugEnv.replace(/[|\\{}()[\]^$+?.]/g, "\\<script>
-const STORAGE_KEY").replace(/\*/g, ".*").replace(/,/g, "$|^").toUpperCase();
+        debugEnv = debugEnv.replace(/[|\\{}()[\]^$+?.]/g, "\\$&").replace(/\*/g, ".*").replace(/,/g, "$|^").toUpperCase();
         debugEnvRegex = new RegExp("^" + debugEnv + "$", "i");
       }
       exports$1.debuglog = function(set) {
@@ -24584,6 +24589,7 @@ document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
     document.getElementById(btn.dataset.view).classList.add("active");
     document.getElementById("viewTitle").textContent=viewNames[btn.dataset.view];
     updateTopbarSaveBtn(btn.dataset.view);
+    if(window.Embed) Embed.notify(btn.dataset.view); // 포털 끼움 모드 (v61)
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
@@ -24603,6 +24609,28 @@ document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
     go(); setTimeout(go,700); // 시작 시 자동 열기 등이 화면을 바꿔도 요청한 탭으로
   }catch(e){}
 })();
+// 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨기고, 같은 호스트의 포털(부모 창)과 화면 전환을 메시지로 주고받는다
+//   포털 → 앱: {source:"sandle-portal", type:"show", view:"archiveView"} / {type:"hello"}
+//   앱 → 포털: {source:"sandle-minutes", type:"ready"|"view", view:"…"}
+const Embed=(function(){
+  const on=document.documentElement.classList.contains("embedded") && window.parent!==window;
+  function post(msg){ if(!on) return; try{ window.parent.postMessage(Object.assign({source:"sandle-minutes"},msg), location.origin); }catch(e){} }
+  function current(){ const b=document.querySelector(".nav button[data-view].active"); return b?b.dataset.view:"previewView"; }
+  if(on){
+    window.addEventListener("message",e=>{
+      if(e.origin!==location.origin || !e.data || e.data.source!=="sandle-portal") return;
+      if(e.data.type==="show"){
+        const b=document.querySelector('.nav button[data-view="'+String(e.data.view||"").replace(/[^A-Za-z]/g,"")+'"]');
+        if(b) b.click();
+      }else if(e.data.type==="hello"){
+        post({type:"view",view:current()});
+      }
+    });
+    post({type:"ready",view:current()});
+  }
+  return {on, notify:v=>post({type:"view",view:v})};
+})();
+window.Embed=Embed;
 // ⑤ 회의 설정, ⑦ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
 function updateTopbarSaveBtn(view){
   const el=document.getElementById("topbarSaveBtn");
