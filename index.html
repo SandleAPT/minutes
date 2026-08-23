@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v51</title>
+<title>산들마을 입주자대표회의 회의록 v52</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -744,7 +744,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v51 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v52 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -27026,10 +27026,22 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   function fetchSummaries(cb) {
     if (summariesLoading) return; // 진행 중인 요청이 끝나면 그쪽에서 다시 그린다
     summariesLoading = true;
+    var mainUpdated = null;
     apiGet({ action: "get", id: SUM_ID }).then(function (r) {
       var s = null;
+      mainUpdated = (r && r.item && r.item.updatedAt) || null;
       try { if (r && r.ok && r.item) s = JSON.parse(r.item.json || "{}"); } catch (e) {}
-      saveSumCache((s && s.topics) ? s : { version: 1, topics: {} }, (r && r.item && r.item.updatedAt) || null);
+      // 조각 저장(v52): 본 레코드가 {chunked:true, parts:N}이면 _p1.._pN 을 차례로 받아 이어 붙인다
+      if (s && s.chunked && s.parts > 0) {
+        var seq = Promise.resolve(""), n = s.parts;
+        for (var i = 1; i <= n; i++) (function (idx) {
+          seq = seq.then(function (acc) { return apiGet({ action: "get", id: SUM_ID + "_p" + idx }).then(function (pr) { if (!(pr && pr.ok && pr.item)) throw new Error("조각 " + idx + " 없음"); return acc + String(pr.item.json || ""); }); });
+        })(i);
+        return seq.then(function (full) { try { return JSON.parse(full); } catch (e) { return null; } });
+      }
+      return s;
+    }).then(function (s) {
+      saveSumCache((s && s.topics) ? s : { version: 1, topics: {} }, mainUpdated);
       summariesLoading = false; if (cb) cb();
     }).catch(function () { if (summaries === null) summaries = { version: 1, topics: {} }; summariesLoading = false; if (cb) cb(); });
   }
@@ -27229,8 +27241,24 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
         cur.topics[t] = { text: text, basedOn: keys, count: keys.length, updatedAt: now, by: by || "Claude Code" };
       });
       cur.version = 1; cur.updatedAt = now;
-      var record = { id: SUM_ID, name: "주제 흐름 요약 (시스템)", date: "", json: JSON.stringify(cur) };
-      return apiPost({ action: "save", record: record, adminKey: key }).then(function (res) {
+      // 조각 저장 (v52): 구글 시트 셀 한도(50,000자) 때문에 45,000자를 넘으면 _p1.._pN 레코드로 나눠 저장하고
+      // 본 레코드에는 {chunked:true, parts:N}만 둔다. 조각을 먼저 저장하고 본 레코드를 마지막에 저장해 읽는 쪽이 깨진 상태를 보지 않게 한다.
+      var json = JSON.stringify(cur), CH = 45000, parts = [], main = json;
+      if (json.length > CH) {
+        var i = 0;
+        while (i < json.length) { var end = Math.min(i + CH, json.length); var c = json.charCodeAt(end - 1); if (end < json.length && c >= 0xD800 && c <= 0xDBFF) end--; parts.push(json.slice(i, end)); i = end; }
+        main = JSON.stringify({ version: 1, chunked: true, parts: parts.length, updatedAt: now, totalLen: json.length });
+      }
+      var seq = Promise.resolve();
+      parts.forEach(function (p, idx) {
+        seq = seq.then(function () {
+          return apiPost({ action: "save", record: { id: SUM_ID + "_p" + (idx + 1), name: "주제 흐름 요약 (시스템, 조각 " + (idx + 1) + "/" + parts.length + ")", date: "", json: p }, adminKey: key })
+            .then(function (res) { if (!(res && res.ok)) throw new Error((res && res.error) || ("조각 " + (idx + 1) + " 저장 실패")); });
+        });
+      });
+      return seq.then(function () {
+        return apiPost({ action: "save", record: { id: SUM_ID, name: "주제 흐름 요약 (시스템)", date: "", json: main }, adminKey: key });
+      }).then(function (res) {
         if (!(res && res.ok)) throw new Error((res && res.error) || "저장 실패");
         saveSumCache(cur, null); render(); return res; // updatedAt은 다음 목록 대조 때 서버값으로 맞춰짐
       });
