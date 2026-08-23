@@ -47,3 +47,9 @@
 - 원본 PDF는 사용자 드라이브(`산들마을 기록/`)에 두고 `file`(파일명)과 `link`(드라이브 링크, 있으면)로 가리킨다. 깃에는 올리지 않는다.
 - **적재 절차(다른 PC에서도 동일)**: ① PDF를 로컬 서버로 서빙 + pdf.js로 페이지를 JPEG로 렌더(숨은 탭이면 `intent:"print"`) → ② 페이지 이미지를 읽어 안건·의결·명단·원문 전문을 옮김 → ③ `scripts/import/*.js`처럼 `mk(spec)`으로 레코드를 만들고, 관리자 키(`sandle_admin_key`)가 있는 브라우저에서 GAS `action:"save"`로 저장 → ④ `action:"get"`으로 검증 → ⑤ 요약 갱신("요약 갱신해줘") → ⑥ CHANGELOG/PLAN/DATA 갱신. 스크립트는 저장소 `scripts/import/`에 남긴다.
 - 임차 명단 좌석 = 선거구 번호(당선인 공고 기준). 선거구를 모르는 사람은 1번 칸에 두고 `notes`에 적는다(예: 제4기 김아도 감사).
+
+## 8. 공고·기록 보관함 / 절차 점검 (v65, 2026-08-24)
+- 시스템 레코드 2개(목록·주제 집계·data.json 제외): `notices_v1` = {version, items:[{id(n_YYYYMMDD_slug), date(공고일), body(임차|입대의|선관위(임차)|관리사무소), kind(당선인공고|선거공고|사퇴공고|안내|결과공고|기타), title, noticeNo, postRange, summary, facts[], tags[], file, link(드라이브), related[{type:notice|minutes,id,label}], text(원문 전문), notes}]}, `checks_v1` = {version, items:[{id(c_slug), title, status(확인중|질의함|해소|문제없음), opened, facts[], rules[{ref,text,verified}], question, memo, related[], updatedAt}]}.
+- ⑤ 공고·기록 화면(`noticeView`)의 `Notices` 모듈이 GAS에서 읽어 표시(localStorage `sandle_notices_cache_v1` 사본). 적재·갱신은 `scripts/import/notices_*.js` 방식.
+- **절차 점검 원칙**: 사실(공고·회의록 기재)과 규정 조문만 싣고 특정인에 대한 판단·평가는 싣지 않는다. `rules[].verified`는 조문 원문을 확인한 뒤에만 true. `memo`는 관리자 키 있는 화면에서만 보이지만 **저장소 자체는 비공개가 아니므로**(GAS 토큰이 공개 HTML에 있음) 민감한 내용은 넣지 않는다 — 진짜 비공개가 필요하면 GAS에 읽기 제한을 추가해야 한다.
+- 개인정보: 공고 원문의 성별·나이 등은 전문에서 생략하고 생략 사실을 남긴다. 이름·동호수는 공고에 이미 공개된 범위만.

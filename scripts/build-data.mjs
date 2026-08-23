@@ -22,7 +22,7 @@ async function api(params, tries = 3) {
   }
 }
 
-function isSystemRecord(id) { return /^(topic_summaries|roster_history)/.test(String(id || "")); }
+function isSystemRecord(id) { return /^(topic_summaries|roster_history|notices_v1|checks_v1)/.test(String(id || "")); }
 
 const list = await api({ action: "list" });
 if (!list || !list.ok) throw new Error("list failed: " + JSON.stringify(list).slice(0, 200));
