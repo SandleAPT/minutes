@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v52</title>
+<title>산들마을 입주자대표회의 회의록 v53</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -744,7 +744,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v52 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v53 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -27122,9 +27122,12 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
         '<button type="button" class="btn tag-btn" onclick="Topic.flowOpenAll(false)">모두 접기</button>' +
         '<button type="button" class="btn tag-btn" onclick="Topic.flowOrder()">' + (flowDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></span></div>';
     }
-    var secs = (anyTimeline && flowDesc && sections.length > 1) ? sections.slice().reverse() : sections; // 최신순이면 구간 순서도 뒤집는다
+    var isKeySec = function (sc) { return /^(요점|핵심|한눈에)/.test(sc.head || ""); };
+    // 최신순이면 구간 순서도 뒤집되, '요점' 구간은 항상 맨 위에 둔다
+    var keySecs = sections.filter(isKeySec), restSecs = sections.filter(function (sc) { return !isKeySec(sc); });
+    var secs = keySecs.concat((anyTimeline && flowDesc && restSecs.length > 1) ? restSecs.slice().reverse() : restSecs);
     secs.forEach(function (sc) {
-      var isKey = /^(요점|핵심|한눈에)/.test(sc.head);
+      var isKey = isKeySec(sc);
       if (sc.head) html += '<div class="topic-flow-h' + (isKey ? ' key' : '') + '">' + esc(sc.head) + '</div>';
       sc.paras.forEach(function (p) { html += '<p>' + esc(p) + '</p>'; });
       if (!sc.bullets.length) return;
