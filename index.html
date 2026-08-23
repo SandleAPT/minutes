@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v59</title>
+<title>산들마을 입주자대표회의 회의록 v60</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -795,7 +795,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v59 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v60 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -24592,6 +24592,17 @@ document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
   });
 });
+// 주소로 탭 열기 (v60): ?tab=archiveView|topicView|hajaView|repsView… 또는 #archiveView — 포털 등 외부 링크에서 바로 해당 화면으로
+(function(){
+  try{
+    const q=new URLSearchParams(location.search).get("tab") || (location.hash||"").replace(/^#/,"");
+    if(!q) return;
+    const btn=document.querySelector('.nav button[data-view="'+q.replace(/[^A-Za-z]/g,"")+'"]');
+    if(!btn) return;
+    const go=()=>btn.click();
+    go(); setTimeout(go,700); // 시작 시 자동 열기 등이 화면을 바꿔도 요청한 탭으로
+  }catch(e){}
+})();
 // ⑤ 회의 설정, ⑦ 안건·발언 화면에서는 상단바에 클라우드 저장 버튼을 보여준다
 function updateTopbarSaveBtn(view){
   const el=document.getElementById("topbarSaveBtn");
