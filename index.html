@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v58</title>
+<title>산들마을 입주자대표회의 회의록 v59</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -412,7 +412,9 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .arc-cov-row{display:flex;align-items:center;gap:2px;margin-top:3px}
 .arc-cov-y{width:38px;font-size:11px;font-weight:700;color:#8a8476}
 .arc-cov-m{width:22px;height:20px;line-height:20px;text-align:center;font-size:10.5px;border-radius:4px;background:#f1ede4;color:#b9b3a6}
-.arc-cov-m.on{background:#d8a944;color:#fff;font-weight:700}
+.arc-cov-m.on{background:#d8a944;color:#fff;font-weight:700;cursor:pointer}
+.arc-cov-m.on:hover{filter:brightness(.92);transform:translateY(-1px)}
+.arc-cov-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px;padding:10px 12px;border:1px dashed #d8a944;border-radius:12px;background:#fffaf0}
 .arc-cov.tenant .arc-cov-m.on{background:#3f7fa6}
 .arc-cov-m.gap{background:#fde9e6;color:#b85c52;font-weight:700}
 .arc-cov-m.na{background:transparent;color:#d6d1c6}
@@ -793,7 +795,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v58 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v59 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -24326,7 +24328,9 @@ function ensureRoster(termNo, body){
   // 임차(키 "t…")는 동이 아니라 1~16 번호를 키로 쓴다(동은 unit에 선택 기재). (v44)
   const seats = key.startsWith("t") ? Array.from({length:16},(_,i)=>i+1) : dongList;
   if(!state.rosters[key]){
-    const fm=rosterMasterLoad()[key]; const fromMaster=fm && Array.isArray(fm.rows) ? fm.rows : (Array.isArray(fm)?fm:null);
+    const fm=rosterMasterLoad()[key]; let fromMaster=fm && Array.isArray(fm.rows) ? fm.rows : (Array.isArray(fm)?fm:null);
+    // 이 기기 사본에 없으면 전체 회의록(⑥ 사본)에서 그 기수 명단이 든 가장 최근 회의록의 명단을 가져온다 (v59)
+    if(!(Array.isArray(fromMaster)&&fromMaster.some(r=>String(r.name||"").trim())) && window.Topic && Topic.rosterFor){ try{ const rf=Topic.rosterFor(key); if(rf&&rf.length) fromMaster=rf; }catch(e){} }
     state.rosters[key]=Array.isArray(fromMaster)&&fromMaster.length ? fromMaster.map(r=>({dong:r.dong,role:r.role||"대표",name:r.name||"",unit:r.unit||""})) : seats.map(d=>({dong:d,role:"대표",name:""}));
   }
   rosterMasterPut(key, state.rosters[key]);
@@ -26714,14 +26718,38 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
           var k = y + "-" + m;
           var outside = (y === y0 && m < first.getMonth() + 1) || (y === y1 && m > last.getMonth() + 1);
           if (!have[k] && !outside) missing++;
-          grid += '<span class="arc-cov-m' + (have[k] ? ' on' : (outside ? ' na' : ' gap')) + '" title="' + y + '.' + pad(m) + (have[k] ? ' · ' + have[k] + '건' : (outside ? '' : ' · 회의록 없음')) + '">' + m + '</span>';
+          grid += '<span class="arc-cov-m' + (have[k] ? ' on' : (outside ? ' na' : ' gap')) + '" title="' + y + '.' + pad(m) + (have[k] ? ' · ' + have[k] + '건 · 눌러서 열기' : (outside ? '' : ' · 회의록 없음')) + '"' +
+            (have[k] ? ' role="button" tabindex="0" onclick="Cloud.openMonth(\'' + b + '\',' + y + ',' + m + ')"' : '') + '>' + m + '</span>'; // 달 칸 = 열기 버튼 (v59)
         }
         grid += '</div>';
       }
       out += '<div class="arc-cov' + (tenant ? ' tenant' : '') + '"><div class="arc-cov-head"><b>' + title + '</b> ' + fmtYM(first) + ' ~ ' + fmtYM(last) + ' · ' + its.length + '건' +
         (missing ? ' <span class="arc-cov-miss">· 사이에 비어 있는 달 ' + missing + '개</span>' : ' <span style="color:#6a9a5a">· 빈 달 없음</span>') + '</div>' + grid + '</div>';
     });
-    return '<div class="arc-cov-wrap" title="회의일 기준. 색칠된 달 = 회의록 있음, 빈 칸 = 회의록 없음(미수집)">' + out + '</div>';
+    return '<div class="arc-cov-wrap" title="회의일 기준. 색칠된 달 = 회의록 있음(누르면 열기), 빈 칸 = 회의록 없음(미수집)">' + out + '</div><div id="arcCovPick"></div>';
+  }
+  // 회의일(없으면 회의명의 연·월)을 Date로 — 목록 항목용 (v59: 달 칸 열기에서도 사용)
+  function meetDateOf(it) {
+    var d = it && it.date ? new Date(it.date) : null;
+    if (d && !isNaN(d.getTime())) return d;
+    var m = String((it && it.name) || "").match(/(\d{4})년\s*(\d{1,2})월/);
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, 1) : null;
+  }
+  // 기록 범위의 달 칸을 눌렀을 때: 그 달 회의록이 1건이면 바로 열고, 여러 건이면 고르는 줄을 보여 준다 (v59)
+  function openMonth(body, y, m) {
+    var items = (listCache || []).filter(function (it) {
+      if (!it || !it.id || isSysRecord(it)) return false;
+      if ((/임차인대표회의/.test(String(it.name || "")) ? "임차" : "입대의") !== body) return false;
+      var d = meetDateOf(it); return !!d && d.getFullYear() === y && d.getMonth() + 1 === m;
+    }).sort(function (a, b) { return (meetDateOf(a) - meetDateOf(b)); });
+    var pick = document.getElementById("arcCovPick");
+    if (!items.length) { if (pick) pick.innerHTML = ""; return; }
+    if (items.length === 1) { if (pick) pick.innerHTML = ""; Cloud._open(items[0].id); return; }
+    if (!pick) return;
+    pick.innerHTML = '<div class="arc-cov-pick"><span class="small"><b>' + y + '.' + pad(m) + '</b> ' + (body === "임차" ? "◇ 임차인대표회의" : "◆ 입주자대표회의") + ' 회의록 ' + items.length + '건 — 열 회의록을 고르세요</span>' +
+      items.map(function (it) { var d = meetDateOf(it); return '<button type="button" class="btn" onclick="Cloud._open(\'' + escAttr(it.id) + '\')">' + esc(it.name || it.id) + (d ? ' <span class="small">(' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) + ')</span>' : '') + '</button>'; }).join("") +
+      '<button type="button" class="btn" style="margin-left:auto" onclick="document.getElementById(\'arcCovPick\').innerHTML=\'\'">닫기</button></div>';
+    pick.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
   function renderArchiveList() {
     var box = document.getElementById("cloudArchiveList");
@@ -26896,6 +26924,7 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
 
   window.Cloud = {
     setArchiveBody: function (b) { archiveBodyFilter = b || "전체"; renderArchiveList(); },
+    openMonth: openMonth, // 기록 범위의 달 칸 → 그 달 회의록 열기 (v59)
     requireAdmin: requireAdmin,
     saveSystemRecord: saveSystemRecord,
     getSystemRecord: getSystemRecord,
@@ -27439,6 +27468,18 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     reload: function () { cache = null; render(); },
     knownTags: allTags,
     termsOf: termsOf, // 성명 → 재임 기수 (전체 회의록 명단 색인, v48)
+    // 기수 키("4"/"t5")의 명단 — 그 키의 명단이 든 회의록 중 회의일이 가장 최근인 것의 명단 (v59: ③에서 아직 안 연 기수도 채움)
+    rosterFor: function (key) {
+      if (recMap === null) { try { quickBuild(); } catch (e) { return null; } }
+      var best = null, bestDate = "";
+      Object.keys(recMap || {}).forEach(function (k) {
+        var rec = recMap[k]; var st; try { st = JSON.parse(rec.json || "{}"); } catch (e) { return; }
+        var ro = st && st.rosters && st.rosters[key]; if (!ro || !ro.some(function (r) { return String((r && r.name) || "").trim(); })) return;
+        var d = (st.meeting && st.meeting.date) || rec.date || "";
+        if (!best || String(d) > bestDate) { best = ro; bestDate = String(d); }
+      });
+      return best ? best.map(function (r) { return { dong: r.dong, role: r.role || "대표", name: r.name || "", unit: r.unit || "" }; }) : null;
+    },
     // 흐름 요약 펼치기 (v51)
     flowToggleItem: function (ev, li) { if (ev && ev.target && ev.target.closest && ev.target.closest("a,button")) return; if (!li.classList.contains("clampable") && !li.classList.contains("open")) return; li.classList.toggle("open"); },
     flowYearToggle: function (d) {
