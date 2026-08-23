@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v67</title>
+<title>산들마을 입주자대표회의 회의록 v68</title>
 <script>/* 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨긴다(깜빡임 방지를 위해 가장 먼저) */try{if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("embedded");}catch(e){}</script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
@@ -576,6 +576,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .nt-lock-row{display:flex;gap:8px;justify-content:center}
 .nt-lock-row input{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;width:180px}
 .rl-docs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.rl-doc-h{margin:22px 0 4px;font-weight:900;font-size:15px;color:#3c3a35;background:#f2eee5;border-radius:10px;padding:8px 14px}
 .rl-docs .btn{padding:7px 14px;font-size:12.5px}
 .rl-head{margin-bottom:14px}
 .rl-search{width:100%;max-width:460px;border:1px solid var(--line);border-radius:11px;padding:10px 14px;font:inherit;font-size:14px}
@@ -859,7 +860,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v67 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v68 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -27940,7 +27941,7 @@ var Notices=(function(){
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
   var CACHE="sandle_notices_cache_v1";
   var st={notices:null,checks:null,rulesDocs:{},doc:"bunyang",loading:false,rulesLoading:false,err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",unlocked:false,verifying:false};
-  var RULE_DOCS={bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"}}; // 규약 문서 2종 (v67)
+  var RULE_DOCS={bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"},all:{label:"◆◇ 함께 검색"}}; // 규약 문서 2종 + 통합 검색 (v67·v68)
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
   function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
   function getRec(id){return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){return x&&x.ok&&x.item?JSON.parse(x.item.json):null});}
@@ -27956,25 +27957,23 @@ var Notices=(function(){
     });
   }
   function loadRules(){
-    var d=st.doc;
-    if(st.rulesLoading||st.rulesDocs[d]) return; st.rulesLoading=true;
-    fetch(RULE_DOCS[d].file).then(function(r){return r.json()}).then(function(j){st.rulesLoading=false;st.rulesDocs[d]=j;draw();}).catch(function(){st.rulesLoading=false;st.err=RULE_DOCS[d].file+"을 불러오지 못했습니다.";draw();});
+    var keys=st.doc==="all"?["bunyang","tenant"]:[st.doc];
+    st._ld=st._ld||{};
+    keys.forEach(function(d){
+      if(st.rulesDocs[d]||st._ld[d]) return; st._ld[d]=1;
+      fetch(RULE_DOCS[d].file).then(function(r){return r.json()}).then(function(j){st._ld[d]=0;st.rulesDocs[d]=j;draw();}).catch(function(){st._ld[d]=0;st.err=RULE_DOCS[d].file+"을 불러오지 못했습니다.";draw();});
+    });
   }
   // ---- 검색 (규약) ----
   function hl(text,q){ if(!q) return esc(text); var t=esc(text),qq=esc(q); var i,out="",low=t.toLowerCase(),ql=qq.toLowerCase(),from=0; while((i=low.indexOf(ql,from))>=0){ out+=t.slice(from,i)+"<mark>"+t.slice(i,i+qq.length)+"</mark>"; from=i+qq.length; } return out+t.slice(from); }
   function ruleArticleHtml(a,q,open){
     return '<details class="rl-art"'+(open?" open":"")+'><summary><b>'+hl(a.no+(a.title?"("+a.title+")":""),q)+'</b></summary><div class="rl-text">'+hl(a.text,q).replace(/\n/g,"<br>")+'</div></details>';
   }
-  function rulesHtml(){
-    var r=st.rulesDocs[st.doc];
-    var docBtns='<div class="rl-docs">'+Object.keys(RULE_DOCS).map(function(k){return '<button type="button" class="btn'+(st.doc===k?" gold":"")+'" onclick="Notices.doc(\''+k+'\')">'+RULE_DOCS[k].label+'</button>'}).join("")+'</div>';
-    if(!r) return docBtns+'<div class="nt-empty">'+(st.rulesLoading?"관리규약 불러오는 중…":"규약 자료가 없습니다.")+'</div>';
-    var q=st.q.trim();
-    var h=docBtns+'<div class="rl-head"><input id="ruleSearch" class="rl-search" placeholder="규약 전문 검색 (예: 선거관리위원회, 장기수선충당금)" value="'+esc(st.q)+'" oninput="Notices.search(this.value)">'+
-      '<div class="small" style="margin-top:4px">'+esc(r.title)+' · '+esc(r.effective)+' 시행 · 원본: '+esc(r.source)+' — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div></div>';
-    var shown=0,total=0;
+  // 규약 한 벌의 본문(조문·별표·서식)을 검색어로 걸러 그린다 (v68: 통합 검색을 위해 분리)
+  function docBodyHtml(r,q){
+    var h="",shown=0;
     (r.chapters||[]).forEach(function(ch){
-      var arts=(ch.articles||[]).filter(function(a){ total++; return !q || (a.no+(a.title||"")+a.text).toLowerCase().indexOf(q.toLowerCase())>=0; });
+      var arts=(ch.articles||[]).filter(function(a){ return !q || (a.no+(a.title||"")+a.text).toLowerCase().indexOf(q.toLowerCase())>=0; });
       if(!arts.length) return;
       shown+=arts.length;
       h+='<div class="rl-ch">'+esc(ch.no?ch.no+" ":"")+esc(ch.title||"")+'</div>'+arts.map(function(a){return ruleArticleHtml(a,q,!!q)}).join("");
@@ -27983,7 +27982,29 @@ var Notices=(function(){
     if(apps.length){ h+='<div class="rl-ch">별표</div>'+apps.map(function(a){return '<details class="rl-art"'+(q?" open":"")+'><summary><b>'+hl(a.no+" "+(a.title||""),q)+'</b></summary><div class="rl-text">'+hl(a.text||"",q).replace(/\n/g,"<br>")+'</div></details>'}).join(""); shown+=apps.length; }
     var forms=(r.forms||[]).filter(function(f){ return !q || (f.no+" "+(f.title||"")+" "+(f.note||"")).toLowerCase().indexOf(q.toLowerCase())>=0; });
     if(forms.length){ h+='<div class="rl-ch">별지 서식 <span class="small">(서식 명칭·용도만 수록 — 양식 원본은 PDF)</span></div><ul class="nt-facts">'+forms.map(function(f){return '<li>'+hl(f.no+" "+(f.title||""),q)+(f.note?' — <span class="small">'+hl(f.note,q)+'</span>':'')+'</li>'}).join("")+'</ul>'; shown+=forms.length; }
-    if(q) h='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+shown+'건 — 해당 조문만 표시(펼침)</div>'+h;
+    return {html:h,shown:shown};
+  }
+  function rulesHtml(){
+    var docBtns='<div class="rl-docs">'+Object.keys(RULE_DOCS).map(function(k){return '<button type="button" class="btn'+(st.doc===k?" gold":"")+'" onclick="Notices.doc(\''+k+'\')">'+RULE_DOCS[k].label+'</button>'}).join("")+'</div>';
+    var keys=st.doc==="all"?["bunyang","tenant"]:[st.doc];
+    var missing=keys.filter(function(d){return !st.rulesDocs[d]});
+    if(missing.length){ return docBtns+'<div class="nt-empty">관리규약 불러오는 중…</div>'; }
+    var q=st.q.trim();
+    var h=docBtns+'<div class="rl-head"><input id="ruleSearch" class="rl-search" placeholder="'+(st.doc==="all"?"두 규약을 함께 검색 (예: 선거관리위원회, 겸임금지)":"규약 전문 검색 (예: 선거관리위원회, 장기수선충당금)")+'" value="'+esc(st.q)+'" oninput="Notices.search(this.value)">';
+    if(st.doc==="all"){ h+='<div class="small" style="margin-top:4px">분양(2024.10.30 시행)·임차(2020.04.18 시행) 규약을 함께 봅니다 — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div>'; }
+    else { var r0=st.rulesDocs[st.doc]; h+='<div class="small" style="margin-top:4px">'+esc(r0.title)+' · '+esc(r0.effective)+' 시행 · 원본: '+esc(r0.source)+' — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div>'; }
+    h+='</div>';
+    var shown=0, body="";
+    keys.forEach(function(d){
+      var sec=docBodyHtml(st.rulesDocs[d],q);
+      if(st.doc==="all"){
+        body+='<div class="rl-doc-h">'+esc(RULE_DOCS[d].label)+' <span class="small">'+esc(st.rulesDocs[d].effective)+' 시행'+(q?' — '+sec.shown+'건':'')+'</span></div>';
+        if(q&&!sec.shown) body+='<div class="nt-empty" style="padding:10px">이 규약에는 검색 결과가 없습니다.</div>';
+      }
+      body+=sec.html; shown+=sec.shown;
+    });
+    if(q) h+='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+shown+'건'+(st.doc==="all"?"(두 규약 합산)":"")+' — 해당 조문만 표시(펼침)</div>';
+    h+=body;
     if(q&&!shown) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
     return h;
   }
@@ -28068,7 +28089,7 @@ var Notices=(function(){
     reload:function(){ st.notices=null; st.checks=null; st.rulesDocs={}; if(st.sub==="rules") loadRules(); else if(!locked()) load(); draw(); },
     sub:function(s){ st.sub=s; draw(); if(s==="rules") loadRules(); else if(!locked()&&!st.notices) load(); },
     fBody:function(b){ st.fBody=b; draw(); },
-    doc:function(d){ st.doc=d; st.q=""; draw(); loadRules(); }, // 규약 문서 전환 (v67)
+    doc:function(d){ st.doc=d; draw(); loadRules(); }, // 규약 문서 전환 (v67; v68부터 검색어 유지)
     fKind:function(k){ st.fKind=k; draw(); },
     search:function(q){ st.q=q; clearTimeout(st._t); st._t=setTimeout(function(){ var el=document.getElementById("ruleSearch"); var pos=el?el.selectionStart:0; draw(); var el2=document.getElementById("ruleSearch"); if(el2){ el2.focus(); try{el2.setSelectionRange(pos,pos);}catch(e){} } },250); },
     unlock:function(){
