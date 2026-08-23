@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v49</title>
+<title>산들마을 입주자대표회의 회의록 v50</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -720,7 +720,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v49 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v50 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -27058,20 +27058,39 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
       if (/^[-•·] /.test(s)) { bullets.push(s.slice(2)); return; }
       paras.push(s);
     });
-    var dated = bullets.filter(function (b) { return /^\d{2}\.\d{2}/.test(b); }).length;
-    var sortable = bullets.length >= 2 && dated >= Math.ceil(bullets.length * 0.6); // 날짜로 시작하는 타임라인일 때만 정렬 제공
-    var ordered = (sortable && flowDesc) ? bullets.slice().reverse() : bullets;
+    // 소제목("## ")이 2개 이상이면 구간(섹션)별로 나눠 문서 순서대로 그린다 (v50) — 전체 요약처럼
+    // '2025 입대의 / 임차 / 2026 입대의' 식으로 나뉜 요약에서 소제목이 모두 위로 몰리던 문제 해결.
+    // 구간 안의 날짜 글머리는 구간별로 최신순/오래된순 정렬.
+    var isSortable = function (bs) { var d = bs.filter(function (b) { return /^\d{2}\.\d{2}/.test(b); }).length; return bs.length >= 2 && d >= Math.ceil(bs.length * 0.6); };
+    var sections = [];
+    if (heads.length >= 2) {
+      var cur = { head: "", paras: [], bullets: [] };
+      lines.forEach(function (s) {
+        if (/^(?:[-•·]\s*)?현재\s*상태\s*[:：]/.test(s)) return;
+        if (s.indexOf("## ") === 0) { if (cur.head || cur.paras.length || cur.bullets.length) sections.push(cur); cur = { head: s.slice(3), paras: [], bullets: [] }; return; }
+        if (/^[-•·] /.test(s)) { cur.bullets.push(s.slice(2)); return; }
+        cur.paras.push(s);
+      });
+      sections.push(cur);
+    } else {
+      sections.push({ head: heads.join(" · "), paras: paras, bullets: bullets });
+    }
+    var anySortable = sections.some(function (sc) { return isSortable(sc.bullets); });
     var html = "";
     if (status.length) html += '<div class="topic-flow-status"><span class="topic-flow-status-label">현재 상태</span>' + status.map(esc).join("<br>") + '</div>';
-    heads.forEach(function (h) { html += '<div class="topic-flow-h">' + esc(h) + '</div>'; });
-    paras.forEach(function (p) { html += '<p>' + esc(p) + '</p>'; });
-    if (bullets.length) {
-      if (sortable) {
-        html += '<div class="topic-flow-tl-head"><span class="small">시간 흐름 · ' + (flowDesc ? '최신순 (아래로 갈수록 과거)' : '오래된순 (아래로 갈수록 최근)') + '</span>' +
-          '<button type="button" class="btn tag-btn" onclick="Topic.flowOrder()">' + (flowDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></div>';
-      }
-      html += '<ul>' + ordered.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join("") + '</ul>';
+    if (anySortable) {
+      html += '<div class="topic-flow-tl-head"><span class="small">시간 흐름 · ' + (flowDesc ? '최신순 (아래로 갈수록 과거)' : '오래된순 (아래로 갈수록 최근)') + '</span>' +
+        '<button type="button" class="btn tag-btn" onclick="Topic.flowOrder()">' + (flowDesc ? '오래된순으로 보기 ↑' : '최신순으로 보기 ↓') + '</button></div>';
     }
+    var secs = (anySortable && flowDesc && sections.length > 1) ? sections.slice().reverse() : sections; // 최신순이면 구간 순서도 뒤집는다
+    secs.forEach(function (sc) {
+      if (sc.head) html += '<div class="topic-flow-h">' + esc(sc.head) + '</div>';
+      sc.paras.forEach(function (p) { html += '<p>' + esc(p) + '</p>'; });
+      if (sc.bullets.length) {
+        var ordered = (isSortable(sc.bullets) && flowDesc) ? sc.bullets.slice().reverse() : sc.bullets;
+        html += '<ul>' + ordered.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join("") + '</ul>';
+      }
+    });
     return '<div class="topic-flow-text">' + html + '</div>';
   }
   // 요약문 간이 서식: "## " 소제목, "- " 글머리, 빈 줄 = 문단 구분
