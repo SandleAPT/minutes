@@ -52,7 +52,7 @@
 - [ ] ④ 하자판결금: 동별 호 목록 공개 범위 재검토(현재 카페 공고와 같은 범위)
 
 ### 큰 그림 — 상위 포털 (2026-08-23 제안)
-- [x] (2026-08-23) 포털 첫 화면 게시: 저장소 `SandleAPT/Main` → https://sandleapt.github.io/Main/ (루트 주소로 옮기려면 저장소명을 `sandleapt.github.io`로 변경). 구상: `https://sandleapt.github.io/` 루트에 **산들마을 입주민 포털** 한 장을 두고 ① 회의록(이 앱) ② 업무현황 공개용(Notion) ③ (두 번째 Notion 페이지) ④ 커뮤니티센터 이용 안내(CommunityNotice) ⑤ 하자판결금 조회 등을 카드로 연결. 저장소 `SandleAPT/sandleapt.github.io`(사용자 사이트)를 새로 만들어야 루트 주소 사용 가능 — 없으면 `minutes/home/`에 두고 리다이렉트.
+- [x] (2026-08-23) 포털 첫 화면 게시: 저장소 `SandleAPT/sandleapt.github.io` → **https://sandleapt.github.io/** (루트). 구상: `https://sandleapt.github.io/` 루트에 **산들마을 입주민 포털** 한 장을 두고 ① 회의록(이 앱) ② 업무현황 공개용(Notion) ③ (두 번째 Notion 페이지) ④ 커뮤니티센터 이용 안내(CommunityNotice) ⑤ 하자판결금 조회 등을 카드로 연결. 저장소 `SandleAPT/sandleapt.github.io`(사용자 사이트)를 새로 만들어야 루트 주소 사용 가능 — 없으면 `minutes/home/`에 두고 리다이렉트.
 - [ ] 포털에서 각 서비스의 "최근 갱신일"을 보여줄지 검토(회의록은 `data.json`의 generatedAt, Notion은 수동).
 
 ### 구조적으로 생각해 둘 것
