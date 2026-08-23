@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v53</title>
+<title>산들마을 입주자대표회의 회의록 v54</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -343,6 +343,36 @@ details.tl-year[open]>summary::before{content:"▾"}
 details.tl-year[open] .tl-year-peek{display:none}
 details.tl-year>.tl-list{margin:0 0 8px 0}
 .tl-misc{margin-top:6px}
+/* ⑦ 하자판결금 수령 현황 (v54) */
+.haja-lookup{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfaf6;margin-bottom:12px}
+.haja-lookup select,.haja-lookup input{padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+.haja-lookup input{width:110px}
+.haja-res{border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid #e6e4dc;background:#fff;line-height:1.6}
+.haja-res.ok{border-left:5px solid #4f7a47;background:#f4f9f1}
+.haja-res.pending{border-left:5px solid #c0392b;background:#fdf3f1}
+.haja-res.none{border-left:5px solid #b9b3a6;background:#faf8f3}
+.haja-res b.st{font-size:15px}
+.haja-res ul{margin:6px 0 0 18px;padding:0}
+.haja-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.haja-stat{flex:1 1 120px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;text-align:center}
+.haja-stat b{display:block;font-size:20px}
+.haja-stat.ok b{color:#4f7a47}.haja-stat.pending b{color:#c0392b}
+details.haja-dong{border:1px solid #e7e2d8;border-radius:12px;margin:6px 0;padding:0 12px;background:#fff}
+details.haja-dong>summary{cursor:pointer;padding:10px 0;font-weight:700;display:flex;gap:10px;align-items:center;flex-wrap:wrap;list-style:none}
+details.haja-dong>summary::-webkit-details-marker{display:none}
+details.haja-dong>summary::before{content:"▸";color:#7f927a}
+details.haja-dong[open]>summary::before{content:"▾"}
+.haja-bar{flex:1;min-width:120px;height:8px;border-radius:999px;background:#f1d9d4;overflow:hidden}
+.haja-bar i{display:block;height:100%;background:#4f7a47}
+.haja-grid{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 12px}
+.haja-ho{min-width:52px;padding:3px 6px;border-radius:7px;font-size:12px;text-align:center;border:1px solid #e6e4dc;background:#f6f4ee;color:#666}
+.haja-ho.ok{background:#e6f0e1;border-color:#b9d3ae;color:#2f5128}
+.haja-ho.pending{background:#fde9e6;border-color:#efb8b0;color:#8a2a20;font-weight:700}
+.haja-legend{font-size:12px;color:#666;margin:4px 0 10px;display:flex;gap:12px;flex-wrap:wrap}
+.haja-legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.haja-legend .l-ok::before{background:#b9d3ae}.haja-legend .l-pending::before{background:#efb8b0}
+.haja-src{font-size:12px;color:#666;margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.haja-src ul{margin:4px 0 0 18px;padding:0}
 /* 명단 변동 이력 (v40) */
 .roster-history-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:#fbfaf6}
 .roster-history-add input,.roster-history-add select{padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
@@ -744,7 +774,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v53 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v54 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -753,6 +783,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
       <button data-view="agendaView">④ 안건 · 발언</button>
       <button data-view="archiveView">⑤ 이전 회의록</button>
       <button data-view="topicView">⑥ 주제별 보기</button>
+      <button data-view="hajaView">⑦ 하자판결금</button>
     </div>
     <div class="note">
       입력한 내용은 현재 브라우저에 자동 저장됩니다.<br>
@@ -1008,6 +1039,23 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
         <div id="topicSummary" style="font-size:12px;color:var(--muted);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"></div>
         <div id="topicFlow"></div>
         <div id="topicResult"></div>
+      </div>
+    </section>
+
+    <!-- ⑦ 하자판결금 수령 현황 (v54): 하자소송 판결금 세대분배 안내문(1~6차) 명단을 모아 세대별 수령/미수령과 수령 시기(공고 차수 사이 구간)를 보여 준다. 데이터: haja.json -->
+    <section id="hajaView" class="view">
+      <div class="help">
+        2017년부터 진행된 <b>하자소송</b>의 판결금(전유부분) 세대 배당 현황입니다. 입주자대표회의가 카페에 올린 <b>세대분배 안내문(1~6차)</b>의 첨부 명단을 모아,
+        우리 집이 <b>채권양도(소송 참여) 세대인지</b>, <b>수령했는지</b>, 했다면 <b>언제쯤</b> 받았는지(공고 차수 사이 구간), 아직이면 <b>무엇을 제출해야 하는지</b>를 보여 줍니다.
+        정확한 지급일·금액은 관리사무소에 확인하세요.
+      </div>
+      <div class="card">
+        <div class="card-title"><div><h3>하자판결금 수령 현황</h3><small id="hajaSub">불러오는 중…</small></div></div>
+        <div id="hajaLookup" class="haja-lookup"></div>
+        <div id="hajaResult"></div>
+        <div id="hajaStats"></div>
+        <div id="hajaTables"></div>
+        <div id="hajaSources"></div>
       </div>
     </section>
   </main>
@@ -24479,7 +24527,8 @@ const viewNames={
   agendaView:"안건 · 발언",
   previewView:"회의록 미리보기",
   archiveView:"이전 회의록",
-  topicView:"주제별 보기"
+  topicView:"주제별 보기",
+  hajaView:"하자판결금 수령 현황"
 };
 document.querySelectorAll(".nav button").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -24492,6 +24541,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     if(btn.dataset.view==="previewView") renderPreview();
     if(btn.dataset.view==="archiveView" && window.Cloud) Cloud.renderArchiveList();
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
+    if(btn.dataset.view==="hajaView" && window.Haja) Haja.render(); // ⑦ 하자판결금 (v54)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
   });
@@ -27352,6 +27402,103 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
 })();
 </script>
 
+<script>
+// ---- ⑦ 하자판결금 수령 현황 (v54) ----
+// haja.json(저장소 정적 파일)을 읽어 세대별 수령/미수령과 수령 시기(공고 차수 사이 구간)를 보여 준다.
+// 새 차수 공고가 나오면 haja.json의 pendingByRound/receivedAsOf6/rounds/asOf 를 갱신한다(Claude Code 작업).
+(function () {
+  var data = null, loading = false, err = "";
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); };
+  function load(cb) {
+    if (data) { cb(); return; }
+    if (loading) return; loading = true;
+    fetch("haja.json?v=" + encodeURIComponent(new Date().toISOString().slice(0, 10))).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (j) { data = j; index(); loading = false; cb(); })
+      .catch(function (e) { err = String(e && e.message || e); loading = false; cb(); });
+  }
+  var idx = {}; // "동-호" → {dong,ho,status,period}
+  function has(map, dong, ho) { var a = map && map[dong]; return !!a && a.indexOf(ho) >= 0; }
+  function index() {
+    idx = {};
+    var P = data.participants || {}, p4 = (data.pendingByRound || {})["4"], p5 = (data.pendingByRound || {})["5"], p6 = (data.pendingByRound || {})["6"], rc = data.receivedAsOf6 || {};
+    Object.keys(P).forEach(function (dong) {
+      P[dong].forEach(function (ho) {
+        var st, per;
+        if (has(p6, dong, ho)) { st = "pending"; per = "pending"; }
+        else if (has(p5, dong, ho)) { st = "ok"; per = "r5to6"; }
+        else if (has(p4, dong, ho)) { st = "ok"; per = "r4to5"; }
+        else { st = "ok"; per = "before4"; }
+        idx[dong + "-" + ho] = { dong: dong, ho: ho, status: st, period: per, inReceived: has(rc, dong, ho) };
+      });
+    });
+    // 자료 정합성 점검(콘솔): 6차 수령+미수령 = 참여세대, 미수령 차수별 포함관계
+    try {
+      var bad = [];
+      Object.keys(P).forEach(function (dong) {
+        P[dong].forEach(function (ho) { var r = has(rc, dong, ho), q = has(p6, dong, ho); if (r === q) bad.push(dong + "-" + ho + (r ? " 수령·미수령 중복" : " 6차 명단 누락")); if (has(p6, dong, ho) && !has(p5, dong, ho)) bad.push(dong + "-" + ho + " 6차 미수령인데 5차 명단에 없음"); if (has(p5, dong, ho) && !has(p4, dong, ho)) bad.push(dong + "-" + ho + " 5차 미수령인데 4차 명단에 없음"); });
+        (rc[dong] || []).concat(p6[dong] || [], p5[dong] || [], p4[dong] || []).forEach(function (ho) { if (!has(P, dong, ho)) bad.push(dong + "-" + ho + " 참여세대 명단에 없음"); });
+      });
+      if (bad.length) console.warn("[haja.json 정합성]", bad);
+    } catch (e) {}
+  }
+  function periodLabel(per) { var p = (data.periods || {})[per]; return p ? p.label : per; }
+  function periodRange(per) { var p = (data.periods || {})[per]; return p ? p.range : ""; }
+  function render() {
+    var sub = document.getElementById("hajaSub"); if (!sub) return;
+    if (!data) { if (err) sub.textContent = "자료를 불러오지 못했습니다: " + err; else { sub.textContent = "불러오는 중…"; load(render); } return; }
+    var t = data.totals || {};
+    sub.textContent = (data.asOf ? data.asOf.replace(/-/g, ".") + " 기준 (6차 공고 명단)" : "") + " · 채권양도세대 " + t.participants + "세대 중 수령 " + t.received + " · 미수령 " + t.pending;
+    var dongs = Object.keys(data.participants || {}).sort();
+    document.getElementById("hajaLookup").innerHTML =
+      '<b>우리 집 확인</b> <select id="hajaDong">' + dongs.map(function (d) { return '<option value="' + d + '">' + d + '동</option>'; }).join("") + '<option value="etc">그 외 동</option></select>' +
+      '<input id="hajaHo" type="number" inputmode="numeric" placeholder="호 (예: 1203)" onkeydown="if(event.key===\'Enter\')Haja.lookup()">' +
+      '<button class="btn gold" type="button" onclick="Haja.lookup()">확인</button>' +
+      '<span class="small" style="color:#888">하자소송 참여(채권양도) 세대는 201·204·207·208·209·210·211·213동 370세대입니다.</span>';
+    // 통계
+    var ok = 0, pend = 0, perCount = { before4: 0, r4to5: 0, r5to6: 0 };
+    Object.keys(idx).forEach(function (k) { var x = idx[k]; if (x.status === "ok") { ok++; perCount[x.period] = (perCount[x.period] || 0) + 1; } else pend++; });
+    document.getElementById("hajaStats").innerHTML = '<div class="haja-stats">' +
+      '<div class="haja-stat"><b>' + (ok + pend) + '</b><span class="small">참여(채권양도) 세대</span></div>' +
+      '<div class="haja-stat ok"><b>' + ok + '</b><span class="small">수령 완료</span></div>' +
+      '<div class="haja-stat pending"><b>' + pend + '</b><span class="small">미수령 (' + esc(data.asOf || "") + ' 기준)</span></div>' +
+      '<div class="haja-stat"><b>' + Math.round(ok / Math.max(1, ok + pend) * 100) + '%</b><span class="small">수령률</span></div></div>' +
+      '<div class="small" style="color:#666;margin:-4px 0 10px">수령 시기 추정: ' + ["before4", "r4to5", "r5to6"].map(function (p) { return periodLabel(p) + " " + (perCount[p] || 0) + "세대"; }).join(" · ") + '</div>';
+    // 동별 표
+    var html = '<div class="haja-legend"><span class="l-ok">수령 완료</span><span class="l-pending">미수령</span><span>— 칸을 누르면 상세</span></div>';
+    dongs.forEach(function (d) {
+      var list = (data.participants[d] || []).slice().sort(function (a, b) { return a - b; });
+      var o = list.filter(function (h) { return idx[d + "-" + h].status === "ok"; }).length, pn = list.length - o;
+      html += '<details class="haja-dong"><summary><span>' + d + '동</span><span class="small" style="font-weight:600;color:#666">참여 ' + list.length + ' · 수령 ' + o + ' · 미수령 ' + pn + '</span><span class="haja-bar" title="수령률 ' + Math.round(o / list.length * 100) + '%"><i style="width:' + Math.round(o / list.length * 100) + '%"></i></span></summary>' +
+        '<div class="haja-grid">' + list.map(function (h) { var x = idx[d + "-" + h]; return '<span class="haja-ho ' + x.status + '" title="' + (x.status === "ok" ? "수령 완료 · " + periodLabel(x.period) : "미수령") + '" onclick="Haja.show(\'' + d + '\',' + h + ')">' + h + '</span>'; }).join("") + '</div></details>';
+    });
+    document.getElementById("hajaTables").innerHTML = html;
+    // 출처·제출 서류
+    document.getElementById("hajaSources").innerHTML = '<div class="haja-src"><b>미수령 세대 제출 서류(관리사무소)</b><ul>' + (data.documents || []).map(function (s) { return '<li>' + esc(s) + '</li>'; }).join("") + '</ul>' +
+      '<b style="display:block;margin-top:8px">출처 — 하자소송 하자판결금 세대분배 안내문</b><ul>' + (data.rounds || []).map(function (r) { return '<li>' + esc(r.date.replace(/-/g, ".")) + ' ' + esc(r.desc) + '</li>'; }).join("") + '</ul>' +
+      '<div style="margin-top:6px">' + esc(data.note || "") + ' (자료 갱신 ' + esc(data.updated || "") + ')</div></div>';
+    if (window.track) track("haja_view", {});
+  }
+  function show(dong, ho) {
+    var box = document.getElementById("hajaResult"); if (!box || !data) return;
+    ho = Number(ho);
+    var x = idx[dong + "-" + ho];
+    if (!x) {
+      box.innerHTML = '<div class="haja-res none"><b class="st">' + esc(dong === "etc" ? "" : dong + "동 ") + (ho ? ho + "호" : "") + ' — 채권양도(소송 참여) 세대 명단에 없습니다.</b><div class="small">하자소송 판결금 배당 대상은 채권양도 370세대(201·204·207·208·209·210·211·213동)입니다. 명단 오류라고 생각되시면 관리사무소에 확인하세요.</div></div>';
+    } else if (x.status === "pending") {
+      box.innerHTML = '<div class="haja-res pending"><b class="st">' + dong + '동 ' + ho + '호 — 아직 수령하지 않은 세대입니다</b> <span class="small">(' + esc(data.asOf || "") + ' 기준 6차 공고 미수령 명단)</span>' +
+        '<div style="margin-top:6px">관리사무소에 아래 서류를 제출하면 <b>매월 말일</b> 서류 취합 후 지급됩니다. 지급일 기준 등기부등본상 소유주에게 지급되며, 세입자는 소유주에게 전달해 주세요.</div><ul>' + (data.documents || []).slice(0, 4).map(function (s) { return '<li>' + esc(s) + '</li>'; }).join("") + '</ul></div>';
+    } else {
+      box.innerHTML = '<div class="haja-res ok"><b class="st">' + dong + '동 ' + ho + '호 — 수령 완료 세대입니다</b>' +
+        '<div style="margin-top:4px">수령 시기(추정): <b>' + esc(periodLabel(x.period)) + '</b> <span class="small">(' + esc(periodRange(x.period)) + ' — ' + esc(((data.periods || {})[x.period] || {}).desc || "") + ')</span></div>' +
+        '<div class="small" style="color:#666;margin-top:4px">공고 차수별 미수령 명단 비교로 추정한 구간입니다. 실제 입금일은 관리사무소에 확인하세요.</div></div>';
+    }
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (window.track) track("haja_lookup", { dong: dong, status: x ? x.status : "none" });
+  }
+  function lookup() { var d = document.getElementById("hajaDong"), h = document.getElementById("hajaHo"); if (!d || !h) return; show(d.value, h.value); }
+  window.Haja = { render: render, lookup: lookup, show: show, data: function () { return data; } };
+})();
+</script>
 <script>
 // ---- 명단 변동 이력 (v40) ----
 // 기수별로 사퇴·보궐취임·직책변경을 시간순 기록. 클라우드 시스템 레코드(roster_history_v1)에 공용 저장, 이 브라우저에 사본 캐시.
