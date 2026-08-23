@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v55</title>
+<title>산들마을 입주자대표회의 회의록 v56</title>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
   window.GA_MEASUREMENT_ID = "G-MH479X0GSE"; // GA4 속성 "산들마을 회의록" 웹 스트림 (CommunityNotice의 G-GGDNLH6MCQ와 별도)
@@ -774,7 +774,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v55 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v56 · 2026.08.23 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <button class="active" data-view="previewView">① 회의록 미리보기</button>
@@ -27450,10 +27450,11 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     sub.textContent = (data.asOf ? data.asOf.replace(/-/g, ".") + " 기준 (6차 공고 명단)" : "") + " · 채권양도세대 " + t.participants + "세대 중 수령 " + t.received + " · 미수령 " + t.pending;
     var dongs = Object.keys(data.participants || {}).sort();
     document.getElementById("hajaLookup").innerHTML =
-      '<b>우리 집 확인</b> <select id="hajaDong">' + dongs.map(function (d) { return '<option value="' + d + '">' + d + '동</option>'; }).join("") + '</select>' +
-      '<input id="hajaHo" type="number" inputmode="numeric" placeholder="호 (예: 1203)" onkeydown="if(event.key===\'Enter\')Haja.lookup()">' +
+      '<b>우리 집 확인</b> <select id="hajaDong" onchange="Haja.fillHo()">' + dongs.map(function (d) { return '<option value="' + d + '">' + d + '동</option>'; }).join("") + '</select>' +
+      '<select id="hajaHo" onchange="Haja.lookup()"></select>' + // 참여세대 호만 드롭박스로 (v56)
       '<button class="btn gold" type="button" onclick="Haja.lookup()">확인</button>' +
       '<span class="small" style="color:#888">하자소송 참여(채권양도) 세대는 201·204·207·208·209·210·211·213동 370세대입니다. 그 외 동은 배당 대상이 아닙니다.</span>';
+    fillHo(); // 첫 동의 참여 호 채우기 (v56)
     // 통계
     var ok = 0, pend = 0, perCount = { before4: 0, r4to5: 0, r5to6: 0 };
     Object.keys(idx).forEach(function (k) { var x = idx[k]; if (x.status === "ok") { ok++; perCount[x.period] = (perCount[x.period] || 0) + 1; } else pend++; });
@@ -27495,8 +27496,15 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
     if (window.track) track("haja_lookup", { dong: dong, status: x ? x.status : "none" });
   }
-  function lookup() { var d = document.getElementById("hajaDong"), h = document.getElementById("hajaHo"); if (!d || !h) return; show(d.value, h.value); }
-  window.Haja = { render: render, lookup: lookup, show: show, data: function () { return data; } };
+  // 동을 고르면 그 동의 참여(채권양도) 세대 호만 드롭박스에 채운다 (v56)
+  function fillHo() {
+    var d = document.getElementById("hajaDong"), h = document.getElementById("hajaHo"); if (!d || !h || !data) return;
+    var list = (data.participants[d.value] || []).slice().sort(function (a, b) { return a - b; });
+    h.innerHTML = '<option value="">호 선택 (참여 ' + list.length + '세대)</option>' + list.map(function (ho) { var x = idx[d.value + "-" + ho]; return '<option value="' + ho + '">' + ho + '호' + (x && x.status === "pending" ? " · 미수령" : "") + '</option>'; }).join("");
+    var box = document.getElementById("hajaResult"); if (box) box.innerHTML = "";
+  }
+  function lookup() { var d = document.getElementById("hajaDong"), h = document.getElementById("hajaHo"); if (!d || !h) return; if (!h.value) { var box = document.getElementById("hajaResult"); if (box) box.innerHTML = '<div class="haja-res none">호를 선택해 주세요. 목록에 없는 호는 채권양도(소송 참여) 세대가 아닙니다.</div>'; return; } show(d.value, h.value); }
+  window.Haja = { render: render, lookup: lookup, show: show, fillHo: fillHo, data: function () { return data; } };
 })();
 </script>
 <script>
