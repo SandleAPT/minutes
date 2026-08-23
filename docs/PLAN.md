@@ -55,6 +55,7 @@
 ### 큰 그림 — 상위 포털 (2026-08-23 제안)
 - [x] (2026-08-23) 포털 첫 화면 게시: 저장소 `SandleAPT/sandleapt.github.io` → **https://sandleapt.github.io/** (루트). 구상: `https://sandleapt.github.io/` 루트에 **산들마을 입주민 포털** 한 장을 두고 ① 회의록(이 앱) ② 업무현황 공개용(Notion) ③ (두 번째 Notion 페이지) ④ 커뮤니티센터 이용 안내(CommunityNotice) ⑤ 하자판결금 조회 등을 카드로 연결. 저장소 `SandleAPT/sandleapt.github.io`(사용자 사이트)를 새로 만들어야 루트 주소 사용 가능 — 없으면 `minutes/home/`에 두고 리다이렉트.
 - [x] (2026-08-23) 포털을 **왼쪽 사이드바 하나**로 개편(시안 C, 네이버 카페식): 회의록 ①~④ · 작성·관리자 ⑤~⑦(접힘) · 관리사무소(업무현황·자료=노션, 새 창) · 커뮤니티센터. 회의록 앱은 `?embed=1` 끼움 모드로 iframe 한 벌만 띄우고 `postMessage`(source `sandle-portal` ↔ `sandle-minutes`, type show/ready/view)로 화면을 맞춘다. 노션은 `X-Frame-Options/frame-ancestors`로 끼워 넣기 불가 → 안내 카드 + 새 창.
+- [x] (2026-08-24) ⑤ 공고·기록 신설(v65): 공고·안내 보관함(notices_v1, 7건 — 5기 당선 24.5, 6기 후보·투표·당선 25.12, 선관위원장 사퇴 26.3, 분양전환 안내 2건 26.3) + 절차 점검(checks_v1, 4건 모두 확인중 — 6기 선거 공고~투표 1일, 5기 임기 불일치, 선관위원 후보 등록(김영자), 선관위원장 사퇴 후 정족수). 원칙: 사실·규정만, 판단 없음(DATA.md §8). 다음: 관리규약 PDF(Downloads)에서 제31조 등 조문 원문 확인해 rules.verified 채우기
 - [ ] 노션 업무현황을 노션 API → `tasks.json`(Actions 주기 갱신)으로 가져와 포털 안에서 보여 주기(Integration 토큰 필요)
 - [ ] 포털에서 각 서비스의 "최근 갱신일"을 보여줄지 검토(회의록은 `data.json`의 generatedAt, Notion은 수동).
 
