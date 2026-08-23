@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v65</title>
+<title>산들마을 입주자대표회의 회의록 v66</title>
 <script>/* 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨긴다(깜빡임 방지를 위해 가장 먼저) */try{if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("embedded");}catch(e){}</script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
@@ -570,6 +570,19 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .nt-note{border:1px solid var(--line);border-radius:10px;background:#faf8f3;padding:10px 14px;font-size:12.5px;color:#5c5b56;margin-bottom:12px;line-height:1.6}
 .nt-err{color:#a33;font-size:12.5px;margin-bottom:10px}
 .nt-empty{padding:24px;color:#999;text-align:center}
+.nt-lock{max-width:420px;margin:30px auto;text-align:center;border:1px solid var(--line);border-radius:14px;padding:26px 24px;background:#fbf9f4}
+.nt-lock-ic{font-size:26px;margin-bottom:6px}
+.nt-lock p{font-size:13px;color:#6b6656;margin:8px 0 14px;line-height:1.6}
+.nt-lock-row{display:flex;gap:8px;justify-content:center}
+.nt-lock-row input{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;width:180px}
+.rl-head{margin-bottom:14px}
+.rl-search{width:100%;max-width:460px;border:1px solid var(--line);border-radius:11px;padding:10px 14px;font:inherit;font-size:14px}
+.rl-count{font-size:12.5px;color:#8a6410;margin-bottom:10px;font-weight:700}
+.rl-ch{margin:18px 0 8px;font-weight:900;font-size:14px;color:#4a4841;border-bottom:2px solid var(--line);padding-bottom:4px}
+.rl-art{border:1px solid #e7e2d8;border-radius:10px;margin-bottom:6px;background:#fff;padding:2px 12px}
+.rl-art summary{cursor:pointer;padding:8px 2px;font-size:13.5px}
+.rl-art mark{background:#f6e39a;border-radius:3px;padding:0 1px}
+.rl-text{font-size:13px;line-height:1.75;padding:2px 4px 12px;color:#3c3a35}
 @media print{.print-helper{display:none!important}}
 
 
@@ -844,7 +857,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v65 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v66 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -854,7 +867,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
         <button data-view="archiveView">② 이전 회의록</button>
         <button data-view="topicView">③ 주제별 보기</button>
         <button data-view="hajaView">④ 하자판결금</button>
-        <button data-view="noticeView">⑤ 공고·기록</button>
+        <button data-view="noticeView">⑤ 규약·공고</button>
       </div>
       <div class="nav-group" id="navEditGroup">
         <button type="button" class="nav-group-title toggle" onclick="toggleNavGroup()">작성 · 관리자 <span class="nav-arrow">▸</span></button>
@@ -1142,11 +1155,11 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 
     <section id="noticeView" class="view">
       <div class="help">
-        회의록이 아닌 <b>공고·안내문</b>(선거·당선인·사퇴 공고, 관리사무소 안내)을 원문 전문과 함께 보관하고,
-        <b>절차 점검</b> 탭에는 공고·회의록에 적힌 사실과 근거 규정을 나란히 정리합니다. 기록 추가·갱신은 Claude Code로 합니다.
+        <b>관리규약</b> 전문(조문·별표)을 검색해 볼 수 있고, <b>공고·안내</b>(선거·당선인·사퇴 공고, 관리사무소 안내)와
+        <b>절차 점검</b> 기록은 관리자 비밀번호를 입력한 기기에서만 열립니다. 기록 추가·갱신은 Claude Code로 합니다.
       </div>
       <div class="card">
-        <div class="card-title"><div><h3>공고·기록</h3><small>공고·안내 보관함 · 절차 점검</small></div>
+        <div class="card-title"><div><h3>규약·공고</h3><small>관리규약 전문·검색 · 공고 보관함 · 절차 점검</small></div>
           <button class="btn" onclick="Notices.reload()">↻ 새로고침</button></div>
         <div id="noticeBody"></div>
       </div>
@@ -24625,7 +24638,7 @@ const viewNames={
   archiveView:"이전 회의록",
   topicView:"주제별 보기",
   hajaView:"하자판결금 수령 현황",
-  noticeView:"공고·기록"
+  noticeView:"관리규약 · 공고 · 점검"
 };
 // 작성·관리자 메뉴 묶음 접기/펼치기 (v57): 관리자 비밀번호가 있는 기기나 한 번 펼친 기기는 펼친 채로 기억
 const NAV_EDIT_KEY="sandle_nav_edit_open";
@@ -27913,20 +27926,22 @@ initMeetingControls();renderMeetingControls();renderRepMaster();renderAttendance
   setTimeout(function () { if (data === null) { if (!loadCache()) data = { terms: {} }; fetchCloud(function () { if (typeof renderRepMaster === "function") renderRepMaster(); }); if (typeof renderRepMaster === "function") renderRepMaster(); } }, 1800);
 })();
 </script>
+
 <script>
-// ── ⑤ 공고·기록 (v65) ──────────────────────────────────────────────
-// 회의록이 아닌 문서(선거·당선인·사퇴 공고, 관리사무소 안내문)와 절차 점검 기록을 보관·표시한다.
-// 데이터는 클라우드 시스템 레코드 notices_v1 / checks_v1 (목록·주제 집계에서 제외, docs/DATA.md §8).
-// 갱신은 Claude Code가 스크립트로 저장(scripts/import/ 참고). 점검 기록의 '메모' 필드는 관리자 키가 있는
-// 기기에서만 표시된다(표시만 가림 — 완전한 비공개가 필요한 내용은 넣지 않는다).
+// ── ⑤ 규약·공고 (v65 신설, v66 확장) ──────────────────────────────
+// 탭 1 관리규약: 정적 rules.json(조문·별표 전문, 별지 서식 목록) + 검색 — 누구나 열람.
+// 탭 2 공고·안내 / 탭 3 절차 점검: 클라우드 notices_v1/checks_v1 — 관리자 비밀번호를 입력한 기기에서만 표시.
+//   잠금은 화면 표시 단계의 가림이다(저장소 자체의 접근 제한은 GAS 쪽 수정 필요 — docs/DATA.md §8).
+//   비밀번호 검증: 존재하지 않는 id에 delete 요청 → 키가 맞으면 {ok:true,deleted:false}, 틀리면 admin_required.
 var Notices=(function(){
   var URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
   var CACHE="sandle_notices_cache_v1";
-  var st={notices:null,checks:null,loading:false,err:"",sub:"notices",fBody:"전체",fKind:"전체"};
+  var st={notices:null,checks:null,rules:null,loading:false,rulesLoading:false,err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",unlocked:false,verifying:false};
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
-  function isAdmin(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
+  function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
   function getRec(id){return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){return x&&x.ok&&x.item?JSON.parse(x.item.json):null});}
+  function verifyKey(k){return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_key___",adminKey:k,token:TOKEN})}).then(function(r){return r.json()}).then(function(x){return !!(x&&x.ok);});}
   function load(){
     if(st.loading) return; st.loading=true; st.err="";
     Promise.all([getRec("notices_v1").catch(function(){return null}),getRec("checks_v1").catch(function(){return null})]).then(function(rs){
@@ -27937,6 +27952,46 @@ var Notices=(function(){
       draw();
     });
   }
+  function loadRules(){
+    if(st.rulesLoading||st.rules) return; st.rulesLoading=true;
+    fetch("rules.json").then(function(r){return r.json()}).then(function(j){st.rulesLoading=false;st.rules=j;draw();}).catch(function(){st.rulesLoading=false;st.err="rules.json을 불러오지 못했습니다.";draw();});
+  }
+  // ---- 검색 (규약) ----
+  function hl(text,q){ if(!q) return esc(text); var t=esc(text),qq=esc(q); var i,out="",low=t.toLowerCase(),ql=qq.toLowerCase(),from=0; while((i=low.indexOf(ql,from))>=0){ out+=t.slice(from,i)+"<mark>"+t.slice(i,i+qq.length)+"</mark>"; from=i+qq.length; } return out+t.slice(from); }
+  function ruleArticleHtml(a,q,open){
+    return '<details class="rl-art"'+(open?" open":"")+'><summary><b>'+hl(a.no+(a.title?"("+a.title+")":""),q)+'</b></summary><div class="rl-text">'+hl(a.text,q).replace(/\n/g,"<br>")+'</div></details>';
+  }
+  function rulesHtml(){
+    var r=st.rules;
+    if(!r) return '<div class="nt-empty">'+(st.rulesLoading?"관리규약 불러오는 중…":"규약 자료가 없습니다.")+'</div>';
+    var q=st.q.trim();
+    var h='<div class="rl-head"><input id="ruleSearch" class="rl-search" placeholder="규약 전문 검색 (예: 선거관리위원회, 장기수선충당금)" value="'+esc(st.q)+'" oninput="Notices.search(this.value)">'+
+      '<div class="small" style="margin-top:4px">'+esc(r.title)+' · '+esc(r.effective)+' 시행 · 원본: '+esc(r.source)+' — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div></div>';
+    var shown=0,total=0;
+    (r.chapters||[]).forEach(function(ch){
+      var arts=(ch.articles||[]).filter(function(a){ total++; return !q || (a.no+(a.title||"")+a.text).toLowerCase().indexOf(q.toLowerCase())>=0; });
+      if(!arts.length) return;
+      shown+=arts.length;
+      h+='<div class="rl-ch">'+esc(ch.no?ch.no+" ":"")+esc(ch.title||"")+'</div>'+arts.map(function(a){return ruleArticleHtml(a,q,!!q)}).join("");
+    });
+    var apps=(r.appendices||[]).filter(function(a){ return !q || (a.no+(a.title||"")+(a.text||"")).toLowerCase().indexOf(q.toLowerCase())>=0; });
+    if(apps.length){ h+='<div class="rl-ch">별표</div>'+apps.map(function(a){return '<details class="rl-art"'+(q?" open":"")+'><summary><b>'+hl(a.no+" "+(a.title||""),q)+'</b></summary><div class="rl-text">'+hl(a.text||"",q).replace(/\n/g,"<br>")+'</div></details>'}).join(""); shown+=apps.length; }
+    var forms=(r.forms||[]).filter(function(f){ return !q || (f.no+" "+(f.title||"")+" "+(f.note||"")).toLowerCase().indexOf(q.toLowerCase())>=0; });
+    if(forms.length){ h+='<div class="rl-ch">별지 서식 <span class="small">(서식 명칭·용도만 수록 — 양식 원본은 PDF)</span></div><ul class="nt-facts">'+forms.map(function(f){return '<li>'+hl(f.no+" "+(f.title||""),q)+(f.note?' — <span class="small">'+hl(f.note,q)+'</span>':'')+'</li>'}).join("")+'</ul>'; shown+=forms.length; }
+    if(q) h='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+shown+'건 — 해당 조문만 표시(펼침)</div>'+h;
+    if(q&&!shown) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
+    return h;
+  }
+  // ---- 잠금 ----
+  function lockHtml(){
+    return '<div class="nt-lock"><div class="nt-lock-ic">🔒</div><b>관리자 확인이 필요한 기록입니다</b>'+
+      '<p>공고·안내 보관함과 절차 점검 기록은 관리자 비밀번호를 입력한 기기에서만 열람할 수 있습니다.</p>'+
+      '<div class="nt-lock-row"><input id="ntKeyInput" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key===\'Enter\')Notices.unlock()">'+
+      '<button type="button" class="btn gold" onclick="Notices.unlock()">'+(st.verifying?"확인 중…":"확인")+'</button></div>'+
+      '<div id="ntKeyMsg" class="nt-err" style="margin-top:8px"></div></div>';
+  }
+  function locked(){ return !(st.unlocked||hasKey()); }
+  // ---- 카드 ----
   function badge(txt,cls){return '<span class="nt-badge '+cls+'">'+esc(txt)+'</span>';}
   function bodyCls(b){return b==="임차"?"t":b&&b.indexOf("선관위")>=0?"e":b==="관리사무소"?"o":"a";}
   function bullets(arr){return (arr&&arr.length)?'<ul class="nt-facts">'+arr.map(function(f){return '<li>'+esc(f)+'</li>'}).join("")+'</ul>':"";}
@@ -27969,18 +28024,22 @@ var Notices=(function(){
       '<div class="nt-sec">사실관계 <span class="small">(공고·회의록 기재 내용)</span></div>'+bullets(c.facts)+
       (c.rules&&c.rules.length?'<div class="nt-sec">근거 규정</div><ul class="nt-facts">'+c.rules.map(function(r){return '<li>'+esc(r.ref)+(r.text?' — '+esc(r.text):'')+(r.verified?' <span class="nt-ok">원문 확인됨</span>':' <span class="nt-todo">조문 원문 확인 필요</span>')+'</li>'}).join("")+'</ul>':"")+
       (c.question?'<div class="nt-sec">확인할 점</div><div class="nt-sum">'+esc(c.question)+'</div>':"")+
-      (c.memo&&isAdmin()?'<div class="nt-memo">🔒 메모(관리자 화면에만 표시): '+esc(c.memo)+'</div>':"")+
+      (c.memo?'<div class="nt-memo">🔒 메모: '+esc(c.memo)+'</div>':"")+
       relChips(c.related)+
     '</div>';
   }
   function draw(){
     var box=document.getElementById("noticeBody"); if(!box) return;
+    var lockMark=locked()?" 🔒":"";
     var h='<div class="nt-tabs">'+
-      '<button type="button" class="btn'+(st.sub==="notices"?" gold":"")+'" onclick="Notices.sub(\'notices\')">공고·안내'+(st.notices?' ('+st.notices.items.length+')':'')+'</button>'+
-      '<button type="button" class="btn'+(st.sub==="checks"?" gold":"")+'" onclick="Notices.sub(\'checks\')">절차 점검'+(st.checks?' ('+st.checks.items.length+')':'')+'</button></div>';
+      '<button type="button" class="btn'+(st.sub==="rules"?" gold":"")+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
+      '<button type="button" class="btn'+(st.sub==="notices"?" gold":"")+'" onclick="Notices.sub(\'notices\')">공고·안내'+(!locked()&&st.notices?' ('+st.notices.items.length+')':lockMark)+'</button>'+
+      '<button type="button" class="btn'+(st.sub==="checks"?" gold":"")+'" onclick="Notices.sub(\'checks\')">절차 점검'+(!locked()&&st.checks?' ('+st.checks.items.length+')':lockMark)+'</button></div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
+    if(st.sub==="rules"){ box.innerHTML=h+rulesHtml(); return; }
+    if(locked()){ box.innerHTML=h+lockHtml(); return; }
     if(st.sub==="notices"){
-      if(!st.notices){ h+='<div class="nt-empty">'+(st.loading?"불러오는 중…":"기록이 없습니다.")+'</div>'; box.innerHTML=h; return; }
+      if(!st.notices){ h+='<div class="nt-empty">'+(st.loading?"불러오는 중…":"기록이 없습니다.")+'</div>'; box.innerHTML=h; if(!st.loading) load(); return; }
       var items=st.notices.items.slice();
       var bodies=["전체"].concat(Array.from(new Set(items.map(function(n){return n.body}))));
       var kinds=["전체"].concat(Array.from(new Set(items.map(function(n){return n.kind}))));
@@ -27993,19 +28052,31 @@ var Notices=(function(){
       order.forEach(function(y){h+='<div class="nt-year">'+esc(y)+'년 <span class="small">('+years[y].length+')</span></div>'+years[y].map(noticeCard).join("")});
       if(!items.length) h+='<div class="nt-empty">조건에 맞는 기록이 없습니다.</div>';
     }else{
-      if(!st.checks){ h+='<div class="nt-empty">'+(st.loading?"불러오는 중…":"기록이 없습니다.")+'</div>'; box.innerHTML=h; return; }
+      if(!st.checks){ h+='<div class="nt-empty">'+(st.loading?"불러오는 중…":"기록이 없습니다.")+'</div>'; box.innerHTML=h; if(!st.loading) load(); return; }
       h+='<div class="nt-note">이 기록은 공고·회의록에 적힌 <b>사실</b>과 <b>규정</b>만 싣습니다. 특정인에 대한 판단·평가는 싣지 않으며, 상태는 확인중 → 질의함 → 해소/문제없음으로 갱신합니다.</div>';
       h+=st.checks.items.map(checkCard).join("");
     }
     box.innerHTML=h;
   }
   return {
-    render:function(){ draw(); if(!st.notices&&!st.loading) load(); },
-    reload:function(){ st.notices=null; st.checks=null; load(); },
-    sub:function(s){ st.sub=s; draw(); },
+    render:function(){ draw(); if(st.sub==="rules") loadRules(); },
+    reload:function(){ st.notices=null; st.checks=null; st.rules=null; if(st.sub==="rules") loadRules(); else if(!locked()) load(); draw(); },
+    sub:function(s){ st.sub=s; draw(); if(s==="rules") loadRules(); else if(!locked()&&!st.notices) load(); },
     fBody:function(b){ st.fBody=b; draw(); },
     fKind:function(k){ st.fKind=k; draw(); },
-    jump:function(id){ st.sub="notices"; draw(); var el=document.getElementById("nt-"+id); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.classList.add("hl"); setTimeout(function(){el.classList.remove("hl")},1600); } }
+    search:function(q){ st.q=q; clearTimeout(st._t); st._t=setTimeout(function(){ var el=document.getElementById("ruleSearch"); var pos=el?el.selectionStart:0; draw(); var el2=document.getElementById("ruleSearch"); if(el2){ el2.focus(); try{el2.setSelectionRange(pos,pos);}catch(e){} } },250); },
+    unlock:function(){
+      var inp=document.getElementById("ntKeyInput"),msg=document.getElementById("ntKeyMsg");
+      var k=inp?inp.value.trim():"";
+      if(!k){ if(msg) msg.textContent="비밀번호를 입력해 주세요."; return; }
+      if(st.verifying) return; st.verifying=true; if(msg) msg.textContent="확인 중…";
+      verifyKey(k).then(function(ok){
+        st.verifying=false;
+        if(ok){ try{localStorage.setItem("sandle_admin_key",k);}catch(e){} st.unlocked=true; load(); draw(); }
+        else if(msg) msg.textContent="비밀번호가 올바르지 않습니다.";
+      }).catch(function(){ st.verifying=false; if(msg) msg.textContent="확인 실패 — 네트워크 상태를 확인해 주세요."; });
+    },
+    jump:function(id){ if(locked()) return; st.sub="notices"; draw(); var el=document.getElementById("nt-"+id); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.classList.add("hl"); setTimeout(function(){el.classList.remove("hl")},1600); } }
   };
 })();
 window.Notices=Notices;

@@ -53,3 +53,5 @@
 - ⑤ 공고·기록 화면(`noticeView`)의 `Notices` 모듈이 GAS에서 읽어 표시(localStorage `sandle_notices_cache_v1` 사본). 적재·갱신은 `scripts/import/notices_*.js` 방식.
 - **절차 점검 원칙**: 사실(공고·회의록 기재)과 규정 조문만 싣고 특정인에 대한 판단·평가는 싣지 않는다. `rules[].verified`는 조문 원문을 확인한 뒤에만 true. `memo`는 관리자 키 있는 화면에서만 보이지만 **저장소 자체는 비공개가 아니므로**(GAS 토큰이 공개 HTML에 있음) 민감한 내용은 넣지 않는다 — 진짜 비공개가 필요하면 GAS에 읽기 제한을 추가해야 한다.
 - 개인정보: 공고 원문의 성별·나이 등은 전문에서 생략하고 생략 사실을 남긴다. 이름·동호수는 공고에 이미 공개된 범위만.
+- **관리규약 전문(`rules.json`, v66)**: 정적 파일. `{title, effective, source, transcribed, preamble, chapters[{no,title,articles[{no,title,text}]}], appendices([별표]), forms([별지 서식 — 명칭·용도만)}`. 2024.10.30 최종본 PDF(이미지)를 전사한 사본 — 효력은 원본에 있음 표기. ⑤ 관리규약 탭에서 검색(부분일치·하이라이트) 제공. 재전사 절차: PDF를 pdf.js로 페이지 렌더 → 보조 에이전트 분담 전사(scratchpad rules_part*.txt) → `mkrules.pl` 파서로 JSON 생성.
+- **⑤ 잠금(v66)**: 공고·안내/절차 점검 탭은 관리자 비밀번호 확인 후 표시. 검증은 GAS에 존재하지 않는 id의 delete 요청(키 맞음 → {ok:true,deleted:false}, 틀림 → admin_required) — 데이터 무변경. 이 잠금은 화면 가림이며 GAS 데이터 자체는 토큰만으로 읽힘(완전 비공개는 GAS 수정 필요).
