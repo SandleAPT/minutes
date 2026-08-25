@@ -218,17 +218,13 @@ td.center,th.center{text-align:center}
 .vote-consensus{display:flex;align-items:center;gap:13px;border:1px solid #9d978c;background:#fbfcfa;min-height:42px}
 .vote-consensus b{flex:0 0 110px;align-self:stretch;display:flex;align-items:center;justify-content:center;background:#e8efe5;border-right:1px solid #9d978c;padding:7px 10px;font-size:11.5pt;white-space:nowrap}
 .vote-consensus span{padding:7px 10px;font-size:11pt;line-height:1.45}
-.vote-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.vote-card{border:1px solid #9d978c;background:#fff;min-width:0}
-.vote-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid #c8c4bb;font-size:11.5pt}
-.vote-card-head b{font-size:11.5pt;white-space:nowrap}.vote-card-head span{font-size:10.5pt;color:#666;white-space:nowrap}
-.vote-card.for .vote-card-head{background:#e8efe5}.vote-card.against .vote-card-head{background:#f7ece8}
-.vote-card-body{padding:8px 10px;font-size:10.5pt;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
-.vote-seat-grid{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start}
-.vote-seat{min-width:52px;padding:4px 7px;border-radius:7px;text-align:center;border:1px solid #c7d8bf;background:#e6f0e1;color:#2f5128;font-size:10pt;font-weight:800;line-height:1.25}
-.vote-card.against .vote-seat{border-color:#efb8b0;background:#fde9e6;color:#8a2a20}
-.vote-card.pending .vote-seat{border-color:#e1cd86;background:#fff4d6;color:#725b13}
-.vote-card-body.empty{color:#777;text-align:center;background:#faf9f6}
+.vote-tally{display:flex;align-items:center;gap:14px;border:1px solid #9d978c;border-bottom:0;padding:7px 10px;background:#faf9f6;font-size:11pt;font-weight:900}
+.vote-tally .for{color:#2f5128}.vote-tally .against{color:#8a2a20}
+.vote-mixed-grid{display:flex;flex-wrap:wrap;gap:6px;border:1px solid #9d978c;padding:9px 10px;background:#fff}
+.vote-person{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;border:1px solid #c7d8bf;background:#e6f0e1;color:#2f5128;font-size:9.8pt;line-height:1.25;word-break:keep-all}
+.vote-person b{font-weight:800}.vote-person small{font-size:8.8pt;font-weight:900;white-space:nowrap}
+.vote-person.against{border-color:#efb8b0;background:#fde9e6;color:#8a2a20}
+.vote-person.pending{border-color:#e1cd86;background:#fff4d6;color:#725b13}
 .vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:10.5pt}
 .footer-note{margin-top:5mm;text-align:center;font-size:10px;color:#777}
 .page-number{
