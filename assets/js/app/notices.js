@@ -1,14 +1,15 @@
-// ── ⑤ 규약·공고 (v65 신설, v66 확장) ──────────────────────────────
+// ── ⑤ 규약·공고·계약 (v70 확장) ──────────────────────────────
 // 탭 1 관리규약: 정적 rules.json(조문·별표 전문, 별지 서식 목록) + 검색 — 누구나 열람.
-// 탭 2 공고·안내 / 탭 3 절차 점검: 클라우드 notices_v1/checks_v1 — 관리자 비밀번호를 입력한 기기에서만 표시.
+// 탭 2 계약·기준문서: 정적 contracts.json + 조항·핵심의무·쟁점메모 검색 — 누구나 열람.
+// 탭 3 공고·안내 / 탭 4 절차 점검: 클라우드 notices_v1/checks_v1 — 관리자 비밀번호를 입력한 기기에서만 표시.
 //   잠금은 화면 표시 단계의 가림이다(저장소 자체의 접근 제한은 GAS 쪽 수정 필요 — docs/DATA.md §8).
 //   비밀번호 검증: 존재하지 않는 id에 delete 요청 → 키가 맞으면 {ok:true,deleted:false}, 틀리면 admin_required.
 var Notices=(function(){
   var URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
   var CACHE="sandle_notices_cache_v1";
-  var st={notices:null,checks:null,rulesDocs:{},doc:"bunyang",loading:false,rulesLoading:false,err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",unlocked:false,verifying:false};
-  var RULE_DOCS={bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"},all:{label:"◆◇ 함께 검색"}}; // 규약 문서 2종 + 통합 검색 (v67·v68)
+  var st={notices:null,checks:null,rulesDocs:{},contracts:null,doc:"bunyang",loading:false,rulesLoading:false,contractsLoading:false,err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",cq:"",unlocked:false,verifying:false};
+  var RULE_DOCS={bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"},all:{label:"◆◇ 함께 검색"}};
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
   function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
   function getRec(id){return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){return x&&x.ok&&x.item?JSON.parse(x.item.json):null});}
@@ -31,12 +32,16 @@ var Notices=(function(){
       fetch(RULE_DOCS[d].file).then(function(r){return r.json()}).then(function(j){st._ld[d]=0;st.rulesDocs[d]=j;draw();}).catch(function(){st._ld[d]=0;st.err=RULE_DOCS[d].file+"을 불러오지 못했습니다.";draw();});
     });
   }
+  function loadContracts(){
+    if(st.contracts||st.contractsLoading) return;
+    st.contractsLoading=true;
+    fetch("contracts.json").then(function(r){return r.json()}).then(function(j){st.contractsLoading=false;st.contracts=j;draw();}).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
+  }
   // ---- 검색 (규약) ----
   function hl(text,q){ if(!q) return esc(text); var t=esc(text),qq=esc(q); var i,out="",low=t.toLowerCase(),ql=qq.toLowerCase(),from=0; while((i=low.indexOf(ql,from))>=0){ out+=t.slice(from,i)+"<mark>"+t.slice(i,i+qq.length)+"</mark>"; from=i+qq.length; } return out+t.slice(from); }
   function ruleArticleHtml(a,q,open){
     return '<details class="rl-art"'+(open?" open":"")+'><summary><b>'+hl(a.no+(a.title?"("+a.title+")":""),q)+'</b></summary><div class="rl-text">'+hl(a.text,q).replace(/\n/g,"<br>")+'</div></details>';
   }
-  // 규약 한 벌의 본문(조문·별표·서식)을 검색어로 걸러 그린다 (v68: 통합 검색을 위해 분리)
   function docBodyHtml(r,q){
     var h="",shown=0;
     (r.chapters||[]).forEach(function(ch){
@@ -73,6 +78,35 @@ var Notices=(function(){
     if(q) h+='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+shown+'건'+(st.doc==="all"?"(두 규약 합산)":"")+' — 해당 조문만 표시(펼침)</div>';
     h+=body;
     if(q&&!shown) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
+    return h;
+  }
+  // ---- 계약·기준문서 ----
+  function contractHay(c){
+    return [c.ref,c.title,c.summary,c.issueNote,(c.keywords||[]).join(" ")].join(" ").toLowerCase();
+  }
+  function contractClauseHtml(c,q){
+    return '<details class="rl-art"'+(q?" open":"")+'><summary><b>'+hl(c.ref+(c.title?"("+c.title+")":""),q)+'</b></summary>'+
+      '<div class="rl-text">'+hl(c.summary||"",q)+'</div>'+
+      (c.issueNote?'<div class="nt-note" style="margin-top:10px"><b>현재 검토 메모</b><br>'+hl(c.issueNote,q)+'</div>':"")+
+      (c.keywords&&c.keywords.length?'<div class="nt-rel">검색어: '+c.keywords.map(function(k){return '<span class="nt-chip">'+hl(k,q)+'</span>'}).join(" ")+'</div>':"")+
+    '</details>';
+  }
+  function contractsHtml(){
+    if(!st.contracts){ return '<div class="nt-empty">'+(st.contractsLoading?"계약·기준문서 불러오는 중…":"계약·기준문서가 없습니다.")+'</div>'; }
+    var q=st.cq.trim(), h='<div class="rl-head"><input id="contractSearch" class="rl-search" placeholder="계약·기준문서 검색 (예: 계약해지, 관리소장, LH, 감사, 보고)" value="'+esc(st.cq)+'" oninput="Notices.contractSearch(this.value)">';
+    h+='<div class="small" style="margin-top:4px">'+esc(st.contracts.note||"")+'</div></div>';
+    var total=0;
+    (st.contracts.items||[]).forEach(function(d){
+      var clauses=(d.clauses||[]).filter(function(c){return !q||contractHay(c).indexOf(q.toLowerCase())>=0;});
+      if(q&&!clauses.length && [d.title,d.type,d.period,(d.tags||[]).join(" ")].join(" ").toLowerCase().indexOf(q.toLowerCase())<0) return;
+      total+=clauses.length;
+      h+='<div class="rl-doc-h">'+esc(d.title)+' <span class="small">'+esc(d.period||"")+'</span></div>';
+      h+='<div class="nt-sum"><b>'+esc(d.type||"계약")+'</b> · '+esc((d.parties||[]).join(" ↔ "))+'<br><span class="small">원본: '+esc(d.source||"")+'</span></div>';
+      if(!clauses.length && q){ h+='<div class="nt-empty" style="padding:10px">문서 기본정보에는 검색어가 있으나 해당 조항 요약에는 검색 결과가 없습니다.</div>'; }
+      else h+=clauses.map(function(c){return contractClauseHtml(c,q)}).join("");
+    });
+    if(q) h='<div class="rl-count">"'+esc(q)+'" 계약·기준문서 검색 결과 '+total+'개 조항</div>'+h;
+    if(q&&!total && h.indexOf('rl-doc-h')<0) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
     return h;
   }
   // ---- 잠금 ----
@@ -126,10 +160,12 @@ var Notices=(function(){
     var lockMark=locked()?" 🔒":"";
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==="rules"?" gold":"")+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
+      '<button type="button" class="btn'+(st.sub==="contracts"?" gold":"")+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
       '<button type="button" class="btn'+(st.sub==="notices"?" gold":"")+'" onclick="Notices.sub(\'notices\')">공고·안내'+(!locked()&&st.notices?' ('+st.notices.items.length+')':lockMark)+'</button>'+
       '<button type="button" class="btn'+(st.sub==="checks"?" gold":"")+'" onclick="Notices.sub(\'checks\')">절차 점검'+(!locked()&&st.checks?' ('+st.checks.items.length+')':lockMark)+'</button></div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==="rules"){ box.innerHTML=h+rulesHtml(); return; }
+    if(st.sub==="contracts"){ box.innerHTML=h+contractsHtml(); if(!st.contracts&&!st.contractsLoading) loadContracts(); return; }
     if(locked()){ box.innerHTML=h+lockHtml(); return; }
     if(st.sub==="notices"){
       if(!st.notices){ h+='<div class="nt-empty">'+(st.loading?"불러오는 중…":"기록이 없습니다.")+'</div>'; box.innerHTML=h; if(!st.loading) load(); return; }
@@ -152,13 +188,14 @@ var Notices=(function(){
     box.innerHTML=h;
   }
   return {
-    render:function(){ draw(); if(st.sub==="rules") loadRules(); },
-    reload:function(){ st.notices=null; st.checks=null; st.rulesDocs={}; if(st.sub==="rules") loadRules(); else if(!locked()) load(); draw(); },
-    sub:function(s){ st.sub=s; draw(); if(s==="rules") loadRules(); else if(!locked()&&!st.notices) load(); },
+    render:function(){ draw(); if(st.sub==="rules") loadRules(); else if(st.sub==="contracts") loadContracts(); },
+    reload:function(){ st.notices=null; st.checks=null; st.rulesDocs={}; st.contracts=null; if(st.sub==="rules") loadRules(); else if(st.sub==="contracts") loadContracts(); else if(!locked()) load(); draw(); },
+    sub:function(s){ st.sub=s; draw(); if(s==="rules") loadRules(); else if(s==="contracts") loadContracts(); else if(!locked()&&!st.notices) load(); },
     fBody:function(b){ st.fBody=b; draw(); },
-    doc:function(d){ st.doc=d; draw(); loadRules(); }, // 규약 문서 전환 (v67; v68부터 검색어 유지)
+    doc:function(d){ st.doc=d; draw(); loadRules(); },
     fKind:function(k){ st.fKind=k; draw(); },
     search:function(q){ st.q=q; clearTimeout(st._t); st._t=setTimeout(function(){ var el=document.getElementById("ruleSearch"); var pos=el?el.selectionStart:0; draw(); var el2=document.getElementById("ruleSearch"); if(el2){ el2.focus(); try{el2.setSelectionRange(pos,pos);}catch(e){} } },250); },
+    contractSearch:function(q){ st.cq=q; clearTimeout(st._ct); st._ct=setTimeout(function(){ var el=document.getElementById("contractSearch"); var pos=el?el.selectionStart:0; draw(); var el2=document.getElementById("contractSearch"); if(el2){ el2.focus(); try{el2.setSelectionRange(pos,pos);}catch(e){} } },200); },
     unlock:function(){
       var inp=document.getElementById("ntKeyInput"),msg=document.getElementById("ntKeyMsg");
       var k=inp?inp.value.trim():"";
