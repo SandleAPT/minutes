@@ -10,15 +10,33 @@ var Notices=(function(){
   var CACHE="sandle_notices_cache_v1";
   var st={
     notices:null,checks:null,rulesDocs:{},contracts:null,investigations:null,
-    doc:"bunyang",loading:false,contractsLoading:false,investigationsLoading:false,
+    doc:"all",loading:false,contractsLoading:false,investigationsLoading:false,
     err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",cq:"",checkFilter:"전체",
     unlocked:false,verifying:false
   };
   var RULE_DOCS={
+    all:{label:"◆◇ 두 규약 함께"},
     bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},
-    tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"},
-    all:{label:"◆◇ 함께 검색"}
+    tenant:{file:"trules.json",label:"◇ 임차 (임대주택 관리규약)"}
   };
+  // 함께 검색 결과를 주제별로 묶기 위한 장(章) 대응표 — 두 규약은 별개 문서라 장 구성·조 번호가 다르다.
+  var RULE_TOPICS=[
+    {t:"총칙",b:["제1장"],n:["제1장"]},
+    {t:"입주자·임차인의 권리와 의무",b:["제2장"],n:["제2장"]},
+    {t:"대표회의 (입주자대표회의 / 임차인대표회의)",b:["제3장"],n:["제3장"]},
+    {t:"선거관리위원회",b:["제4장"],n:["제4장"]},
+    {t:"공동체 활성화",b:["제5장"],n:["제5장"]},
+    {t:"관리방법·관리주체의 업무와 책임",b:["제6장","제7장","제8장"],n:["제6장"]},
+    {t:"관리비·회계·잡수입",b:["제9장","제10장"],n:["제7장","제8장","제9장"]},
+    {t:"관리책임 및 비용부담",b:["제11장"],n:["제10장"]},
+    {t:"생활질서·벌칙",b:["제12장"],n:["제11장"]},
+    {t:"규약의 제정·개정",b:["제13장"],n:["제12장"]},
+    {t:"공사·용역 사업자 선정",b:["제14장"],n:[]},
+    {t:"혼합단지 관리·보칙",b:["제15장","제16장"],n:["제13장","제14장"]},
+    {t:"부칙·그 밖의 규정",b:["__rest__"],n:["__rest__"]},
+    {t:"별표",b:["__app__"],n:["__app__"]},
+    {t:"별지 서식",b:["__form__"],n:["__form__"]}
+  ];
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
   function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
   function getRec(id){return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){return x&&x.ok&&x.item?JSON.parse(x.item.json):null});}
@@ -77,8 +95,10 @@ var Notices=(function(){
     while((i=low.indexOf(ql,from))>=0){out+=t.slice(from,i)+"<mark>"+t.slice(i,i+qq.length)+"</mark>";from=i+qq.length;}
     return out+t.slice(from);
   }
-  function ruleArticleHtml(a,q,open){
-    return '<details class="rl-art"'+(open?' open':'')+'><summary><b>'+hl(a.no+(a.title?'('+a.title+')':''),q)+'</b></summary><div class="rl-text">'+hl(a.text,q).replace(/\n/g,'<br>')+'</div></details>';
+  // dk: 함께 검색 결과에서 어느 규약의 조문인지 배지로 표시('bunyang'|'tenant')
+  function ruleDocBadge(dk){return '<span class="nt-badge '+(dk==='tenant'?'t':'k')+'" style="margin-right:7px">'+(dk==='tenant'?'◇ 임차':'◆ 분양')+'</span>';}
+  function ruleArticleHtml(a,q,open,dk){
+    return '<details class="rl-art"'+(open?' open':'')+'><summary>'+(dk?ruleDocBadge(dk):'')+'<b>'+hl(a.no+(a.title?'('+a.title+')':''),q)+'</b></summary><div class="rl-text">'+hl(a.text,q).replace(/\n/g,'<br>')+'</div></details>';
   }
   function docBodyHtml(r,q){
     var h="",shown=0;
@@ -100,6 +120,53 @@ var Notices=(function(){
     }
     return {html:h,shown:shown};
   }
+  // ◆◇ 함께 검색: 결과를 규약별이 아니라 주제별로 묶고, 조문마다 어느 규약인지 배지로 표시
+  function allTopicResultsHtml(q){
+    var ql=q.toLowerCase();
+    function mArt(a){return (a.no+(a.title||'')+a.text).toLowerCase().indexOf(ql)>=0;}
+    function mApp(a){return (a.no+(a.title||'')+(a.text||'')).toLowerCase().indexOf(ql)>=0;}
+    function mForm(f){return (f.no+' '+(f.title||'')+' '+(f.note||'')).toLowerCase().indexOf(ql)>=0;}
+    // 대응표에 없는 장(부칙 등, 장 번호 없음)은 rest 로 모아 "부칙·그 밖의 규정" 주제로 보여준다
+    var mapped={};RULE_TOPICS.forEach(function(tp){tp.b.concat(tp.n).forEach(function(no){mapped[no]=1;});});
+    var res={};
+    ['bunyang','tenant'].forEach(function(d){
+      var r=st.rulesDocs[d],o={ch:{},rest:[],app:[],form:[]};
+      (r.chapters||[]).forEach(function(ch){
+        var arts=(ch.articles||[]).filter(mArt);
+        if(!arts.length) return;
+        if(ch.no&&mapped[ch.no]) o.ch[ch.no]=(o.ch[ch.no]||[]).concat(arts);
+        else o.rest=o.rest.concat(arts);
+      });
+      o.app=(r.appendices||[]).filter(mApp);
+      o.form=(r.forms||[]).filter(mForm);
+      res[d]=o;
+    });
+    var total=0,body='';
+    RULE_TOPICS.forEach(function(tp){
+      var bArts=[],nArts=[];
+      if(tp.b[0]==='__app__'){bArts=res.bunyang.app;nArts=res.tenant.app;}
+      else if(tp.b[0]==='__form__'){bArts=res.bunyang.form;nArts=res.tenant.form;}
+      else if(tp.b[0]==='__rest__'){bArts=res.bunyang.rest;nArts=res.tenant.rest;}
+      else{
+        tp.b.forEach(function(no){bArts=bArts.concat(res.bunyang.ch[no]||[]);});
+        tp.n.forEach(function(no){nArts=nArts.concat(res.tenant.ch[no]||[]);});
+      }
+      if(!bArts.length&&!nArts.length) return;
+      total+=bArts.length+nArts.length;
+      body+='<div class="rl-ch">'+esc(tp.t)+' <span class="small" style="font-weight:400">◆ 분양 '+bArts.length+'건 · ◇ 임차 '+nArts.length+'건</span></div>';
+      if(tp.b[0]==='__form__'){
+        var li=function(dk){return function(f){return '<li>'+ruleDocBadge(dk)+hl(f.no+' '+(f.title||''),q)+(f.note?' — <span class="small">'+hl(f.note,q)+'</span>':'')+'</li>';};};
+        if(bArts.length||nArts.length) body+='<ul class="nt-facts">'+bArts.map(li('bunyang')).join('')+nArts.map(li('tenant')).join('')+'</ul>';
+      }else{
+        body+=bArts.map(function(a){return ruleArticleHtml(a,q,true,'bunyang');}).join('');
+        body+=nArts.map(function(a){return ruleArticleHtml(a,q,true,'tenant');}).join('');
+      }
+    });
+    var h='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+total+'건 — 주제별로 묶어 표시(펼침)</div>';
+    h+='<div class="nt-note" style="margin:8px 0 12px"><b>두 규약은 별개 문서입니다</b> — 분양(공동주택관리규약, 2024.10.30 시행)과 임차(임대주택 관리규약, 2020.04.18 시행)는 적용 대상이 다르고, 같은 주제라도 조문 내용·조 번호가 서로 다릅니다. 각 조문 앞의 <span class="nt-badge k">◆ 분양</span> <span class="nt-badge t">◇ 임차</span> 배지로 어느 규약인지 확인하세요.</div>';
+    if(!total) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
+    return h+body;
+  }
   function rulesHtml(){
     var docBtns='<div class="rl-docs">'+Object.keys(RULE_DOCS).map(function(k){return '<button type="button" class="btn'+(st.doc===k?' gold':'')+'" onclick="Notices.doc(\''+k+'\')">'+RULE_DOCS[k].label+'</button>';}).join('')+'</div>';
     var keys=st.doc==='all'?['bunyang','tenant']:[st.doc];
@@ -107,12 +174,13 @@ var Notices=(function(){
     if(missing.length) return docBtns+'<div class="nt-empty">관리규약 불러오는 중…</div>';
     var q=st.q.trim();
     var h=docBtns+'<div class="rl-head"><input id="ruleSearch" class="rl-search" placeholder="'+(st.doc==='all'?'두 규약을 함께 검색 (예: 선거관리위원회, 겸임금지)':'규약 전문 검색 (예: 선거관리위원회, 장기수선충당금)')+'" value="'+esc(st.q)+'" oninput="Notices.search(this.value)">';
-    if(st.doc==='all') h+='<div class="small" style="margin-top:4px">분양(2024.10.30 시행)·임차(2020.04.18 시행) 규약을 함께 봅니다 — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div>';
+    if(st.doc==='all') h+='<div class="small" style="margin-top:4px">서로 다른 두 규약 — <b>◆ 분양</b>(공동주택관리규약, 2024.10.30 시행)과 <b>◇ 임차</b>(임대주택 관리규약, 2020.04.18 시행) — 를 함께 봅니다. 검색하면 주제별로 묶어 보여줍니다. 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div>';
     else{
       var r0=st.rulesDocs[st.doc];
       h+='<div class="small" style="margin-top:4px">'+esc(r0.title)+' · '+esc(r0.effective)+' 시행 · 원본: '+esc(r0.source)+' — 이미지 원본을 옮겨 적은 사본이며, 효력은 원본 문서에 있습니다.</div>';
     }
     h+='</div>';
+    if(st.doc==='all'&&q) return h+allTopicResultsHtml(q);
     var shown=0,body='';
     keys.forEach(function(d){
       var sec=docBodyHtml(st.rulesDocs[d],q);
