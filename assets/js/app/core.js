@@ -323,10 +323,11 @@ function esc(s=""){
 }
 function listLineParts(line=""){
   const source=String(line);
-  const match=source.match(/^(\s*)((?:[-–—•·▪◦]|(?:\d+|[가-힣])[.)]|\((?:\d+|[가-힣])\)))\s*(.*)$/);
+  // 줄 앞 기호 인식 (v70 확장): 글머리 -–—•·▪◦*○●□■◇◆▷▶※★☆ / 번호 1. 1) (1) 가. a) ㄱ. ①⑴㉮ⓐ 등
+  const match=source.match(/^(\s*)((?:[-–—•·▪◦*○●□■◇◆▷▶※★☆]|(?:\d+|[가-힣]|[A-Za-z]|[ㄱ-ㅎ])[.)]|\((?:\d+|[가-힣]|[A-Za-z]|[ㄱ-ㅎ])\)|[①-⑳⑴-⒇㉠-㉭㉮-㉻ⓐ-ⓩ]))\s*(.*)$/);
   if(!match) return null;
   const marker=match[2];
-  const numbered=!/^[-–—•·▪◦]$/.test(marker);
+  const numbered=!/^[-–—•·▪◦*○●□■◇◆▷▶※★☆]$/.test(marker);
   const explicitIndent=Math.floor((match[1]||"").replace(/\t/g,"  ").length/2);
   return {marker,text:match[3],level:Math.min(2,explicitIndent+(numbered?1:0))};
 }
@@ -833,14 +834,17 @@ function officialAgendaRows(){
   if(others.length) rows.push({label:`제${regular.length+1}안`,title:"기타안건",agendas:others,isOtherGroup:true});
   return rows;
 }
-function outputAgendaItems(){
+// includeDrafts=true(관리자 미리보기 전용)면 제목만 있는 미완성 안건도 본문 페이지로 만든다.
+// 인쇄·Word·DOCX 는 항상 기본값(false)으로 불러 완성 안건만 나간다.
+function outputAgendaItems(includeDrafts=false){
   const listedRegular=listedRegularAgendas();
-  const regular=printableRegularAgendas();
-  const items=regular.map(agenda=>({agenda,label:`제${listedRegular.indexOf(agenda)+1}안`,title:agenda.title,isOther:false,subIndex:0}));
-  const others=printableOtherAgendas();
-  others.forEach((agenda,index)=>items.push({agenda,label:`제${listedRegular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length}));
+  const regular=includeDrafts?listedRegular:printableRegularAgendas();
+  const items=regular.map(agenda=>({agenda,label:`제${listedRegular.indexOf(agenda)+1}안`,title:agenda.title,isOther:false,subIndex:0,draft:!isAgendaComplete(agenda)}));
+  const others=includeDrafts?listedOtherAgendas():printableOtherAgendas();
+  others.forEach((agenda,index)=>items.push({agenda,label:`제${listedRegular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length,draft:!isAgendaComplete(agenda)}));
   return items;
 }
+function isAdminDevice(){ try{ return !!localStorage.getItem("sandle_admin_key"); }catch(e){ return false; } }
 const AGENDA_CATS=["헬스장","도서관","커뮤니티센터","주차","수광선","LH·관리이관","회계·결산","관리비","잡수입·예산","관리규약","선거·임원","장기수선","승강기","화재·소방","조경·환경","지원사업","저수조·청소","교통·버스","전기·설비","기타"];
 // ---- 주제 태그 (v30) ----
 // 안건 하나가 여러 주제에 속할 수 있다. a.tags(직접 지정)가 비어 있으면 자동 분류(window.autoTags)를 따른다.
@@ -963,6 +967,7 @@ function normalizeRemarks(a){
     reference:String(m?.reference||m?.url||""),
     note:String(m?.note||""),
     fileName:String(m?.fileName||""),
+    fileType:String(m?.fileType||""),
     fileSize:Math.max(0,Number(m?.fileSize)||0),
     pageCount:Math.max(0,Math.floor(Number(m?.pageCount)||0)),
     attachmentKey:String(m?.attachmentKey||m?.id||"")
@@ -1063,35 +1068,62 @@ async function getPdfLibrary(){
   if(window.sandlePdfReady) return await window.sandlePdfReady;
   throw new Error("PDF 도구를 불러오지 못했습니다.");
 }
-async function attachAgendaPdf(aid,mid,input){
+// 첨부 종류 (v70): pdf·image 는 인쇄물·DOCX에 페이지로 이어지고, 그 외 파일은 자료 목록 기록 + 내려받기만 된다.
+function materialKind(m){
+  const type=String(m?.fileType||"").toLowerCase(), name=String(m?.fileName||"").toLowerCase();
+  if(type==="application/pdf"||/\.pdf$/.test(name)) return "pdf";
+  if(/^image\//.test(type)||/\.(png|jpe?g|gif|webp|bmp)$/.test(name)) return "image";
+  return "file";
+}
+function materialKindLabel(m){
+  const kind=materialKind(m);
+  return kind==="pdf"?`PDF ${m.pageCount||"?"}쪽`:kind==="image"?"이미지":"파일";
+}
+async function attachAgendaFile(aid,mid,input){
   const file=input.files&&input.files[0];
   if(!file) return;
-  if(file.type!=="application/pdf"&&!/\.pdf$/i.test(file.name)){
-    showToast("PDF 파일만 첨부할 수 있습니다.","warn"); input.value=""; return;
-  }
   const a=state.agendas.find(x=>x.id===aid); const m=a?.materials?.find(x=>x.id===mid);
   if(!a||!m) return;
   try{
-    showToast("PDF 파일을 확인하는 중입니다…");
-    const lib=await getPdfLibrary();
-    const bytes=new Uint8Array(await file.arrayBuffer());
-    const pdf=await lib.getDocument({data:bytes}).promise;
+    const kind=materialKind({fileType:file.type,fileName:file.name});
+    let pageCount=0;
+    if(kind==="pdf"){
+      showToast("PDF 파일을 확인하는 중입니다…");
+      const lib=await getPdfLibrary();
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      const pdf=await lib.getDocument({data:bytes}).promise;
+      pageCount=pdf.numPages;
+    }else if(kind==="image"){
+      pageCount=1;
+    }
     const key=m.attachmentKey||m.id;
     await putAttachment(key,file);
-    m.attachmentKey=key; m.fileName=file.name; m.fileSize=file.size; m.pageCount=pdf.numPages;
-    if(!m.title.trim()) m.title=file.name.replace(/\.pdf$/i,"");
+    m.attachmentKey=key; m.fileName=file.name; m.fileType=file.type||""; m.fileSize=file.size; m.pageCount=pageCount;
+    if(!m.title.trim()) m.title=file.name.replace(/\.[^.]+$/,"");
     persistOnly(); renderAgendas(); renderPreview();
-    showToast(`${file.name} · ${pdf.numPages}쪽을 첨부했습니다.`);
+    showToast(kind==="pdf"?`${file.name} · ${pageCount}쪽을 첨부했습니다.`
+      :kind==="image"?`${file.name} 이미지를 첨부했습니다. 인쇄물에 1쪽으로 이어집니다.`
+      :`${file.name} 파일을 첨부했습니다. 인쇄물에는 자료 목록으로만 표시됩니다.`);
   }catch(err){
-    console.error(err); showToast("PDF 파일을 읽지 못했습니다.","error");
+    console.error(err); showToast("첨부 파일을 읽지 못했습니다.","error");
   }finally{ input.value=""; }
 }
-async function removeAgendaPdf(aid,mid){
+async function removeAgendaFile(aid,mid){
   const a=state.agendas.find(x=>x.id===aid); const m=a?.materials?.find(x=>x.id===mid);
   if(!m) return;
   await deleteAttachment(m.attachmentKey||m.id);
-  m.fileName="";m.fileSize=0;m.pageCount=0;m.attachmentKey=m.id;
+  m.fileName="";m.fileType="";m.fileSize=0;m.pageCount=0;m.attachmentKey=m.id;
   persistOnly();renderAgendas();renderPreview();
+}
+async function downloadAgendaFile(aid,mid){
+  const a=state.agendas.find(x=>x.id===aid); const m=a?.materials?.find(x=>x.id===mid);
+  if(!m||!m.fileName) return;
+  const blob=await getAttachment(m.attachmentKey||m.id);
+  if(!blob){ showToast(`${m.fileName} 파일을 현재 브라우저에서 찾을 수 없습니다.`,"error"); return; }
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url; link.download=m.fileName; document.body.appendChild(link); link.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);link.remove();},1800);
 }
 function addAgendaMaterial(aid){
   const a=state.agendas.find(x=>x.id===aid); if(!a) return;
@@ -1144,12 +1176,12 @@ function renderAgendas(){
         <textarea placeholder="검토한 내용 · 관련 쪽수 · 비고" aria-label="자료 비고" oninput="setAgendaMaterial('${a.id}','${m.id}','note',this.value)">${esc(m.note)}</textarea>
         <button class="btn danger" type="button" onclick="removeAgendaMaterial('${a.id}','${m.id}')">자료 삭제</button>
         <div class="pdf-file-info" style="grid-column:1 / -1">
-          ${m.fileName?`<b>${esc(m.fileName)}</b><span>PDF ${m.pageCount||"?"}쪽 · ${Math.max(1,Math.round((m.fileSize||0)/1024))}KB</span>`:`<span>PDF 원문을 첨부하면 ‘출력물에 회의자료 포함’ 선택 시 이 안건 뒤에 페이지가 이어집니다.</span>`}
+          ${m.fileName?`<b>${esc(m.fileName)}</b><span>${materialKindLabel(m)} · ${Math.max(1,Math.round((m.fileSize||0)/1024))}KB${materialKind(m)==="file"?" · 인쇄물에는 자료 목록으로만 표시":""}</span>`:`<span>PDF·이미지·문서 등 어떤 파일이든 첨부할 수 있습니다. PDF와 이미지는 ‘출력물에 회의자료 포함’ 선택 시 이 안건 뒤에 페이지로 이어집니다.</span>`}
         </div>
         <div class="inline-actions" style="grid-column:1 / -1">
-          <label class="btn soft" for="pdf-${m.id}">${m.fileName?"PDF 교체":"PDF 첨부"}</label>
-          <input id="pdf-${m.id}" type="file" accept="application/pdf,.pdf" hidden onchange="attachAgendaPdf('${a.id}','${m.id}',this)">
-          ${m.fileName?`<button class="btn danger" type="button" onclick="removeAgendaPdf('${a.id}','${m.id}')">PDF만 제거</button>`:""}
+          <label class="btn soft" for="pdf-${m.id}">${m.fileName?"파일 교체":"파일 첨부"}</label>
+          <input id="pdf-${m.id}" type="file" hidden onchange="attachAgendaFile('${a.id}','${m.id}',this)">
+          ${m.fileName?`<button class="btn soft" type="button" onclick="downloadAgendaFile('${a.id}','${m.id}')">내려받기</button><button class="btn danger" type="button" onclick="removeAgendaFile('${a.id}','${m.id}')">파일만 제거</button>`:""}
         </div>
       </div>`).join("");
     const remarks=a.noRemarks ? "" : speakers.map(speaker=>{
@@ -1193,11 +1225,11 @@ function renderAgendas(){
             <div class="subsection-head">
               <div>
                 <h4>회의자료 · 첨부자료 기록</h4>
-                <div class="small">글로 기록하거나 PDF 원문을 첨부할 수 있습니다. 첨부 파일은 현재 브라우저에 저장됩니다.</div>
+                <div class="small">글로 기록하거나 원문 파일(PDF·이미지·문서 등)을 첨부할 수 있습니다. 첨부 파일은 현재 브라우저에 저장됩니다.</div>
               </div>
               <button class="btn soft" type="button" onclick="addAgendaMaterial('${a.id}')">+ 자료 추가</button>
             </div>
-            <label class="toggle"><input type="checkbox" ${a.showMaterials?"checked":""} onchange="setAgenda('${a.id}','showMaterials',this.checked)"> 출력물에 회의자료 포함 <span class="small">(PDF 원문도 안건 뒤에 연속 포함)</span></label>
+            <label class="toggle"><input type="checkbox" ${a.showMaterials?"checked":""} onchange="setAgenda('${a.id}','showMaterials',this.checked)"> 출력물에 회의자료 포함 <span class="small">(PDF·이미지 원문도 안건 뒤에 연속 포함)</span></label>
             <div class="material-list">${materialRows||`<div class="small">등록된 회의자료가 없습니다.</div>`}</div>
           </div>
           <div class="inline-actions" style="margin-top:10px">
@@ -1390,6 +1422,7 @@ function coverHtml(totalPages){
 }
 function agendaPageHtml(item,currentPage,totalPages){
   const a=item.agenda;
+  const draftRibbon=item.draft?`<div class="draft-ribbon">미완성 초안 — 관리자에게만 보이며, 인쇄·게시에는 포함되지 않습니다 (의결·표결 미기입)</div>`:"";
   normalizeRemarks(a);
   const vote=voteStatus(a);
   const voteHtml=voteIsBlank(a)
@@ -1408,7 +1441,8 @@ function agendaPageHtml(item,currentPage,totalPages){
       }</tbody></table>`
     : "";
   const materials=materialListHtml(a);
-  return `<section class="paper">
+  return `<section class="paper${item.draft?" draft-page":""}">
+    ${draftRibbon}
     <div class="agenda-document-head">
       <div class="agenda-meeting-name">${esc(buildMeetingName())}</div>
       <div class="agenda-page-title"><span class="agenda-page-num">${item.label}</span><span>${esc(item.title)}</span></div>
@@ -1443,13 +1477,13 @@ function includedPdfMaterials(a){
 function attachmentPageHtml(item,material,pageIndex,currentPage,totalPages,imageUrl=""){
   return `<section class="paper attachment-page">
     <div class="attachment-head"><b>${esc(item.label)} · ${esc(material.fileName)}</b><span>첨부 ${pageIndex} / ${material.pageCount}</span></div>
-    ${imageUrl?`<img src="${imageUrl}" alt="${esc(material.fileName)} ${pageIndex}쪽">`:`<div class="attachment-placeholder"><div><b>${esc(material.fileName)}</b><br>PDF ${pageIndex} / ${material.pageCount}쪽<br><span class="small">인쇄 시 이 위치에 원문 페이지가 포함됩니다.</span></div></div>`}
+    ${imageUrl?`<img src="${imageUrl}" alt="${esc(material.fileName)} ${pageIndex}쪽">`:`<div class="attachment-placeholder"><div><b>${esc(material.fileName)}</b><br>원문 ${pageIndex} / ${material.pageCount}쪽<br><span class="small">인쇄 시 이 위치에 원문 페이지가 포함됩니다.</span></div></div>`}
     ${pageNumberHtml(currentPage,totalPages)}
   </section>`;
 }
-function outputPagePlan(){
+function outputPagePlan(includeDrafts=false){
   const plan=[];
-  outputAgendaItems().forEach(item=>{
+  outputAgendaItems(includeDrafts).forEach(item=>{
     plan.push({type:"agenda",item});
     includedPdfMaterials(item.agenda).forEach(material=>{
       for(let pageIndex=1;pageIndex<=material.pageCount;pageIndex++) plan.push({type:"attachment",item,material,pageIndex});
@@ -1458,13 +1492,18 @@ function outputPagePlan(){
   return plan;
 }
 function renderPreview(){
-  const plan=outputPagePlan();
+  // 관리자 기기(비밀번호를 입력해 본 기기)는 미완성 안건도 미리보기에서 확인할 수 있다 (v70).
+  // 인쇄·Word·DOCX·다른 방문자 화면에는 여전히 완성 안건만 나간다.
+  const showDrafts=isAdminDevice();
+  const plan=outputPagePlan(showDrafts);
   const totalPages=1+plan.length;
+  const draftCount=plan.filter(e=>e.type==="agenda"&&e.item.draft).length;
   const pages=plan.map((entry,index)=>entry.type==="agenda"
     ? agendaPageHtml(entry.item,index+2,totalPages)
     : attachmentPageHtml(entry.item,entry.material,entry.pageIndex,index+2,totalPages)
   ).join("");
-  document.getElementById("previewShell").innerHTML=coverHtml(totalPages)+pages;
+  const notice=showDrafts&&draftCount?`<div class="preview-admin-note">🔒 관리자 전용 미리보기 — 미완성 안건 ${draftCount}건(빨간 점선 표시)이 함께 보입니다. 다른 방문자 화면과 인쇄·Word 출력에는 의결·표결까지 완료된 안건만 나갑니다.</div>`:"";
+  document.getElementById("previewShell").innerHTML=notice+coverHtml(totalPages)+pages;
   renderSourceBox(); // 원문 전문 (v62)
 }
 // 원문 전문 상자 (v62): 레코드에 `source`(옮겨 적은 공고 원문)가 있으면 미리보기 아래에 접이식으로 보여 준다.
@@ -1529,7 +1568,7 @@ function openExportModal(type){
     content.innerHTML=`
       <p>현재 회의록 데이터를 <b>JSON 백업 파일</b>로 저장합니다.</p>
       <div class="export-modal-summary">
-        포함 내용: 회의 기본정보 · 기수별 동대표 명단 · 참석현황 · 배석자 · 참관 인원 · 회의진행순서 · 안건 · 회의자료 기록과 첨부 PDF 원문 · 주요 발언 · 표결 · 의결사항 · 후속조치
+        포함 내용: 회의 기본정보 · 기수별 동대표 명단 · 참석현황 · 배석자 · 참관 인원 · 회의진행순서 · 안건 · 회의자료 기록과 첨부 원문 파일 · 주요 발언 · 표결 · 의결사항 · 후속조치
       </div>`;
     actions.innerHTML=`
       <button class="btn soft" onclick="closeExportModal()">취소</button>
@@ -1540,7 +1579,7 @@ function openExportModal(type){
       <p>현재 회의록을 수정 가능한 <b>.docx 문서</b>로 저장합니다.</p>
       <div class="export-modal-summary">
         Word에서 수정하거나 한글에서 열어 HWP 형식으로 다시 저장할 수 있습니다.<br>
-        ‘출력물에 회의자료 포함’을 선택한 PDF 원문도 해당 안건 뒤에 이어집니다.
+        ‘출력물에 회의자료 포함’을 선택한 PDF·이미지 원문도 해당 안건 뒤에 이어집니다.
       </div>`;
     actions.innerHTML=`
       <button class="btn soft" onclick="closeExportModal()">취소</button>
@@ -1551,7 +1590,7 @@ function openExportModal(type){
       <p>사용 목적에 맞는 출력 방식을 선택하세요.</p>
       <div class="export-modal-summary">
         <b>첨부 제외 출력</b> — 종이로 배포할 회의록 본문만 출력합니다.<br>
-        <b>첨부 포함 출력</b> — 웹 게시용으로 회의록과 첨부 PDF를 한 파일에 포함합니다.<br><br>
+        <b>첨부 포함 출력</b> — 웹 게시용으로 회의록과 첨부 원문을 한 파일에 포함합니다.<br><br>
         인쇄창에서 프린터 대신 <b>PDF로 저장</b>을 선택할 수 있습니다.
       </div>`;
     actions.innerHTML=`
@@ -1628,7 +1667,7 @@ async function saveBackupFromModal(){
         const dataUrl=await new Promise((resolve,reject)=>{
           const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(stored);
         });
-        payload._attachments[material.attachmentKey||material.id]={name:material.fileName,type:"application/pdf",dataUrl};
+        payload._attachments[material.attachmentKey||material.id]={name:material.fileName,type:material.fileType||stored.type||"application/octet-stream",dataUrl};
       }
     }
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1679,6 +1718,22 @@ function printableDocumentHtml(content){
 async function renderPdfMaterialPages(material){
   const blob=await getAttachment(material.attachmentKey||material.id);
   if(!blob) throw new Error(`${material.fileName} 파일을 현재 브라우저에서 찾을 수 없습니다.`);
+  if(materialKind(material)==="image"){
+    // 이미지 1장 = 출력 1쪽. DOCX(ImageRun type:"jpg")와 인쇄가 같은 경로를 쓰므로 흰 배경 JPEG로 통일한다.
+    modalStatus(`${material.fileName} 이미지를 인쇄용으로 변환하는 중입니다…`);
+    const bitmapUrl=URL.createObjectURL(blob);
+    try{
+      const img=await new Promise((resolve,reject)=>{
+        const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error(`${material.fileName} 이미지를 읽지 못했습니다.`));im.src=bitmapUrl;
+      });
+      const canvas=document.createElement("canvas");
+      canvas.width=Math.max(1,img.naturalWidth);canvas.height=Math.max(1,img.naturalHeight);
+      const context=canvas.getContext("2d",{alpha:false});
+      context.fillStyle="#fff";context.fillRect(0,0,canvas.width,canvas.height);
+      context.drawImage(img,0,0);
+      return [canvas.toDataURL("image/jpeg",.92)];
+    }finally{ URL.revokeObjectURL(bitmapUrl); }
+  }
   const lib=await getPdfLibrary();
   const bytes=new Uint8Array(await blob.arrayBuffer());
   const pdf=await lib.getDocument({data:bytes}).promise;
@@ -2192,7 +2247,11 @@ async function buildDocxBlob(){
       const images=await renderPdfMaterialPages(material);
       for(let i=0;i<images.length;i++){
         const bytes=Uint8Array.from(atob(images[i].split(",")[1]),c=>c.charCodeAt(0));
-        children.push(pageBreak(),p(`${item.label} · ${material.fileName} · ${i+1} / ${images.length}쪽`,{bold:true,size:18,color:"666666",after:28}),new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:0},children:[new ImageRun({data:bytes,type:"jpg",transformation:{width:640,height:900}})]}));
+        // 사진 등 임의 비율 이미지가 늘어나지 않도록 640×900 안에 비율 유지로 맞춘다 (v70)
+        const dims=await new Promise(resolve=>{const im=new Image();im.onload=()=>resolve({w:im.naturalWidth||640,h:im.naturalHeight||900});im.onerror=()=>resolve({w:640,h:900});im.src=images[i];});
+        const fit=Math.min(640/dims.w,900/dims.h);
+        const w=Math.max(1,Math.round(dims.w*fit)),h=Math.max(1,Math.round(dims.h*fit));
+        children.push(pageBreak(),p(`${item.label} · ${material.fileName} · ${i+1} / ${images.length}쪽`,{bold:true,size:18,color:"666666",after:28}),new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:0},children:[new ImageRun({data:bytes,type:"jpg",transformation:{width:w,height:h}})]}));
       }
     }
   }
@@ -2246,7 +2305,7 @@ async function printFromModal(includeAttachments=true){
     return;
   }
   try{
-    const preparingText=includeAttachments?"회의록과 첨부 PDF를 준비하는 중입니다…":"회의록을 준비하는 중입니다…";
+    const preparingText=includeAttachments?"회의록과 첨부 원문을 준비하는 중입니다…":"회의록을 준비하는 중입니다…";
     printWindow.document.write(`<!doctype html><meta charset="utf-8"><title>인쇄 준비</title><body style="font-family:Malgun Gothic;padding:30px">${preparingText}</body>`);
     const content=await buildPrintableContent(includeAttachments);
     printWindow.document.open();
