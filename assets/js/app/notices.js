@@ -1,6 +1,7 @@
-// ── ⑤ 규약·공고·계약 (v72: 절차 점검 현황판 정리) ──────────────────────────────
+// ── ⑤ 규약·공고·계약 ──────────────────────────────────────────────────────────
 // 탭 1 관리규약: 정적 rules.json(조문·별표 전문, 별지 서식 목록) + 검색 — 누구나 열람.
-// 탭 2 계약·기준문서: 정적 contracts.json + 조항·핵심의무·쟁점메모 검색 — 누구나 열람.
+// 탭 2 계약·기준문서: 정적 contracts.json(v2: 조문 원문 그대로 + 해석·검토 메모 분리) — 문서는
+//   접힌 카드로만 나열하고, 검색하면 모든 문서를 훑어 일치하는 조문만 펼쳐 보여준다.
 // 탭 3 공고·안내 / 탭 4 절차 점검: 관리자 비밀번호를 입력한 기기에서만 표시.
 // 절차 점검은 investigations.json의 현재 조사 현황만 한 화면에 보여준다.
 var Notices=(function(){
@@ -58,7 +59,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=1").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=2").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -127,30 +128,65 @@ var Notices=(function(){
     return h;
   }
 
-  function contractHay(c){return [c.ref,c.title,c.summary,c.issueNote,(c.keywords||[]).join(' ')].join(' ').toLowerCase();}
-  function contractClauseHtml(c,q){
-    return '<details class="rl-art"'+(q?' open':'')+'><summary><b>'+hl(c.ref+(c.title?'('+c.title+')':''),q)+'</b></summary>'+
-      '<div class="rl-text">'+hl(c.summary||'',q)+'</div>'+
-      (c.issueNote?'<div class="nt-note" style="margin-top:10px"><b>현재 검토 메모</b><br>'+hl(c.issueNote,q)+'</div>':'')+
+  // 계약·기준문서(contracts.json v2): 문서는 접힌 카드로만 나열하고, 펼치면 조문 원문 그대로 + 그 아래 해석·검토 메모.
+  // 검색하면 모든 문서의 조문(원문·해석·메모·검색어)을 훑어 일치하는 조문만 펼쳐서 보여준다.
+  function contractDocClauses(d){
+    if(d.chapters) return d.chapters.reduce(function(a,ch){return a.concat(ch.clauses||[]);},[]);
+    return d.clauses||[];
+  }
+  function contractHay(c){return [c.ref,c.title,c.text,c.summary,c.note,c.issueNote,(c.keywords||[]).join(' ')].join(' ').toLowerCase();}
+  function contractClauseHtml(c,q,open){
+    var body=c.text||c.summary||'';
+    return '<details class="rl-art"'+(open?' open':'')+'><summary><b>'+hl(c.ref+(c.title?'('+c.title+')':''),q)+'</b></summary>'+
+      (c.text?'<div class="small" style="font-weight:800;margin:9px 0 2px">원문</div>':'')+
+      '<div class="rl-text">'+hl(body,q).replace(/\n/g,'<br>')+'</div>'+
+      (c.note?'<div class="nt-note" style="margin-top:10px"><b>해석</b><br>'+hl(c.note,q).replace(/\n/g,'<br>')+'</div>':'')+
+      (c.issueNote?'<div class="nt-note" style="margin-top:8px;border-color:#efb3ad;background:#fdf3f2"><b>현재 검토 메모</b><br>'+hl(c.issueNote,q)+'</div>':'')+
       (c.keywords&&c.keywords.length?'<div class="nt-rel">검색어: '+c.keywords.map(function(k){return '<span class="nt-chip">'+hl(k,q)+'</span>';}).join(' ')+'</div>':'')+
     '</details>';
   }
+  function contractDocMetaHtml(d){
+    var h='<div class="nt-sum" style="margin:8px 0 4px"><b>'+esc(d.type||'계약')+'</b>'+(d.parties&&d.parties.length?' · '+esc(d.parties.join(' ↔ ')):'')+
+      (d.signed?'<br>체결일: '+esc(d.signed):'')+(d.period?' · 기간: '+esc(d.period):'')+
+      (d.source?'<br><span class="small">'+esc(d.source)+'</span>':'')+'</div>';
+    if(d.deal&&d.deal.length) h+='<div class="nt-note" style="margin:8px 0"><b>체결 정보</b><ul class="nt-facts" style="margin:6px 0 0">'+d.deal.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+    if(d.sourceNote) h+='<div class="small" style="margin:6px 0 10px">※ '+esc(d.sourceNote)+'</div>';
+    return h;
+  }
+  function contractDocBodyHtml(d,q){
+    if(!d.chapters) return contractDocClauses(d).map(function(c){return contractClauseHtml(c,q,false);}).join('');
+    return d.chapters.map(function(ch){
+      var head=(ch.no==='전문'||!ch.title)?(ch.no||''):(ch.no+' '+ch.title);
+      return (head?'<div class="rl-ch">'+esc(head)+'</div>':'')+(ch.clauses||[]).map(function(c){return contractClauseHtml(c,q,false);}).join('');
+    }).join('');
+  }
   function contractsHtml(){
     if(!st.contracts) return '<div class="nt-empty">'+(st.contractsLoading?'계약·기준문서 불러오는 중…':'계약·기준문서가 없습니다.')+'</div>';
-    var q=st.cq.trim(),h='<div class="rl-head"><input id="contractSearch" class="rl-search" placeholder="계약·기준문서 검색 (예: 계약해지, 관리소장, LH, 감사, 보고)" value="'+esc(st.cq)+'" oninput="Notices.contractSearch(this.value)">';
+    var q=st.cq.trim(),h='<div class="rl-head"><input id="contractSearch" class="rl-search" placeholder="모든 계약·기준문서 검색 (예: 계약해지, 위탁관리수수료, 감사, 보고)" value="'+esc(st.cq)+'" oninput="Notices.contractSearch(this.value)">';
     h+='<div class="small" style="margin-top:4px">'+esc(st.contracts.note||'')+'</div></div>';
-    var total=0;
-    (st.contracts.items||[]).forEach(function(d){
-      var clauses=(d.clauses||[]).filter(function(c){return !q||contractHay(c).indexOf(q.toLowerCase())>=0;});
-      if(q&&!clauses.length&&[d.title,d.type,d.period,(d.tags||[]).join(' ')].join(' ').toLowerCase().indexOf(q.toLowerCase())<0) return;
+    var items=st.contracts.items||[];
+    if(!q){
+      // 검색어 없으면: 문서 제목 카드만(접힘) — 펼쳐야 조문이 보인다.
+      h+=items.map(function(d){
+        var n=contractDocClauses(d).length;
+        return '<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건</span></summary>'+
+          contractDocMetaHtml(d)+contractDocBodyHtml(d,'')+'</details>';
+      }).join('');
+      if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
+      return h;
+    }
+    var total=0,body='';
+    items.forEach(function(d){
+      var clauses=contractDocClauses(d).filter(function(c){return contractHay(c).indexOf(q.toLowerCase())>=0;});
+      var docHit=[d.title,d.type,d.period,(d.tags||[]).join(' '),(d.deal||[]).join(' ')].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0;
+      if(!clauses.length&&!docHit) return;
       total+=clauses.length;
-      h+='<div class="rl-doc-h">'+esc(d.title)+' <span class="small">'+esc(d.period||'')+'</span></div>';
-      h+='<div class="nt-sum"><b>'+esc(d.type||'계약')+'</b> · '+esc((d.parties||[]).join(' ↔ '))+'<br><span class="small">원본: '+esc(d.source||'')+'</span></div>';
-      if(!clauses.length&&q) h+='<div class="nt-empty" style="padding:10px">문서 기본정보에는 검색어가 있으나 해당 조항 요약에는 검색 결과가 없습니다.</div>';
-      else h+=clauses.map(function(c){return contractClauseHtml(c,q);}).join('');
+      body+='<div class="rl-doc-h">'+hl(d.title,q)+' <span class="small">'+esc(d.period||'')+(clauses.length?' — '+clauses.length+'건':'')+'</span></div>';
+      if(!clauses.length) body+='<div class="nt-empty" style="padding:10px">문서 기본정보에 검색어가 있습니다. 조문에는 일치하는 곳이 없습니다.</div>';
+      else body+=clauses.map(function(c){return contractClauseHtml(c,q,true);}).join('');
     });
-    if(q) h='<div class="rl-count">"'+esc(q)+'" 계약·기준문서 검색 결과 '+total+'개 조항</div>'+h;
-    if(q&&!total&&h.indexOf('rl-doc-h')<0) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
+    h+='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+total+'개 조문 — 일치하는 조문만 표시(펼침)</div>'+body;
+    if(!total&&body.indexOf('rl-doc-h')<0) h+='<div class="nt-empty">검색 결과가 없습니다.</div>';
     return h;
   }
 
