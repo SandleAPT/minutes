@@ -1,9 +1,8 @@
-// ── ⑤ 규약·공고·계약 (v71: 절차 점검 현황판) ──────────────────────────────
+// ── ⑤ 규약·공고·계약 (v72: 절차 점검 현황판 정리) ──────────────────────────────
 // 탭 1 관리규약: 정적 rules.json(조문·별표 전문, 별지 서식 목록) + 검색 — 누구나 열람.
 // 탭 2 계약·기준문서: 정적 contracts.json + 조항·핵심의무·쟁점메모 검색 — 누구나 열람.
 // 탭 3 공고·안내 / 탭 4 절차 점검: 관리자 비밀번호를 입력한 기기에서만 표시.
-// 절차 점검의 핵심 조사현황은 investigations.json 정적 사본으로 한눈에 보여주고,
-// 기존 클라우드 checks_v1 기록은 그 아래 보조 기록으로 유지한다.
+// 절차 점검은 investigations.json의 현재 조사 현황만 한 화면에 보여준다.
 var Notices=(function(){
   var URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
@@ -66,12 +65,11 @@ var Notices=(function(){
   function loadInvestigations(){
     if(st.investigations||st.investigationsLoading) return;
     st.investigationsLoading=true;
-    fetch("investigations.json?v=1").then(function(r){return r.json()}).then(function(j){
+    fetch("investigations.json?v=2").then(function(r){return r.json()}).then(function(j){
       st.investigationsLoading=false;st.investigations=j;draw();
     }).catch(function(){st.investigationsLoading=false;st.err="절차 점검 현황을 불러오지 못했습니다.";draw();});
   }
 
-  // ---- 검색 (규약) ----
   function hl(text,q){
     if(!q) return esc(text);
     var t=esc(text),qq=esc(q),i,out="",low=t.toLowerCase(),ql=qq.toLowerCase(),from=0;
@@ -129,7 +127,6 @@ var Notices=(function(){
     return h;
   }
 
-  // ---- 계약·기준문서 ----
   function contractHay(c){return [c.ref,c.title,c.summary,c.issueNote,(c.keywords||[]).join(' ')].join(' ').toLowerCase();}
   function contractClauseHtml(c,q){
     return '<details class="rl-art"'+(q?' open':'')+'><summary><b>'+hl(c.ref+(c.title?'('+c.title+')':''),q)+'</b></summary>'+
@@ -157,7 +154,6 @@ var Notices=(function(){
     return h;
   }
 
-  // ---- 잠금 ----
   function lockHtml(){
     return '<div class="nt-lock"><div class="nt-lock-ic">🔒</div><b>관리자 확인이 필요한 기록입니다</b>'+
       '<p>공고·안내 보관함과 절차 점검 기록은 관리자 비밀번호를 입력한 기기에서만 열람할 수 있습니다.</p>'+
@@ -167,7 +163,6 @@ var Notices=(function(){
   }
   function locked(){return !(st.unlocked||hasKey());}
 
-  // ---- 공고/기존 점검 카드 ----
   function badge(txt,cls){return '<span class="nt-badge '+cls+'">'+esc(txt)+'</span>';}
   function bodyCls(b){return b==='임차'?'t':b&&b.indexOf('선관위')>=0?'e':b==='관리사무소'?'o':'a';}
   function bullets(arr){return arr&&arr.length?'<ul class="nt-facts">'+arr.map(function(f){return '<li>'+esc(f)+'</li>';}).join('')+'</ul>':'';}
@@ -189,18 +184,7 @@ var Notices=(function(){
       (n.link?'<div class="nt-foot"><a href="'+esc(n.link)+'" target="_blank" rel="noopener">원본 열기(드라이브) ↗</a></div>':'')+
       (n.notes?'<div class="nt-foot">※ '+esc(n.notes)+'</div>':'')+relChips(n.related)+'</div>';
   }
-  var ST_CLS={"확인중":"s1","질의함":"s2","해소":"s3","문제없음":"s4"};
-  function checkCard(c){
-    return '<div class="nt-card" id="nt-'+esc(c.id)+'">'+
-      '<div class="nt-head"><span class="nt-badge st '+(ST_CLS[c.status]||'s1')+'">'+esc(c.status||'확인중')+'</span><span class="nt-date">'+esc(c.opened||'')+' 기록</span></div>'+
-      '<div class="nt-title">'+esc(c.title)+'</div>'+
-      '<div class="nt-sec">사실관계 <span class="small">(공고·회의록 기재 내용)</span></div>'+bullets(c.facts)+
-      (c.rules&&c.rules.length?'<div class="nt-sec">근거 규정</div><ul class="nt-facts">'+c.rules.map(function(r){return '<li>'+esc(r.ref)+(r.text?' — '+esc(r.text):'')+(r.verified?' <span class="nt-ok">원문 확인됨</span>':' <span class="nt-todo">조문 원문 확인 필요</span>')+'</li>';}).join('')+'</ul>':'')+
-      (c.question?'<div class="nt-sec">확인할 점</div><div class="nt-sum">'+esc(c.question)+'</div>':'')+
-      (c.memo?'<div class="nt-memo">🔒 메모: '+esc(c.memo)+'</div>':'')+relChips(c.related)+'</div>';
-  }
 
-  // ---- 절차 점검 현황판 ----
   function invStatusStyle(i){
     if(i.severity==='confirmed') return 'background:#fbe9e7;color:#9b2c23;border-color:#efb3ad';
     if(i.severity==='high') return 'background:#fff2d9;color:#8a5a00;border-color:#efcf91';
@@ -245,7 +229,7 @@ var Notices=(function(){
   function draw(){
     var box=document.getElementById('noticeBody');if(!box)return;
     var lockMark=locked()?' 🔒':'';
-    var checkCount=st.investigations&&st.investigations.items?st.investigations.items.length:(st.checks&&st.checks.items?st.checks.items.length:0);
+    var checkCount=st.investigations&&st.investigations.items?st.investigations.items.length:0;
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
       '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
@@ -270,9 +254,6 @@ var Notices=(function(){
     }else{
       h+=investigationsHtml();
       if(!st.investigations&&!st.investigationsLoading) loadInvestigations();
-      if(st.checks&&st.checks.items&&st.checks.items.length){
-        h+='<details style="margin-top:18px"><summary style="cursor:pointer;font-weight:800;color:var(--muted)">기존 절차 점검 기록 '+st.checks.items.length+'건 보기</summary><div style="margin-top:10px">'+st.checks.items.map(checkCard).join('')+'</div></details>';
-      }else if(!st.loading) load();
     }
     box.innerHTML=h;
   }
@@ -281,10 +262,10 @@ var Notices=(function(){
     render:function(){draw();if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();},
     reload:function(){
       st.notices=null;st.checks=null;st.rulesDocs={};st.contracts=null;st.investigations=null;st.err='';
-      if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks'){loadInvestigations();if(!locked())load();}else if(!locked())load();
+      if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();else if(!locked())load();
       draw();
     },
-    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='checks'){loadInvestigations();if(!st.checks&&!st.loading&&!locked())load();}else if(!locked()&&!st.notices)load();},
+    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='checks')loadInvestigations();else if(!locked()&&!st.notices)load();},
     fBody:function(b){st.fBody=b;draw();},
     doc:function(d){st.doc=d;draw();loadRules();},
     fKind:function(k){st.fKind=k;draw();},
