@@ -1097,6 +1097,7 @@ async function attachAgendaFile(aid,mid,input){
       pageCount=1;
     }
     const key=m.attachmentKey||m.id;
+    attPreviewInvalidate(key);
     await putAttachment(key,file);
     m.attachmentKey=key; m.fileName=file.name; m.fileType=file.type||""; m.fileSize=file.size; m.pageCount=pageCount;
     if(!m.title.trim()) m.title=file.name.replace(/\.[^.]+$/,"");
@@ -1111,6 +1112,7 @@ async function attachAgendaFile(aid,mid,input){
 async function removeAgendaFile(aid,mid){
   const a=state.agendas.find(x=>x.id===aid); const m=a?.materials?.find(x=>x.id===mid);
   if(!m) return;
+  attPreviewInvalidate(m.attachmentKey||m.id);
   await deleteAttachment(m.attachmentKey||m.id);
   m.fileName="";m.fileType="";m.fileSize=0;m.pageCount=0;m.attachmentKey=m.id;
   persistOnly();renderAgendas();renderPreview();
@@ -1143,7 +1145,7 @@ async function removeAgendaMaterial(aid,mid){
   const a=state.agendas.find(x=>x.id===aid); if(!a) return;
   normalizeRemarks(a);
   const material=a.materials.find(x=>x.id===mid);
-  if(material?.attachmentKey) await deleteAttachment(material.attachmentKey);
+  if(material?.attachmentKey){ attPreviewInvalidate(material.attachmentKey); await deleteAttachment(material.attachmentKey); }
   a.materials=a.materials.filter(x=>x.id!==mid);
   saveState(); renderAgendas();
 }
@@ -1321,14 +1323,44 @@ function materialReferenceHtml(reference){
 }
 function materialListHtml(a){
   normalizeRemarks(a);
-  const items=a.materials.filter(m=>m.title.trim()||m.reference.trim()||m.note.trim());
+  const items=a.materials.filter(m=>m.title.trim()||m.reference.trim()||m.note.trim()||m.fileName);
   if(!items.length) return "";
   return `<div class="materials-box">${items.map((m,i)=>`
     <div class="material-preview-row">
-      <b>${i+1}. ${esc(m.title||"자료명 미입력")}</b>
+      <b>${i+1}. ${esc(m.title||m.fileName||"자료명 미입력")}</b>
       ${m.reference?`<div>참조: ${materialReferenceHtml(m.reference)}</div>`:""}
       ${m.note?`<div>${nl2br(m.note)}</div>`:""}
+      ${m.fileName?`<div class="attachment-inline" data-att-key="${esc(m.attachmentKey||m.id)}" data-att-kind="${materialKind(m)}" data-att-name="${esc(m.fileName)}"><span class="attachment-inline-tag">첨부 ${esc(m.fileName)}${materialKind(m)==="file"?" — 화면에 표시할 수 없는 형식(⑧에서 내려받기로 확인)":""}</span></div>`:""}
     </div>`).join("")}</div>`;
+}
+// 미리보기 첨부 인라인 표시 (v73): 자료 목록의 이미지·PDF 원문을 화면에서 바로 펼친다.
+// 화면 전용 — 인쇄·Word에는 기존처럼 안건 뒤 첨부 페이지로만 들어간다(중복 방지, CSS로 숨김).
+const AttPreview=new Map(); // attachmentKey -> Promise<string[]>
+function attPreviewInvalidate(key){
+  const p=AttPreview.get(key);
+  if(p){ p.then(urls=>(urls||[]).forEach(u=>{ if(String(u).startsWith("blob:")) URL.revokeObjectURL(u); })).catch(()=>{}); AttPreview.delete(key); }
+}
+function inlineAttachmentImages(key,kind,name){
+  if(!AttPreview.has(key)){
+    AttPreview.set(key,(async()=>{
+      const blob=await getAttachment(key);
+      if(!blob) return [];
+      if(kind==="image") return [URL.createObjectURL(blob)];
+      if(kind==="pdf") return await renderPdfMaterialPages({attachmentKey:key,fileName:name,fileType:"application/pdf"});
+      return [];
+    })().catch(err=>{ console.error(err); AttPreview.delete(key); return []; }));
+  }
+  return AttPreview.get(key);
+}
+function hydrateInlineAttachments(root){
+  if(!root) return;
+  root.querySelectorAll(".attachment-inline").forEach(async box=>{
+    const kind=box.dataset.attKind;
+    if(kind!=="image"&&kind!=="pdf") return;
+    const imgs=await inlineAttachmentImages(box.dataset.attKey,kind,box.dataset.attName);
+    if(!box.isConnected||!imgs.length) return;
+    box.innerHTML=imgs.map((u,i)=>`<img src="${u}" alt="${esc(box.dataset.attName)} ${i+1}쪽" decoding="async">`).join("");
+  });
 }
 function pageNumberHtml(current,total){
   return `<div class="page-number">${current} / ${total}</div>`;
@@ -1503,7 +1535,9 @@ function renderPreview(){
     : attachmentPageHtml(entry.item,entry.material,entry.pageIndex,index+2,totalPages)
   ).join("");
   const notice=showDrafts&&draftCount?`<div class="preview-admin-note">🔒 관리자 전용 미리보기 — 미완성 안건 ${draftCount}건(빨간 점선 표시)이 함께 보입니다. 다른 방문자 화면과 인쇄·Word 출력에는 의결·표결까지 완료된 안건만 나갑니다.</div>`:"";
-  document.getElementById("previewShell").innerHTML=notice+coverHtml(totalPages)+pages;
+  const shell=document.getElementById("previewShell");
+  shell.innerHTML=notice+coverHtml(totalPages)+pages;
+  hydrateInlineAttachments(shell); // 첨부 원문 인라인 표시 (v73)
   renderSourceBox(); // 원문 전문 (v62)
 }
 // 원문 전문 상자 (v62): 레코드에 `source`(옮겨 적은 공고 원문)가 있으면 미리보기 아래에 접이식으로 보여 준다.
@@ -1701,7 +1735,7 @@ function printableDocumentHtml(content){
       ${styles}
       html,body{margin:0;padding:0;background:#fff}
       body{font-family:"Malgun Gothic","Noto Sans KR",Arial,sans-serif}
-      .sidebar,.topbar,.help,.toast,.print-helper,.export-modal-backdrop{display:none!important}
+      .sidebar,.topbar,.help,.toast,.print-helper,.export-modal-backdrop,.attachment-inline{display:none!important}
       .preview-shell{display:block}
       .paper{box-shadow:none;margin:0 auto;border-radius:0;page-break-inside:avoid;break-inside:avoid}
       @page{size:A4;margin:0}
@@ -1746,7 +1780,7 @@ async function renderPdfMaterialPages(material){
     canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
     const context=canvas.getContext("2d",{alpha:false});
     context.fillStyle="#fff";context.fillRect(0,0,canvas.width,canvas.height);
-    await page.render({canvasContext:context,viewport}).promise;
+    await page.render({canvasContext:context,viewport,intent:"print"}).promise; // rAF 미사용 — 숨김·백그라운드 탭에서도 렌더 진행 (v73)
     images.push(canvas.toDataURL("image/jpeg",.92));
     page.cleanup();
   }

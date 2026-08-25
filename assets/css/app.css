@@ -790,6 +790,12 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .formatted-line.level-1{margin-left:.72em}
 .formatted-line.level-2{margin-left:1.45em}
 
+/* 첨부 원문 인라인 표시 (v73): 미리보기 자료 목록에서 이미지·PDF를 바로 펼침. 인쇄에는 첨부 페이지만 나가므로 숨김 */
+.attachment-inline{margin-top:8px;display:grid;gap:8px}
+.attachment-inline img{max-width:100%;border:1px solid #d9d4c8;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.attachment-inline-tag{display:inline-block;font-size:11px;color:#8b867a;background:#f4f1ea;border-radius:999px;padding:3px 8px}
+@media print{.attachment-inline{display:none}}
+
 /* 관리자 전용 미리보기 (v70): 미완성 초안 안건 표시 */
 .preview-admin-note{max-width:210mm;margin:0 auto 12px;padding:10px 14px;border:1px solid #e3b1aa;background:#fdf0ee;color:#8a2a20;border-radius:12px;font-size:13px;font-weight:700;line-height:1.6}
 .paper.draft-page{outline:2px dashed #c96f63;outline-offset:-6px}
