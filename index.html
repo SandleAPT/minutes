@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v68</title>
+<title>산들마을 입주자대표회의 회의록 v69</title>
 <script>/* 포털 끼움 모드 (v61): ?embed=1 이면 왼쪽 메뉴를 숨긴다(깜빡임 방지를 위해 가장 먼저) */try{if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("embedded");}catch(e){}</script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
 <script>
@@ -860,7 +860,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v68 · 2026.08.24 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v69 · 2026.08.25 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -24633,6 +24633,71 @@ function sequenceDisplayHtml(){
   ).join("")}</div>`;
 }
 
+// 안건 입력 화면 관리자 잠금(v69)
+// 저장·삭제 때 사용하는 것과 같은 서버 검증을 화면 진입 시 먼저 거친다.
+// 화면만 가리는 비밀번호 비교가 아니라 Apps Script가 adminKey를 확인한다.
+const AdminGate=(function(){
+  const URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
+  const TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
+  const KEY="sandle_admin_key";
+  let verified=false, checking=false, pending=null, denied=null;
+
+  function saved(){ try{return localStorage.getItem(KEY)||"";}catch(e){return "";} }
+  function remember(k){ try{localStorage.setItem(KEY,k);}catch(e){} }
+  function forget(){ try{localStorage.removeItem(KEY);}catch(e){} verified=false; }
+  function verify(k){
+    return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_agenda_key___",adminKey:k,token:TOKEN})})
+      .then(r=>r.json()).then(x=>!!(x&&x.ok));
+  }
+  function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
+  function finish(ok){
+    const cb=ok?pending:denied; pending=null; denied=null; close();
+    if(cb) cb();
+  }
+  function showDialog(message=""){
+    if(document.getElementById("agendaAdminDialog")) return;
+    const bd=document.createElement("div"); bd.id="agendaAdminDialog";
+    bd.style.cssText="position:fixed;inset:0;z-index:10002;background:rgba(30,30,28,.48);display:flex;align-items:center;justify-content:center;padding:16px";
+    bd.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="agendaAdminTitle" style="background:#fff;border-radius:16px;max-width:390px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25);font-size:14px;line-height:1.6">'+
+      '<div id="agendaAdminTitle" style="font-weight:800;font-size:16px;margin-bottom:6px">🔒 관리자 전용 메뉴</div>'+
+      '<div style="color:#666;font-size:13px;margin-bottom:12px">안건 입력 화면은 관리자 비밀번호를 확인한 뒤 열립니다.</div>'+
+      '<input id="agendaAdminInput" type="password" autocomplete="current-password" placeholder="관리자 비밀번호" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border:1px solid #d9d4c8;border-radius:10px">'+
+      '<div id="agendaAdminMsg" style="min-height:22px;color:#a33;font-size:12px;margin-top:5px">'+esc(message)+'</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn" id="agendaAdminCancel">취소</button><button class="btn gold" id="agendaAdminOk">확인</button></div></div>';
+    document.body.appendChild(bd);
+    const input=document.getElementById("agendaAdminInput"), msg=document.getElementById("agendaAdminMsg"), ok=document.getElementById("agendaAdminOk");
+    function submit(){
+      const k=(input.value||"").trim();
+      if(!k){msg.textContent="비밀번호를 입력해 주세요.";input.focus();return;}
+      if(checking)return; checking=true; ok.disabled=true; msg.style.color="#666";msg.textContent="확인 중…";
+      verify(k).then(valid=>{
+        checking=false;ok.disabled=false;
+        if(!valid){msg.style.color="#a33";msg.textContent="비밀번호가 올바르지 않습니다.";input.select();return;}
+        remember(k);verified=true;finish(true);
+      }).catch(()=>{checking=false;ok.disabled=false;msg.style.color="#a33";msg.textContent="확인하지 못했습니다. 네트워크 상태를 확인해 주세요.";});
+    }
+    ok.onclick=submit;
+    document.getElementById("agendaAdminCancel").onclick=()=>finish(false);
+    input.addEventListener("keydown",e=>{if(e.key==="Enter")submit();else if(e.key==="Escape")finish(false);});
+    setTimeout(()=>input.focus(),50);
+  }
+  function requireAccess(onGranted,onDenied){
+    pending=onGranted; denied=onDenied;
+    if(verified&&saved()){finish(true);return;}
+    const k=saved();
+    if(!k){showDialog();return;}
+    if(checking)return;
+    checking=true;
+    verify(k).then(valid=>{
+      checking=false;
+      if(valid){verified=true;finish(true);}
+      else{forget();showDialog("저장된 비밀번호를 다시 확인해 주세요.");}
+    }).catch(()=>{checking=false;showDialog("자동 확인에 실패했습니다. 비밀번호를 다시 입력해 주세요.");});
+  }
+  return {require:requireAccess,forget};
+})();
+window.AdminGate=AdminGate;
+
 const viewNames={
   setupView:"회의 설정",
   repsView:"동대표 명단",
@@ -24656,8 +24721,7 @@ function toggleNavGroup(){ const g=document.getElementById("navEditGroup"); setN
   try{ const v=localStorage.getItem(NAV_EDIT_KEY); if(v==="1") open=true; else if(v===null && localStorage.getItem("sandle_admin_key")) open=true; }catch(e){}
   setNavGroup(open,false);
 })();
-document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
-  btn.addEventListener("click",()=>{
+function openNavView(btn){
     document.querySelectorAll(".nav button[data-view]").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     if(btn.closest("#navEditGroup")) setNavGroup(true,false); // 묶음 안의 화면이 열리면 묶음도 펼친다
@@ -24673,6 +24737,17 @@ document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
     if(btn.dataset.view==="noticeView" && window.Notices) Notices.render(); // ⑤ 공고·기록 (v65)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
+}
+document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(btn.dataset.view==="agendaView"){
+      AdminGate.require(
+        ()=>openNavView(btn),
+        ()=>{ const cur=document.querySelector(".nav button[data-view].active"); if(cur&&window.Embed) Embed.notify(cur.dataset.view); }
+      );
+      return;
+    }
+    openNavView(btn);
   });
 });
 // 주소로 탭 열기 (v60): ?tab=archiveView|topicView|hajaView|repsView… 또는 #archiveView — 포털 등 외부 링크에서 바로 해당 화면으로
