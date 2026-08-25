@@ -1242,17 +1242,21 @@ function voteNames(a,stateName){
     .filter(([_,s])=>s===stateName)
     .map(([key])=>{
       const rep=currentRoster().find(r=>String(r.dong)===String(key) || r.name===key);
-      return rep ? seatLabel(rep) : String(key);
+      return rep ? actorFullLabel(rep) : String(key);
     })
     .join(", ");
 }
-function voteSeatsHtml(a,stateName){
+function votePeopleHtml(a){
   normalizeVotes(a);
-  const seats=currentAttendees()
-    .filter(rep=>(a.votes||{})[actorKey(rep)]===stateName)
-    .map(rep=>`<span class="vote-seat">${esc(seatLabel(rep))}</span>`)
+  const people=currentAttendees()
+    .map(rep=>{
+      const stateName=(a.votes||{})[actorKey(rep)]||"";
+      const label=stateName==="for"?"찬성":stateName==="against"?"반대":"미선택";
+      const cls=stateName==="for"?"for":stateName==="against"?"against":"pending";
+      return `<span class="vote-person ${cls}"><b>${esc(actorFullLabel(rep))}</b><small>${label}</small></span>`;
+    })
     .join("");
-  return seats||"없음";
+  return people||"표결 대상 없음";
 }
 function voteStatus(a){
   normalizeVotes(a);
@@ -1390,12 +1394,9 @@ function agendaPageHtml(item,currentPage,totalPages){
   const vote=voteStatus(a);
   const voteHtml=voteIsBlank(a)
     ? `<div class="vote-consensus" style="background:#f6f4ee;border-color:#ddd6c7"><b>표결 미기입</b><span>의결 전 상정 안건</span></div>`
-    : vote.unanimous
-    ? `<div class="vote-consensus"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
-    : `<div class="vote-split-grid">
-         <div class="vote-card for"><div class="vote-card-head"><b>찬성</b><span>${vote.forCount}명</span></div><div class="vote-card-body vote-seat-grid ${vote.forCount?"":"empty"}">${voteSeatsHtml(a,"for")}</div></div>
-         <div class="vote-card against"><div class="vote-card-head"><b>반대</b><span>${vote.againstCount}명</span></div><div class="vote-card-body vote-seat-grid ${vote.againstCount?"":"empty"}">${voteSeatsHtml(a,"against")}</div></div>
-       </div>${vote.incomplete ? `<div class="vote-incomplete">미선택 ${vote.incomplete}명 · 표결 선택이 완료되지 않았습니다.</div>` : ""}`;
+    : `<div class="vote-tally"><span class="for">찬성 ${vote.forCount}</span><span class="against">반대 ${vote.againstCount}</span></div>
+       <div class="vote-mixed-grid">${votePeopleHtml(a)}</div>
+       ${vote.incomplete ? `<div class="vote-incomplete">미선택 ${vote.incomplete}명 · 표결 선택이 완료되지 않았습니다.</div>` : ""}`;
   const filledRemarks=Object.entries(a.remarks||{}).filter(([name,text])=>String(text||"").trim());
   const hasRemarks=!a.noRemarks && filledRemarks.length>0;
   const remarks=hasRemarks
@@ -2173,14 +2174,18 @@ async function buildDocxBlob(){
     children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true),sectionTitle("표결"));
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
-    }else if(vote.unanimous){
-      children.push(table([[cell(p("만장일치",{bold:true,size:25,alignment:AlignmentType.CENTER,after:0}),1500,{shade:"E8EFE5",compact:true}),cell(p(vote.detail,{size:26,after:0,line:290}),8660,{compact:true})]],[1500,8660]));
     }else{
-      const voteCard=(label,count,names,shade)=>cell([
-        p([run(label,{bold:true,size:25}),run(`  ${count}명`,{size:23,color:"666666"})],{alignment:AlignmentType.CENTER,after:45,line:285}),
-        p(names||"없음",{size:22,alignment:names?AlignmentType.LEFT:AlignmentType.CENTER,after:0,line:280,color:names?INK:"777777"})
-      ],5080,{shade});
-      children.push(table([[voteCard("찬성",vote.forCount,voteNames(a,"for"),"E8EFE5"),voteCard("반대",vote.againstCount,voteNames(a,"against"),"F7ECE8")]],[5080,5080]));
+      children.push(p([
+        run(`찬성 ${vote.forCount}`,{bold:true,size:25,color:"2F5128"}),
+        run(`   ·   반대 ${vote.againstCount}`,{bold:true,size:25,color:"8A2A20"})
+      ],{after:45,line:290}));
+      const personRows=currentAttendees().map(rep=>{
+        const stateName=(a.votes||{})[actorKey(rep)]||"";
+        const label=stateName==="for"?"찬성":stateName==="against"?"반대":"미선택";
+        const shade=stateName==="for"?"E6F0E1":stateName==="against"?"FDE9E6":"FFF4D6";
+        return [cell(actorFullLabel(rep),8160,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),2000,{shade,compact:true})];
+      });
+      children.push(table(personRows,[8160,2000]));
     }
     if(a.showFollowup)children.push(sectionTitle("후속조치"),contentBox(a.followup,true));
     for(const material of includedPdfMaterials(a)){
