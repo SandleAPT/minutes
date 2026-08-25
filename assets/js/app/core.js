@@ -1359,8 +1359,22 @@ function hydrateInlineAttachments(root){
     if(kind!=="image"&&kind!=="pdf") return;
     const imgs=await inlineAttachmentImages(box.dataset.attKey,kind,box.dataset.attName);
     if(!box.isConnected||!imgs.length) return;
-    box.innerHTML=imgs.map((u,i)=>`<img src="${u}" alt="${esc(box.dataset.attName)} ${i+1}쪽" decoding="async">`).join("");
+    box.innerHTML=imgs.map((u,i)=>`<img src="${u}" alt="${esc(box.dataset.attName)} ${i+1}쪽" title="누르면 크게 보기" decoding="async">`).join("");
+    box.querySelectorAll("img").forEach(img=>{ img.onclick=()=>openAttachmentLightbox(img.src,img.alt); });
   });
+}
+// 첨부 확대 보기 (v75): 인라인 첨부를 누르면 화면 전체로 크게. 그림을 다시 누르면 원본 크기(스크롤), 바깥·Esc로 닫기.
+function openAttachmentLightbox(src,alt){
+  const overlay=document.createElement("div");
+  overlay.className="att-lightbox";
+  overlay.innerHTML=`<img src="${src}" alt="${esc(alt)}" decoding="async"><div class="att-lightbox-hint">그림을 누르면 원본 크기 ↔ 화면 맞춤 · 바깥을 누르거나 Esc로 닫기</div>`;
+  const close=()=>{ overlay.remove(); document.removeEventListener("keydown",onKey); };
+  const onKey=e=>{ if(e.key==="Escape") close(); };
+  overlay.onclick=close;
+  const img=overlay.querySelector("img");
+  img.onclick=e=>{ e.stopPropagation(); overlay.classList.toggle("full"); if(!overlay.classList.contains("full")) overlay.scrollTo(0,0); };
+  document.addEventListener("keydown",onKey);
+  document.body.appendChild(overlay);
 }
 function pageNumberHtml(current,total){
   return `<div class="page-number">${current} / ${total}</div>`;
