@@ -1218,6 +1218,7 @@ function renderAgendas(){
             state.agendas.map((_,order)=>`<option value="${order+1}" ${order===idx?"selected":""}>${order+1}</option>`).join("")
           }</select></label>
           <button class="btn gold" type="button" onclick="Cloud.saveNow()">☁ 클라우드 저장</button>
+          <button class="btn soft" type="button" onclick="printSingleAgenda('${a.id}')">PDF 1쪽 미리보기</button>
           <button class="btn danger" type="button" onclick="removeAgenda('${a.id}')">안건 삭제</button>
         </div>
         <div class="agenda-body">
@@ -2402,6 +2403,35 @@ async function printFromModal(includeAttachments=true){
 
 function printMinutes(){
   openExportModal("pdf");
+}
+
+// 안건 입력 중에도 해당 안건 한 건만 A4 1쪽 형식으로 바로 확인한다.
+// 미완성 안건도 검토할 수 있어야 하므로 전체 출력의 표결 완료 검사는 적용하지 않는다.
+function printSingleAgenda(agendaId){
+  const item=outputAgendaItems(true).find(entry=>entry.agenda.id===agendaId);
+  if(!item){
+    showToast("미리 볼 안건을 찾을 수 없습니다.","warn");
+    return;
+  }
+  const printWindow=window.open("","_blank","width=980,height=760");
+  if(!printWindow){
+    showToast("PDF 미리보기 창이 차단되었습니다. 팝업을 허용한 후 다시 시도하세요.","warn");
+    return;
+  }
+  try{
+    const content=agendaPageHtml(item,1,1);
+    printWindow.document.open();
+    printWindow.document.write(printableDocumentHtml(content));
+    printWindow.document.close();
+    setTimeout(()=>{
+      printWindow.focus();
+      printWindow.print();
+    },500);
+  }catch(err){
+    console.error(err);
+    printWindow.close();
+    showToast("안건 PDF 미리보기를 열 수 없습니다.","error");
+  }
 }
 document.getElementById("restoreInput").addEventListener("change",e=>{
   const input=e.target;
