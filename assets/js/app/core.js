@@ -1217,7 +1217,8 @@ function renderAgendas(){
           <label class="agenda-order"><span>순서</span><select aria-label="안건 순서" onchange="moveAgendaTo('${a.id}',this.value)">${
             state.agendas.map((_,order)=>`<option value="${order+1}" ${order===idx?"selected":""}>${order+1}</option>`).join("")
           }</select></label>
-          <button class="btn danger" onclick="removeAgenda('${a.id}')">안건 삭제</button>
+          <button class="btn gold" type="button" onclick="Cloud.saveNow()">☁ 클라우드 저장</button>
+          <button class="btn danger" type="button" onclick="removeAgenda('${a.id}')">안건 삭제</button>
         </div>
         <div class="agenda-body">
           <div class="grid" style="grid-template-columns:1.4fr .8fr">
