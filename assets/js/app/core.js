@@ -904,7 +904,7 @@ function renderAgendaTagEditor(id){
 }
 function newAgenda(){
   return {
-    id:uid(),title:"",summary:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
+    id:uid(),title:"",proposer:"",summary:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
     category:"",followup:"",showFollowup:false,
     materials:[],showMaterials:false
   };
@@ -944,6 +944,9 @@ function normalizeRemarks(a){
     a.remarks=obj;
   }
   if(!a.remarks || typeof a.remarks!=="object") a.remarks={};
+  // v76: 과거 안건에는 proposer 필드가 없으므로 빈값으로 정규화한다.
+  // 선택값으로 두어 기존 회의록의 완성 여부·출력에는 영향을 주지 않는다.
+  if(typeof a.proposer!=="string") a.proposer="";
   if(typeof a.isOther!=="boolean") a.isOther=false;
   if(typeof a.noRemarks!=="boolean") a.noRemarks=true;
   // v30: 단일 category → 다중 태그(tags). 비어 있으면 자동 분류를 따른다.
@@ -1217,10 +1220,11 @@ function renderAgendas(){
           <button class="btn danger" onclick="removeAgenda('${a.id}')">안건 삭제</button>
         </div>
         <div class="agenda-body">
-          <div class="grid" style="grid-template-columns:1fr 1.4fr">
+          <div class="grid" style="grid-template-columns:1.4fr .8fr">
             <div class="field"><label>안건명 <b>*</b></label><input id="agenda-title-input-${a.id}" value="${esc(a.title)}" placeholder="예: 관리비 부과 내역서 심의 건" oninput="setAgenda('${a.id}','title',this.value)"></div>
-            <div class="field"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
+            <div class="field"><label>안건 제출자 <span class="small">(선택)</span></label><input value="${esc(a.proposer)}" placeholder="예: 208동 유은혜 이사" oninput="setAgenda('${a.id}','proposer',this.value)"></div>
           </div>
+          <div class="field" style="margin-top:8px"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
           <div class="field" style="margin-top:8px"><label>주제 태그 <span class="small">(여러 개 가능 · 안건명 기준 자동 분류, ×로 빼거나 ＋로 더하면 직접 지정 · ③ 주제별 보기에서 모아봄)</span></label>
             ${tagEditorHTML(a)}</div>
           <div class="subsection">
@@ -1422,7 +1426,10 @@ function coverHtml(totalPages){
 
   const leftRows=leftReps.map(repRowHtml).join("");
   const rightRows=rightReps.map(repRowHtml).join("");
-  const agendas=officialAgendaRows().map(row=>`<div class="row"><span>${row.label}</span><span>${esc(row.title)}</span></div>`).join("");
+  const agendas=officialAgendaRows().map(row=>{
+    const proposer=String(row.agenda?.proposer||"").trim();
+    return `<div class="row"><span>${row.label}</span><span>${esc(row.title)}${proposer?`<small class="cover-agenda-proposer">안건 제출자 · ${esc(proposer)}</small>`:""}</span></div>`;
+  }).join("");
   const guests=(state.meeting.guests||[]).filter(g=>g.name.trim()||g.position.trim());
   const guestText=guests.length
     ? guests.map(g=>esc(guestCoverLabel(g))).join("<br>")
@@ -1468,6 +1475,7 @@ function coverHtml(totalPages){
 }
 function agendaPageHtml(item,currentPage,totalPages){
   const a=item.agenda;
+  const proposer=String(a.proposer||"").trim();
   const draftRibbon=item.draft?`<div class="draft-ribbon">미완성 초안 — 관리자에게만 보이며, 인쇄·게시에는 포함되지 않습니다 (의결·표결 미기입)</div>`:"";
   normalizeRemarks(a);
   const vote=voteStatus(a);
@@ -1495,6 +1503,8 @@ function agendaPageHtml(item,currentPage,totalPages){
     </div>
 
     ${item.isOther?`<div class="other-subtitle"><small>기타안건 ${item.subIndex} / ${item.subTotal}</small>${esc(a.title||"소제목 미입력")}</div>`:""}
+
+    ${proposer?`<div class="agenda-proposer"><b>안건 제출자</b><span>${esc(proposer)}</span></div>`:""}
 
     ${String(a.summary||"").trim()?`<div class="section-band">안건 요지</div>
     <div class="summary-box">${nl2br(a.summary,{autoBullets:true})}</div>`:""}
@@ -1852,7 +1862,10 @@ function wordDocumentHtml(){
   const contentBox=(html,extra="")=>`<table class="content-box ${extra}"><tr><td>${html||"&nbsp;"}</td></tr></table>`;
   const sequenceRows=(state.meeting.sequence||[]).map((s,i)=>`<tr><th>${i+1}</th><td>${esc(s)}</td></tr>`).join("");
   const agendaRows=state.agendas.length
-    ? state.agendas.map((a,i)=>`<tr><th>${agendaLabelAt(i)}</th><td>${esc(a.title||"")}</td></tr>`).join("")
+    ? state.agendas.map((a,i)=>{
+        const proposer=String(a.proposer||"").trim();
+        return `<tr><th>${agendaLabelAt(i)}</th><td>${esc(a.title||"")}${proposer?`<div class="cover-proposer">안건 제출자 · ${esc(proposer)}</div>`:""}</td></tr>`;
+      }).join("")
     : `<tr><th>-</th><td>등록된 안건이 없습니다.</td></tr>`;
 
   const cover=`<div class="page Section1">
@@ -1894,6 +1907,7 @@ function wordDocumentHtml(){
     return `<div class="word-page-break">&nbsp;</div><div class="page Section1">
       ${bodyMarkHtml("word")}<div class="word-title">${docTitle()}</div>
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
+      ${String(a.proposer||"").trim()?`<table class="grid agenda-proposer-word"><tr><th>안건 제출자</th><td>${esc(a.proposer)}</td></tr></table>`:""}
       ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
       ${sectionTitle("의결사항")}${contentBox(nl2br(decisionForOutput(a)),"decision")}
@@ -1914,7 +1928,8 @@ function wordDocumentHtml(){
     table{border-collapse:collapse;width:100%;table-layout:fixed}
     .grid th,.grid td{border:1px solid #9d978c;padding:5pt 6pt;vertical-align:middle;line-height:1.35}
     .grid th{background:#f4f6f2;font-weight:700;text-align:left}
-    .meta th,.agenda-title th{white-space:nowrap}.agenda-title td{font-weight:700}
+    .meta th,.agenda-title th,.agenda-proposer-word th{white-space:nowrap}.agenda-title td{font-weight:700}
+    .cover-proposer{margin-top:2pt;color:#6f746c;font-size:8pt;font-weight:400}.agenda-proposer-word{margin-top:4pt}.agenda-proposer-word th{width:18%}.agenda-proposer-word td{width:82%}
     .section-title{margin-top:14pt;border-collapse:collapse}
     .section-title td{border-top:1px solid #9da79a;border-bottom:1px solid #cbd1c8;border-left:4px solid #7f927a;padding:5pt 7pt;font-weight:700}
     .roster th,.roster td{text-align:left;font-size:8.5pt}.roster .head th{text-align:center}
@@ -2062,7 +2077,7 @@ function docxDocumentXml(){
   body+=wSectionTitle("상정 안건");
   const agendaRows=state.agendas.length?state.agendas.map((a,i)=>[
     {text:agendaLabelAt(i),index:0,bold:true,align:"center",shade:"F4F6F2",size:18},
-    {text:a.title||" ",index:1,size:18}
+    {text:(a.title||" ")+(String(a.proposer||"").trim()?`\n안건 제출자 · ${String(a.proposer).trim()}`:""),index:1,size:18}
   ]):[[{text:"-",index:0},{text:"등록된 안건이 없습니다.",index:1}]];
   body+=wTable(agendaRows,[1080,9080],{cellMargin:55,after:10});
 
@@ -2072,6 +2087,9 @@ function docxDocumentXml(){
     body+=`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
     body+=wParagraph(buildMeetingName(),{size:15,color:"6F746C",align:"right",after:35});
     body+=wParagraph(`${agendaLabelAt(idx)}  ${a.title||"안건명 미입력"}`,{bold:true,size:30,align:"left",after:120,line:330,borders:titleBorders});
+    if(String(a.proposer||"").trim()) body+=wTable([
+      [{text:"안건 제출자",index:0,bold:true,shade:"F4F6F2",align:"center",size:18},{text:String(a.proposer).trim(),index:1,size:18}]
+    ],[1600,8560],{cellMargin:55,after:10});
     if(String(a.summary||"").trim()) body+=wSectionTitle("안건 요지")+wContentBox(a.summary,{autoBullets:true});
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim());
     if(a.showMaterials && printableMaterials.length){
