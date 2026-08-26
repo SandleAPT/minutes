@@ -1749,7 +1749,17 @@ async function saveBackupFromModal(){
 }
 
 function printableDocumentHtml(content){
-  const styles=Array.from(document.querySelectorAll("style")).map(s=>s.innerHTML).join("\n");
+  // 화면 CSS는 외부 app.css로 분리되어 있다. 인쇄창은 about:blank에서 열리므로
+  // <style> 태그만 복사하면 표·A4 배치가 모두 빠진 일반 텍스트처럼 보인다.
+  // 현재 문서에 적용된 규칙을 인쇄 문서 안에 직접 넣어 화면과 같은 서식을 유지한다.
+  const styles=Array.from(document.styleSheets).map(sheet=>{
+    try{
+      return Array.from(sheet.cssRules||[]).map(rule=>rule.cssText).join("\n");
+    }catch(err){
+      // 읽을 수 없는 외부 스타일시트가 생겨도 인쇄 자체는 계속 가능하게 한다.
+      return sheet.href?`@import url("${sheet.href}");`:"";
+    }
+  }).join("\n");
   return `<!doctype html>
   <html lang="ko">
   <head>
