@@ -333,6 +333,7 @@ function listLineParts(line=""){
 }
 function nl2br(s="",{autoBullets=false}={}){
   const lines=String(s??"").replace(/\r/g,"").split("\n");
+  while(lines.length&&!lines[lines.length-1].trim())lines.pop(); // 입력 끝의 빈 줄은 표·상자 아래 여백으로만 남으므로 출력하지 않는다
   return `<div class="formatted-text">${lines.map(line=>{
     if(!line.length) return `<div class="formatted-line blank">&nbsp;</div>`;
     const parts=listLineParts(line);

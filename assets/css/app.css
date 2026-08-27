@@ -206,9 +206,9 @@ td.center,th.center{text-align:center}
 .decision-box.pending{color:#8a8476;font-style:italic}
 .follow-box{min-height:15mm}
 .remark-table{width:100%;border-collapse:collapse}
-.remark-table th,.remark-table td{border:1px solid #9d978c;padding:8px 9px;font-size:11pt;line-height:1.55;vertical-align:top}
+.remark-table th,.remark-table td{border:1px solid #9d978c;padding:2mm 2.5mm;font-size:11pt;line-height:1.55;vertical-align:top}
 .remark-table th{background:#f4f6f2;position:static}
-.remark-table td:first-child{width:27%;font-weight:800;word-break:keep-all;overflow-wrap:normal}
+.remark-table td:first-child{width:1%;white-space:nowrap;font-weight:800;word-break:keep-all;overflow-wrap:normal}
 .remark-table td:nth-child(2){white-space:pre-wrap}
 .none-remark{
   border:1px solid #9d978c;border-top:0;padding:18px;text-align:center;color:#777;
