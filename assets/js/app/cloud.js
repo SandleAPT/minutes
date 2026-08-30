@@ -138,6 +138,12 @@
     try { if (typeof saveState === "function") saveState(); } catch (e) {}
     if (state.draft) delete state.draft; // 클라우드에 저장되면 더 이상 '작성 중'이 아님
     var record = { id: currentCloudId(), name: (state.meeting && state.meeting.name) || "회의록", date: (state.meeting && state.meeting.date) || "", json: JSON.stringify(state) };
+    // v82: 구글시트 셀 한도(50,000자) 가드 — 넘으면 서버 저장이 통째로 실패하므로 먼저 막고 안내한다
+    if (record.json.length > 49000) {
+      alert("이 회의록 데이터가 " + record.json.length.toLocaleString() + "자로 클라우드 저장 한도(약 49,000자)를 넘습니다.\n발언 요지나 원문 전문을 줄이거나 회의록을 나눠 주세요. (구글시트 셀 한도 50,000자)");
+      return;
+    }
+    if (record.json.length > 42000) toast("주의: 회의록 데이터 " + record.json.length.toLocaleString() + "자 — 저장 한도(49,000자)에 가까워지고 있습니다");
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record, adminKey: key }).then(function (res) {
       if (res && res.ok) {
@@ -543,14 +549,39 @@
   }
 
   // 시스템 레코드(명단 변동 이력 등) 저장 — 관리자 비밀번호 필요. cb(ok, errorMessage) (v40)
+  // v82: 45,000자 초과 시 조각 저장({chunked,parts} 본 레코드 + id_pN 원문 슬라이스, docs/DATA.md §8) — 구글시트 셀 50,000자 한도 대응.
+  var SYS_CHUNK_LIMIT = 45000;
   function saveSystemRecord(id, name, json, cb, retried) {
     var key = getAdminKey(true);
     if (!key) {
       if (promptUnsupported) { askAdminKeyDialog(function () { saveSystemRecord(id, name, json, cb, retried); }); return; }
       toast("저장 취소됨 — 관리자 비밀번호가 필요합니다"); if (cb) cb(false, "no_key"); return;
     }
+    var cfg = loadCfg();
     toast("클라우드에 저장 중...");
-    apiPost(loadCfg(), { action: "save", record: { id: id, name: name, date: "", json: json }, adminKey: key }).then(function (res) {
+    (async function () {
+      // 이전 조각 수 확인 — 조각이 줄면 잉여 조각을 지워야 다음 읽기가 안 깨진다
+      var oldParts = 0;
+      try {
+        var prev = await apiGet(cfg, { action: "get", token: cfg.token, id: id });
+        var pm = (prev && prev.ok && prev.item) ? JSON.parse(prev.item.json) : null;
+        if (pm && pm.chunked && pm.parts) oldParts = pm.parts;
+      } catch (e) {}
+      var res;
+      if (json.length > SYS_CHUNK_LIMIT) {
+        var n = Math.ceil(json.length / SYS_CHUNK_LIMIT);
+        for (var i = 1; i <= n; i++) {
+          var pr = await apiPost(cfg, { action: "save", record: { id: id + "_p" + i, name: name + " (조각 " + i + "/" + n + ")", date: "", json: json.slice((i - 1) * SYS_CHUNK_LIMIT, i * SYS_CHUNK_LIMIT) }, adminKey: key });
+          if (!(pr && pr.ok)) return pr;
+        }
+        res = await apiPost(cfg, { action: "save", record: { id: id, name: name, date: "", json: JSON.stringify({ version: 1, chunked: true, parts: n, totalLen: json.length, updatedAt: new Date().toISOString() }) }, adminKey: key });
+        for (var j = n + 1; j <= oldParts; j++) await apiPost(cfg, { action: "delete", id: id + "_p" + j, adminKey: key });
+      } else {
+        res = await apiPost(cfg, { action: "save", record: { id: id, name: name, date: "", json: json }, adminKey: key });
+        for (var j2 = 1; j2 <= oldParts; j2++) await apiPost(cfg, { action: "delete", id: id + "_p" + j2, adminKey: key });
+      }
+      return res;
+    })().then(function (res) {
       if (res && res.ok) { toast("클라우드 저장 완료"); if (cb) cb(true); }
       else if (res && res.error === "admin_required") { clearAdminKey(); toast("관리자 비밀번호가 올바르지 않습니다"); if (!retried) saveSystemRecord(id, name, json, cb, true); else if (cb) cb(false, "admin_required"); }
       else { toast("저장 실패: " + ((res && res.error) || "알 수 없음")); if (cb) cb(false, res && res.error); }
@@ -558,7 +589,20 @@
   }
   function getSystemRecord(id, cb) {
     var cfg = loadCfg();
-    apiGet(cfg, { action: "get", token: cfg.token, id: id }).then(function (r) { cb((r && r.ok && r.item) ? r.item : null); }).catch(function () { cb(null); });
+    apiGet(cfg, { action: "get", token: cfg.token, id: id }).then(function (r) {
+      var item = (r && r.ok && r.item) ? r.item : null;
+      if (!item) { cb(null); return; }
+      var meta = null; try { meta = JSON.parse(item.json); } catch (e) {}
+      if (!(meta && meta.chunked && meta.parts)) { cb(item); return; }
+      // v82: 조각 레코드면 이어 붙여 원래 item 모양으로 돌려준다 — 호출부는 그대로 JSON.parse(item.json)
+      var ps = [];
+      for (var i = 1; i <= meta.parts; i++) ps.push(apiGet(cfg, { action: "get", token: cfg.token, id: id + "_p" + i }));
+      Promise.all(ps).then(function (arr) {
+        var s = "";
+        for (var k = 0; k < arr.length; k++) { if (!(arr[k] && arr[k].ok && arr[k].item)) { cb(null); return; } s += arr[k].item.json; }
+        cb({ id: item.id, name: item.name, date: item.date, updatedAt: item.updatedAt, json: s });
+      }).catch(function () { cb(null); });
+    }).catch(function () { cb(null); });
   }
 
   // 관리자 확인 게이트 (v42): 공개 사이트이므로 수정·삭제성 동작은 먼저 관리자 비밀번호를 요구한다. cb(true)면 진행.

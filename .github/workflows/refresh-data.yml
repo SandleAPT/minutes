@@ -31,12 +31,12 @@ jobs:
         run: node scripts/build-data.mjs
       - name: Commit if changed
         run: |
-          if git diff --quiet -- data.json; then
-            echo "data.json 변경 없음"
+          git add data.json system-backup.json
+          if git diff --cached --quiet; then
+            echo "data.json/system-backup.json 변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json
-          git commit -m "data.json 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
+          git commit -m "data.json·system-backup.json 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
           git push
