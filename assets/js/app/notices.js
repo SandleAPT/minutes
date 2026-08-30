@@ -3,7 +3,8 @@
 // 탭 2 계약·기준문서: 정적 contracts.json(v2: 조문 원문 그대로 + 해석·검토 메모 분리) — 문서는
 //   접힌 카드로만 나열하고, 검색하면 모든 문서를 훑어 일치하는 조문만 펼쳐 보여준다.
 // 탭 3 공고·안내 / 탭 4 절차 점검: 관리자 비밀번호를 입력한 기기에서만 표시.
-// 절차 점검은 investigations.json의 현재 조사 현황만 한 화면에 보여준다.
+// 절차 점검은 investigations.json(조사 현황)과 클라우드 checks_v1(규약 대조 기록)을 한 화면에 합쳐,
+//   심각도(위반·미충족 확인 → 소지 → 확인중) 순서로 보여준다. (v85 — 이전에는 checks_v1이 화면에 안 나왔음)
 var Notices=(function(){
   var URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
@@ -315,7 +316,7 @@ var Notices=(function(){
     return '<details class="nt-card" style="padding:0;overflow:hidden;margin:0">'+
       '<summary style="list-style:none;cursor:pointer;padding:15px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start">'+
         '<div style="min-width:0"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:7px">'+
-          '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span><span class="small">'+esc(i.category||'')+'</span></div>'+
+          '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span><span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
           '<div class="nt-title" style="margin:0 0 5px">'+esc(i.title)+'</div><div class="nt-sum" style="margin:0">'+esc(i.summary||'')+'</div></div>'+
         '<span aria-hidden="true" style="font-size:18px;color:var(--muted);padding-top:4px">⌄</span>'+
       '</summary>'+
@@ -323,19 +324,32 @@ var Notices=(function(){
         invList('확인된 사실',i.facts)+invList('적용 기준',i.rules)+invList('확인자료',i.evidence)+
         (i.question?'<div style="margin-top:13px"><div class="nt-sec" style="margin-top:0">판단이 필요한 부분</div><div class="nt-sum">'+esc(i.question)+'</div></div>':'')+
         (i.next?'<div class="nt-note" style="margin-top:13px"><b>다음 조치</b><br>'+esc(i.next)+'</div>':'')+
+        relChips(i.related)+
       '</div></details>';
   }
+  // 클라우드 절차 점검 항목(checks_v1)을 조사 현황과 같은 카드 형태로 변환
+  function checkAsInv(c){
+    return {
+      status:c.status||'확인중', severity:c.severity||'medium', category:'규약 대조',
+      title:c.title, summary:c.summary||'', facts:c.facts,
+      rules:(c.rules||[]).map(function(r){return r.ref+(r.text?': '+r.text:'')+(r.verified===false?' (원문 대조 전)':'');}),
+      question:c.question, next:null, related:c.related, updatedAt:c.updatedAt
+    };
+  }
+  function sevRank(i){return {confirmed:0,high:1,medium:2}[i.severity]!==undefined?{confirmed:0,high:1,medium:2}[i.severity]:3;}
   function investigationsHtml(){
-    if(!st.investigations) return '<div class="nt-empty">'+(st.investigationsLoading?'조사 현황 불러오는 중…':'조사 현황이 없습니다.')+'</div>';
-    var all=st.investigations.items||[];
+    var cloud=(st.checks&&st.checks.items)?st.checks.items.map(checkAsInv):[];
+    if(!st.investigations&&!cloud.length) return '<div class="nt-empty">'+((st.investigationsLoading||st.loading)?'점검 기록 불러오는 중…':'점검 기록이 없습니다.')+'</div>';
+    var all=((st.investigations&&st.investigations.items)||[]).concat(cloud);
+    all=all.slice().sort(function(a,b){return sevRank(a)-sevRank(b);});
     var statuses=['전체'].concat(Array.from(new Set(all.map(function(i){return i.status;}))));
     var items=st.checkFilter==='전체'?all:all.filter(function(i){return i.status===st.checkFilter;});
-    var confirmed=all.filter(function(i){return i.status==='위반 확인';}).length;
+    var confirmed=all.filter(function(i){return i.severity==='confirmed';}).length;
     var active=all.filter(function(i){return i.status!=='해소'&&i.status!=='문제없음';}).length;
     var h='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin:4px 0 12px">'+
-      '<div><div style="font-size:17px;font-weight:900">현재 조사 현황</div><div class="small" style="margin-top:3px">'+esc(st.investigations.updated||'')+' 기준 · '+all.length+'건 정리</div></div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="nt-badge">진행중 '+active+'</span><span class="nt-badge" style="background:#fbe9e7;color:#9b2c23;border-color:#efb3ad">위반 확인 '+confirmed+'</span></div></div>';
-    h+='<div class="nt-note" style="margin-bottom:12px">'+esc(st.investigations.note||'')+'</div>';
+      '<div><div style="font-size:17px;font-weight:900">절차 점검 현황</div><div class="small" style="margin-top:3px">'+esc((st.investigations&&st.investigations.updated)||'')+' 기준 조사 '+(((st.investigations&&st.investigations.items)||[]).length)+'건 · 규약 대조 '+cloud.length+'건</div></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="nt-badge">진행중 '+active+'</span><span class="nt-badge" style="background:#fbe9e7;color:#9b2c23;border-color:#efb3ad">위반·미충족 확인 '+confirmed+'</span></div></div>';
+    h+='<div class="nt-note" style="margin-bottom:12px">'+esc((st.investigations&&st.investigations.note)||'')+' <b>규약 대조</b> 항목은 카페 게시판 공고·회의록 전수 대조와 규약 조문 원문 확인을 바탕으로 한 기록으로, 빨간 배지는 문서상 요건 미충족이 확인된 건입니다.</div>';
     h+='<div class="nt-filters" style="margin-bottom:12px">'+statuses.map(function(s){return '<button type="button" class="btn'+(st.checkFilter===s?' gold':'')+'" onclick="Notices.checkFilter(\''+esc(s)+'\')">'+esc(s)+'</button>';}).join('')+'</div>';
     h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+items.map(investigationCard).join('')+'</div>';
     if(!items.length) h+='<div class="nt-empty">선택한 상태의 점검 건이 없습니다.</div>';
@@ -345,7 +359,7 @@ var Notices=(function(){
   function draw(){
     var box=document.getElementById('noticeBody');if(!box)return;
     var lockMark=locked()?' 🔒':'';
-    var checkCount=st.investigations&&st.investigations.items?st.investigations.items.length:0;
+    var checkCount=(st.investigations&&st.investigations.items?st.investigations.items.length:0)+(st.checks&&st.checks.items?st.checks.items.length:0);
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
       '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
@@ -370,6 +384,7 @@ var Notices=(function(){
     }else{
       h+=investigationsHtml();
       if(!st.investigations&&!st.investigationsLoading) loadInvestigations();
+      if(!st.checks&&!st.loading) load(); // 규약 대조 기록(checks_v1)도 함께
     }
     box.innerHTML=h;
   }
@@ -381,7 +396,7 @@ var Notices=(function(){
       if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();else if(!locked())load();
       draw();
     },
-    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='checks')loadInvestigations();else if(!locked()&&!st.notices)load();},
+    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='checks'){loadInvestigations();if(!locked()&&!st.checks)load();}else if(!locked()&&!st.notices)load();},
     fBody:function(b){st.fBody=b;draw();},
     doc:function(d){st.doc=d;draw();loadRules();},
     fKind:function(k){st.fKind=k;draw();},
