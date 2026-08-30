@@ -344,9 +344,9 @@ var Notices=(function(){
     {t:'❶ 6기 선관위 구성 문제와 그 파생',
      flow:'5기 임기 만료(2025.10.8) → 선거 지연 → 공개모집 공고 없이 4명 구성(요건 미충족 확인) → 위원 결격·정원 미달 소지 → 후보 공고 다음 날 투표 → 이 선관위가 뽑은 6기 동대표·커뮤니티센터 투표의 효력 문제 → LH 사실확인 진행 중',
      ids:['tenant-election-delay','c_ec6_formation','c_ec_chair','c_ec_candidate','c_t6_schedule','tenant-election-qualification','lh-missing-application']},
-    {t:'❷ 기수를 가로지르는 반복 패턴 (4→5→6기)',
-     flow:'모집 공고~접수 7일 요건은 확인된 전 기수에서 미충족(확인) · 5기 선관위도 4명 구성·위원장의 대표 전환 · 5기 임기 기록 불일치 · 같은 3명이 세 기수 연속 재임 — 6기만의 일탈이 아니라 반복돼 온 관행',
-     ids:['c_ec_recruit_notice','c_ec5_transition','c_t5_term','c_term_limit']},
+    {t:'❷ 기수를 가로지르는 반복 패턴 (2→6기)',
+     flow:'3기 선거는 공고 자체가 게시판에 없음(2019~20) · 모집 공고~접수 7일 요건은 확인된 전 기수에서 미충족 · 5기 선관위도 4명 구성·위원장의 대표 전환 · 5기 임기 기록 불일치 · 진세택 회장은 2기부터 5개 기수 연속 재임 — 6기만의 일탈이 아니라 반복돼 온 관행',
+     ids:['c_t3_election','c_ec_recruit_notice','c_ec5_transition','c_t5_term','c_term_limit']},
     {t:'❸ 운영경비 위반과 관리주체 책임',
      flow:'운영경비 규약 위반(LH 공식 확인) + 선거자료 제출 누락 경위 → 개별 해명이 아닌 신대한 본사 차원의 사실확정·시정·환수 요구 단계',
      ids:['tenant-expense-violation','management-responsibility']}
