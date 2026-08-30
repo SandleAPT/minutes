@@ -4,7 +4,7 @@
 - 클라우드 레코드 = `{id, name, date, updatedAt, json}`; `json`은 앱 상태 전체:
   `meeting{body("입대의"|"임차"), termNo, year, month, type(정기|임시), date, time, place, name, attendance{동/번호:true}, guests[], audience, sequence[]}`,
   `rosterTermNo, rosterBody, rosters{"5":[...], "t6":[...]}`, `agendas[]`, `cloudId`.
-- **id 규칙**: 입대의 `m_YYYY_MM[a|s]_v1` (같은 달 2건이면 `a`=앞 회의, `s`=임시), 임차 `t_YYYY_MM[s|s2]_v1`. 앱에서 새로 만든 회의록은 `m_<랜덤>`.
+- **id 규칙**: 입대의 `m_YYYY_MM[a|s]_v1` (같은 달 2건이면 `a`=앞 회의, `s`=임시), 임차 `t_YYYY_MM[s|s2]_v1`. 앱에서 새로 만든 회의록은 `m_<랜덤>`. 예외: 2025.12 정기회의는 `t_2025_12b_v1` — 기본 id를 12.1 통합회의(임시)가 먼저 사용 중이라 뒤 회의에 `b`를 붙임(참조 깨짐 방지 위해 재키하지 않음).
 - **이름 규칙**: `제N기 YYYY년MM월 [임시 ]입주자대표회의` / `…임차인대표회의` — ② 회의체 필터가 이름의 "임차인대표회의"로 판별하므로 임차 이름엔 반드시 포함.
 - 안건: `{id, title, summary, decision, votes{동:'for'|'against'}, remarks{}, noRemarks, isOther, tags[], followup, showFollowup, materials[]}`
   - `tags`가 비어 있으면 안건명 기준 자동 분류(`window.autoTags`), 채우면 그 값이 우선(주제별 보기·요약 모두).
