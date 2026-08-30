@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>산들마을 입주자대표회의 회의록 v83</title>
-<!-- 캐시 키(?v=NN): 버전을 올릴 때 아래와 문서 끝의 ?v= 를 함께 갱신해야 방문자 브라우저가 새 파일을 받는다 (v83) -->
-<script src="assets/js/bootstrap/embed-mode.js?v=83"></script>
+<title>산들마을 입주자대표회의 회의록 v84</title>
+<!-- 캐시 키(?v=NN): 버전을 올릴 때 아래와 문서 끝의 ?v= 를 함께 갱신해야 방문자 브라우저가 새 파일을 받는다 (v84) -->
+<script src="assets/js/bootstrap/embed-mode.js?v=84"></script>
 <!-- Google Analytics (GA4) — 아래 측정 ID(G-…)를 넣으면 활성화됩니다. 비어 있으면 아무 것도 로드하지 않습니다. (v36) -->
-<script src="assets/js/bootstrap/analytics.js?v=83"></script>
-<link rel="stylesheet" href="assets/css/app.css?v=83">
+<script src="assets/js/bootstrap/analytics.js?v=84"></script>
+<link rel="stylesheet" href="assets/css/app.css?v=84">
 </head>
 <body>
 <div class="app">
@@ -20,7 +20,7 @@
           <path d="M5.5 27c4.2-6.8 9-11 15.9-15.1M11.7 21.4c2.1-.1 4.2.3 6.1 1.2M14.7 17.4c.4-1.8.4-3.4.1-4.9" stroke="#fffdf8" stroke-width="1.65" stroke-linecap="round"/>
         </svg>
       </div>
-      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v83 · 2026.08.31 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
+      <div><h1>산들마을 회의록</h1><p id="appVersionInfo">v84 · 2026.08.31 업데이트</p><p id="cloudLatestInfo" title="클라우드에 저장된 회의록 중 가장 최근 저장 시각">☁ 클라우드 최신 갱신: 확인 중…</p><p id="bodyChip" class="body-chip">◆ 입주자대표회의</p></div>
     </div>
     <div class="nav">
       <!-- 메뉴 묶음 (v57): 보기(누구나) / 작성·관리자(접힘) -->
@@ -38,6 +38,7 @@
           <button data-view="setupView">⑥ 회의 설정</button>
           <button data-view="repsView">⑦ 동대표 명단</button>
           <button data-view="agendaView">⑧ 안건 · 발언</button>
+          <button data-view="privateView">⑨ 비공개 자료</button>
         </div>
       </div>
     </div>
@@ -327,6 +328,17 @@
         <div id="noticeBody"></div>
       </div>
     </section>
+
+    <section id="privateView" class="view">
+      <div class="help">
+        <b>비공개 자료</b>는 회의록과 분리된 별도 저장소에 보관됩니다. 모든 열람·저장은 서버가 관리자 비밀번호를 검증하며,
+        공개 백업이나 공개 데이터에 포함되지 않습니다. 저장소 주소는 이 기기에만 기억됩니다.
+      </div>
+      <div class="card">
+        <div class="card-title"><div><h3>비공개 자료</h3><small>민감 서신·자료 보관함(서버 검증)</small></div></div>
+        <div id="privateBody"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -350,17 +362,18 @@
   인쇄창이 열리지 않으면 <b>Ctrl+P</b>를 누르세요.
 </div>
 
-<script src="assets/js/vendor/docx.bundle.js?v=83"></script>
-<script type="module" src="assets/js/vendor/pdf.bundle.js?v=83"></script>
-<script src="assets/js/app/core.js?v=83"></script>
+<script src="assets/js/vendor/docx.bundle.js?v=84"></script>
+<script type="module" src="assets/js/vendor/pdf.bundle.js?v=84"></script>
+<script src="assets/js/app/core.js?v=84"></script>
 
-<script src="assets/js/app/cloud.js?v=83"></script>
+<script src="assets/js/app/cloud.js?v=84"></script>
 
-<script src="assets/js/app/archive-topics.js?v=83"></script>
+<script src="assets/js/app/archive-topics.js?v=84"></script>
 
-<script src="assets/js/app/haja.js?v=83"></script>
-<script src="assets/js/app/roster-history.js?v=83"></script>
+<script src="assets/js/app/haja.js?v=84"></script>
+<script src="assets/js/app/roster-history.js?v=84"></script>
 
-<script src="assets/js/app/notices.js?v=83"></script>
+<script src="assets/js/app/notices.js?v=84"></script>
+<script src="assets/js/app/private.js?v=84"></script>
 </body>
 </html>

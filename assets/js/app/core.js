@@ -435,7 +435,8 @@ const viewNames={
   archiveView:"이전 회의록",
   topicView:"주제별 보기",
   hajaView:"하자판결금 수령 현황",
-  noticeView:"관리규약 · 공고 · 점검"
+  noticeView:"관리규약 · 공고 · 점검",
+  privateView:"비공개 자료"
 };
 // 작성·관리자 메뉴 묶음 접기/펼치기 (v57): 관리자 비밀번호가 있는 기기나 한 번 펼친 기기는 펼친 채로 기억
 const NAV_EDIT_KEY="sandle_nav_edit_open";
@@ -464,6 +465,7 @@ function openNavView(btn){
     if(btn.dataset.view==="topicView" && window.Topic) Topic.render();
     if(btn.dataset.view==="hajaView" && window.Haja) Haja.render(); // ④ 하자판결금 (v54)
     if(btn.dataset.view==="noticeView" && window.Notices) Notices.render(); // ⑤ 공고·기록 (v65)
+    if(btn.dataset.view==="privateView" && window.PrivateStore) PrivateStore.render(); // ⑨ 비공개 자료 (v84)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
 }
