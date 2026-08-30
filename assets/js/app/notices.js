@@ -338,22 +338,51 @@ var Notices=(function(){
     };
   }
   function sevRank(i){return {confirmed:0,high:1,medium:2}[i.severity]!==undefined?{confirmed:0,high:1,medium:2}[i.severity]:3;}
+  // v87: 문제 사슬(스레드)별 묶음 — 항목이 어떻게 이어지는지 흐름 한 줄과 함께 보여준다.
+  //   ids 순서 = 이야기 순서(원인 → 파생). 어디에도 안 속한 항목은 '그 밖의 점검'으로.
+  var CHECK_THREADS=[
+    {t:'❶ 6기 선관위 구성 문제와 그 파생',
+     flow:'5기 임기 만료(2025.10.8) → 선거 지연 → 공개모집 공고 없이 4명 구성(요건 미충족 확인) → 위원 결격·정원 미달 소지 → 후보 공고 다음 날 투표 → 이 선관위가 뽑은 6기 동대표·커뮤니티센터 투표의 효력 문제 → LH 사실확인 진행 중',
+     ids:['tenant-election-delay','c_ec6_formation','c_ec_chair','c_ec_candidate','c_t6_schedule','tenant-election-qualification','lh-missing-application']},
+    {t:'❷ 기수를 가로지르는 반복 패턴 (4→5→6기)',
+     flow:'모집 공고~접수 7일 요건은 확인된 전 기수에서 미충족(확인) · 5기 선관위도 4명 구성·위원장의 대표 전환 · 5기 임기 기록 불일치 · 같은 3명이 세 기수 연속 재임 — 6기만의 일탈이 아니라 반복돼 온 관행',
+     ids:['c_ec_recruit_notice','c_ec5_transition','c_t5_term','c_term_limit']},
+    {t:'❸ 운영경비 위반과 관리주체 책임',
+     flow:'운영경비 규약 위반(LH 공식 확인) + 선거자료 제출 누락 경위 → 개별 해명이 아닌 신대한 본사 차원의 사실확정·시정·환수 요구 단계',
+     ids:['tenant-expense-violation','management-responsibility']}
+  ];
   function investigationsHtml(){
     var cloud=(st.checks&&st.checks.items)?st.checks.items.map(checkAsInv):[];
     if(!st.investigations&&!cloud.length) return '<div class="nt-empty">'+((st.investigationsLoading||st.loading)?'점검 기록 불러오는 중…':'점검 기록이 없습니다.')+'</div>';
     var all=((st.investigations&&st.investigations.items)||[]).concat(cloud);
-    all=all.slice().sort(function(a,b){return sevRank(a)-sevRank(b);});
     var statuses=['전체'].concat(Array.from(new Set(all.map(function(i){return i.status;}))));
-    var items=st.checkFilter==='전체'?all:all.filter(function(i){return i.status===st.checkFilter;});
     var confirmed=all.filter(function(i){return i.severity==='confirmed';}).length;
     var active=all.filter(function(i){return i.status!=='해소'&&i.status!=='문제없음';}).length;
     var h='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin:4px 0 12px">'+
       '<div><div style="font-size:17px;font-weight:900">절차 점검 현황</div><div class="small" style="margin-top:3px">'+esc((st.investigations&&st.investigations.updated)||'')+' 기준 조사 '+(((st.investigations&&st.investigations.items)||[]).length)+'건 · 규약 대조 '+cloud.length+'건</div></div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="nt-badge">진행중 '+active+'</span><span class="nt-badge" style="background:#fbe9e7;color:#9b2c23;border-color:#efb3ad">위반·미충족 확인 '+confirmed+'</span></div></div>';
-    h+='<div class="nt-note" style="margin-bottom:12px">'+esc((st.investigations&&st.investigations.note)||'')+' <b>규약 대조</b> 항목은 카페 게시판 공고·회의록 전수 대조와 규약 조문 원문 확인을 바탕으로 한 기록으로, 빨간 배지는 문서상 요건 미충족이 확인된 건입니다.</div>';
+    h+='<div class="nt-note" style="margin-bottom:12px">'+esc((st.investigations&&st.investigations.note)||'')+' <b>규약 대조</b> 항목은 카페 게시판 공고·회의록 전수 대조와 규약 조문 원문 확인을 바탕으로 한 기록으로, 빨간 배지는 문서상 요건 미충족이 확인된 건입니다. 이어지는 문제끼리 묶어 흐름 순서로 보여줍니다.</div>';
     h+='<div class="nt-filters" style="margin-bottom:12px">'+statuses.map(function(s){return '<button type="button" class="btn'+(st.checkFilter===s?' gold':'')+'" onclick="Notices.checkFilter(\''+esc(s)+'\')">'+esc(s)+'</button>';}).join('')+'</div>';
-    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+items.map(investigationCard).join('')+'</div>';
-    if(!items.length) h+='<div class="nt-empty">선택한 상태의 점검 건이 없습니다.</div>';
+    var byId={};all.forEach(function(i){if(i.id)byId[i.id]=i;});
+    var used={},shown=0;
+    CHECK_THREADS.forEach(function(th){
+      var items=th.ids.map(function(id){used[id]=1;return byId[id];}).filter(Boolean)
+        .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;});
+      if(!items.length) return;
+      shown+=items.length;
+      h+='<div style="margin:20px 0 10px"><div style="font-size:15px;font-weight:900">'+esc(th.t)+'</div>'+
+        '<div class="small" style="margin-top:4px;line-height:1.7;color:var(--muted)">'+esc(th.flow)+'</div></div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+items.map(investigationCard).join('')+'</div>';
+    });
+    var rest=all.filter(function(i){return !(i.id&&used[i.id]);})
+      .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;})
+      .sort(function(a,b){return sevRank(a)-sevRank(b);});
+    if(rest.length){
+      shown+=rest.length;
+      h+='<div style="margin:20px 0 10px;font-size:15px;font-weight:900">그 밖의 점검</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+rest.map(investigationCard).join('')+'</div>';
+    }
+    if(!shown) h+='<div class="nt-empty">선택한 상태의 점검 건이 없습니다.</div>';
     return h;
   }
 
