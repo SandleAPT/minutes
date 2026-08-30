@@ -51,20 +51,36 @@
   }
   function clearAdminKey() { try { localStorage.removeItem(ADMIN_LS); } catch (e) {} }
 
-  // ---- 정적 데이터 파일 (data.json) ----
-  // 확정된 회의록은 GitHub Pages의 data.json에서 즉시 읽고,
-  // data.json에 없거나 클라우드에서 더 최근에 수정된 회의록만 클라우드에서 받아온다.
+  // ---- 정적 데이터 파일 (v83: 연도 샤딩) ----
+  // 확정된 회의록은 GitHub Pages의 정적 사본에서 즉시 읽고, 사본에 없거나 클라우드에서 더 최근에
+  // 수정된 회의록만 클라우드에서 받아온다. v83부터 data-index.json(작은 목차, no-cache) +
+  // data-YYYY.json(연도별, ?v=<그 해 최신 updatedAt> 캐시 키)으로 나눠 — 데이터가 30배가 되어도
+  // 방문자는 목차 + 바뀐 연도 파일만 새로 내려받는다. 인덱스가 없으면 구형 단일 data.json으로 폴백.
   window.StaticData = { map: null, ready: null };
-  window.StaticData.ready = fetch("data.json", { cache: "no-cache" })
+  window.StaticData.ready = fetch("data-index.json", { cache: "no-cache" })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      if (d && d.items) {
-        var m = {};
-        d.items.forEach(function (it) { if (it && it.id) m[it.id] = it; });
-        window.StaticData.map = m;
-      }
+    .then(function (idx) {
+      if (!(idx && idx.years && idx.years.length)) throw new Error("no-index");
+      var m = {};
+      return Promise.all(idx.years.map(function (y) {
+        return fetch(y.file + "?v=" + encodeURIComponent(y.updatedAt || ""), { cache: "force-cache" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) { if (d && d.items) d.items.forEach(function (it) { if (it && it.id) m[it.id] = it; }); })
+          .catch(function () {}); // 한 연도 실패는 그 연도만 클라우드 폴백
+      })).then(function () { window.StaticData.map = m; });
     })
-    .catch(function () {});
+    .catch(function () {
+      return fetch("data.json", { cache: "no-cache" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.items) {
+            var m = {};
+            d.items.forEach(function (it) { if (it && it.id) m[it.id] = it; });
+            window.StaticData.map = m;
+          }
+        })
+        .catch(function () {});
+    });
   // 정적 사본이 있고, 클라우드 목록상 그보다 새 버전이 없으면 정적 사본을 반환
   function staticFresh(id) {
     var m = window.StaticData && window.StaticData.map;
@@ -549,8 +565,8 @@
   }
 
   // 시스템 레코드(명단 변동 이력 등) 저장 — 관리자 비밀번호 필요. cb(ok, errorMessage) (v40)
-  // v82: 45,000자 초과 시 조각 저장({chunked,parts} 본 레코드 + id_pN 원문 슬라이스, docs/DATA.md §8) — 구글시트 셀 50,000자 한도 대응.
-  var SYS_CHUNK_LIMIT = 45000;
+  // v82: 임계 초과 시 조각 저장(v83: 임계 45,000→30,000자 — 한도 도달 전에 미리 조각) ({chunked,parts} 본 레코드 + id_pN 원문 슬라이스, docs/DATA.md §8) — 구글시트 셀 50,000자 한도 대응.
+  var SYS_CHUNK_LIMIT = 30000;
   function saveSystemRecord(id, name, json, cb, retried) {
     var key = getAdminKey(true);
     if (!key) {

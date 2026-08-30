@@ -12,26 +12,26 @@
 | `checks_v1` | 〃 | 6,111자 | 수십 건 | ✅ 〃 |
 | `topic_summaries_v1` | 〃 | 91,085자(조각 3개) | 계속 성장 | ✅ 조각(v52부터). 편집 부담은 §3-④ |
 | `roster_history_v1` | 〃 | 14,379자 | ~40건/2년 증가 | ✅ v82 Cloud.get/saveSystemRecord 조각 지원 |
-| `data.json` | 파일·파싱 | 647KB(97건) | **~20MB** | ⚠️ §3-③ 연도 샤딩 필요 |
-| `action=list` 응답 | 응답·시간 | ~15KB(104건) | ~450KB | ⚠️ §3-⑤ since 파라미터 |
+| 정적 사본 | 파일·파싱 | 647KB(97건) | ~20MB | ✅ v83 연도 샤딩(`data-index.json`+`data-YYYY.json`, 캐시 키) — 방문자는 목차+바뀐 연도만 재다운로드 |
+| `action=list` 응답 | 응답·시간 | ~15KB(104건) | ~450KB | ⚠️ §3 since 파라미터(GAS 수정 필요) |
 | localStorage 캐시(recMap 등) | ~5MB | 수백 KB | 초과 | ✅ try/catch로 캐시 없이 동작(성능만 저하) |
 | 첨부파일 | — | IndexedDB(기기 로컬) | — | ℹ️ 클라우드 레코드에는 메타만. 기기 간 이동은 백업 파일로(설계상 의도) |
 | 구글시트 전체 | 1,000만 셀 | 레코드당 1행 | ~3천 행 | ✅ 여유 |
 
 ## 2. 이번에 넣은 안전장치 (v81~v82)
 
-- **자동 조각 저장 규격 통일** — `{version, chunked:true, parts:N, totalLen, updatedAt}` 본 레코드 + `id_p1..pN`(원문 슬라이스, 45,000자 단위). 주제 요약(v52)·notices/checks(v81 `notices.js`+`importer.js`)·**모든 시스템 레코드(v82 `Cloud.getSystemRecord/saveSystemRecord`)** 가 같은 규격. 조각이 줄면 잉여 조각 자동 삭제.
+- **자동 조각 저장 규격 통일** — `{version, chunked:true, parts:N, totalLen, updatedAt}` 본 레코드 + `id_p1..pN`(원문 슬라이스; 임계는 v83부터 30,000자 — 한도 대비 여유 40%, 미리 조각). 주제 요약(v52)·notices/checks(v81 `notices.js`+`importer.js`)·**모든 시스템 레코드(v82 `Cloud.getSystemRecord/saveSystemRecord`)** 가 같은 규격. 조각이 줄면 잉여 조각 자동 삭제.
 - **회의록 저장 가드(v82 cloud.js)** — 49,000자 초과 시 저장 전 차단+안내(이전엔 "Failed to fetch"로 원인 불명 실패), 42,000자부터 경고 토스트.
 - **공통 임포터(v81 `scripts/import/importer.js`)** — 적재는 `SandleImporter.run(JOB)` 하나로: 저장→재조회 대조→목록 대조, 실패 시 throw. 회의록 49K 가드 포함. (배경: tenant_2022.js가 SyntaxError로 미실행인데 기록만 남았던 사고)
 - **시스템 레코드 백업(v82 build-data.mjs)** — 요약·명단이력·공고·점검(조각 포함)을 `system-backup.json`으로 매일 깃에 저장. 이전에는 **구글시트가 유일 사본**이었음(시트 훼손 = 영구 유실). 복원: system-backup.json의 해당 item.json을 `SandleImporter.saveFull`/GAS save로 되올리면 됨.
 
 ## 3. 남은 과제 (우선순위순)
 
-1. **③ data.json 연도 샤딩** — `data-index.json`(id·updatedAt 목록) + `data-YYYY.json`으로 분할, 앱 StaticData는 인덱스→필요 연도만 로드(최근 연도 우선). 회의록이 ~300건(≈2MB)을 넘기 전에. 앱·워크플로 동시 변경이라 별도 세션 권장.
-2. **⑤ 목록 동기화 경량화** — GAS에 `action=list&since=<ISO>` 추가해 변경분만 대조. ③과 함께.
-3. **④ 요약 연도별 키** — `__all__`이 계속 자라 편집·검토가 무거워짐. `__all_2022__`처럼 연도(또는 기수) 키로 나누고 화면에서 이어 붙이기. 저장 자체는 조각이 감당하므로 급하지 않음.
-4. **GAS 소스 저장소 반영** — Apps Script 코드가 깃에 없음(구글 계정 안에만). `scripts/gas/Code.gs`로 사본을 두고 수정 시 함께 갱신. 저장 경합 방지용 `LockService` 사용 여부도 이때 확인.
-5. **레코드 자체의 조각화(예비)** — 상세 회의록+원문 전문이 49K를 넘는 날이 오면, 시스템 레코드와 같은 조각 규격을 회의록 레코드에도 적용(앱 read 경로는 getSystemRecord와 동일 패턴). 현재 최대 11.9K라 당장은 불필요.
+- ~~③ data.json 연도 샤딩~~ → **v83 완료** (`data-index.json`+`data-YYYY.json`, 구형 data.json 동결·폴백). 조각 임계도 45,000→30,000자로 낮춰 미리 조각(v83).
+1. **목록 동기화 경량화** — GAS에 `action=list&since=<ISO>` 추가해 변경분만 대조. GAS 소스 반영과 함께.
+2. **요약 연도별 키** — `__all__`이 계속 자라 편집·검토가 무거워짐. `__all_2022__`처럼 연도(또는 기수) 키로 나누고 화면에서 이어 붙이기. 저장 자체는 조각이 감당하므로 급하지 않음.
+3. **GAS 소스 저장소 반영** — Apps Script 코드가 깃에 없음(구글 계정 안에만). `scripts/gas/Code.gs`로 사본을 두고 수정 시 함께 갱신. 저장 경합 방지용 `LockService` 사용 여부도 이때 확인.
+4. **레코드 자체의 조각화(예비)** — 상세 회의록+원문 전문이 49K를 넘는 날이 오면, 시스템 레코드와 같은 조각 규격을 회의록 레코드에도 적용(앱 read 경로는 getSystemRecord와 동일 패턴). 현재 최대 11.9K라 당장은 불필요.
 
 ## 4. 운영 수칙
 

@@ -443,9 +443,9 @@
         cur.topics[t] = { text: text, basedOn: keys, count: keys.length, updatedAt: now, by: by || "Claude Code" };
       });
       cur.version = 1; cur.updatedAt = now;
-      // 조각 저장 (v52): 구글 시트 셀 한도(50,000자) 때문에 45,000자를 넘으면 _p1.._pN 레코드로 나눠 저장하고
+      // 조각 저장 (v52): 구글 시트 셀 한도(50,000자) 대비 — v83부터 30,000자(여유 40%)를 넘으면 _p1.._pN 레코드로 나눠 저장하고
       // 본 레코드에는 {chunked:true, parts:N}만 둔다. 조각을 먼저 저장하고 본 레코드를 마지막에 저장해 읽는 쪽이 깨진 상태를 보지 않게 한다.
-      var json = JSON.stringify(cur), CH = 45000, parts = [], main = json;
+      var json = JSON.stringify(cur), CH = 30000, parts = [], main = json;
       if (json.length > CH) {
         var i = 0;
         while (i < json.length) { var end = Math.min(i + CH, json.length); var c = json.charCodeAt(end - 1); if (end < json.length && c >= 0xD800 && c <= 0xDBFF) end--; parts.push(json.slice(i, end)); i = end; }

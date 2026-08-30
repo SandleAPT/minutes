@@ -18,7 +18,7 @@
 - 임기 회차 = 전체 회의록의 `rosters` 키 색인(`Topic.termsOf`) + 이력(취임/선출 추가, `countTerm:false` 제외).
 
 ## 3. 정적 파일
-- `data.json`: `{generatedAt, items:[{id,name,date,updatedAt,json}]}` — `scripts/build-data.mjs`가 클라우드 전체를 받아 생성. 앱은 localStorage 사본 + data.json으로 즉시 그리고, 목록(updatedAt)과 대조해 바뀐 것만 개별로 받는다.
+- 정적 사본(v83, 연도 샤딩): `data-index.json` = `{generatedAt, years:[{year,file,count,updatedAt}]}`(no-cache로 읽는 목차) + `data-YYYY.json` = `{generatedAt, items:[{id,name,date,updatedAt,json}]}`(`?v=<그 해 최신 updatedAt>` 캐시 키로 읽음 — 안 바뀐 연도는 브라우저 캐시 재사용, 날짜 없는 레코드는 `data-etc.json`). `scripts/build-data.mjs`가 생성, 앱은 localStorage 사본 + 정적 사본으로 즉시 그리고 목록(updatedAt)과 대조해 바뀐 것만 개별로 받는다. 구형 단일 `data.json`은 v83부터 동결(폴백용으로 파일만 유지). 시스템 레코드는 `system-backup.json`으로 매일 백업(v82).
   수동 재발행: `scripts/build-data.mjs` 첫 줄 주석을 바꿔 푸시(워크플로 트리거) 또는 Actions에서 `refresh-data` 실행.
 - `haja.json`: 하자판결금 — `participants{동:[호]}`(370), `pendingByRound{"4","5","6"}`(미수령 명단), `receivedAsOf6`, `rounds`, `documents`, `periods`.
   새 차수: 미수령 명단을 `pendingByRound["N"]`에 추가하고 `asOf`·`totals`·`rounds`·`periods` 갱신, 앱 `Haja` 로직의 구간 규칙 확장.

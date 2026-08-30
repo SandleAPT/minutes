@@ -39,7 +39,7 @@ var Notices=(function(){
   ];
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
   function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
-  // v81: 45,000자 초과 레코드는 주제 요약과 같은 조각 방식({chunked,parts} + id_pN 원문 슬라이스)으로 저장된다 — 읽을 때 이어 붙여 파싱.
+  // v81: 임계(v83부터 30,000자) 초과 레코드는 주제 요약과 같은 조각 방식({chunked,parts} + id_pN 원문 슬라이스)으로 저장된다 — 읽을 때 이어 붙여 파싱.
   function getRec(id){
     return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){
       if(!(x&&x.ok&&x.item))return null;

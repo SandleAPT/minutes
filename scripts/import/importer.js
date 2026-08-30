@@ -1,4 +1,4 @@
-﻿// 공통 적재 모듈 (v81, 2026-08-31) — 모든 클라우드 적재는 이 모듈의 run()으로: 저장 → 재조회 대조 → 목록 대조까지 한 단계.
+// 공통 적재 모듈 (v81, 2026-08-31) — 모든 클라우드 적재는 이 모듈의 run()으로: 저장 → 재조회 대조 → 목록 대조까지 한 단계.
 // 배경: tenant_2022.js가 혼입 줄 SyntaxError로 통째로 미실행이었는데 CHANGELOG에는 완료로 남았던 사고(08-31 발견) → 검증 자동화.
 // 사용(회의록 앱 https://sandleapt.github.io/minutes/ 을 연 브라우저, 관리자 키 필요):
 //   var s=document.createElement("script");s.src="scripts/import/importer.js?v="+Date.now();document.head.appendChild(s);
@@ -7,13 +7,13 @@
 //   meetings:[{id,name,date,json:<앱 상태 객체>,overwrite:false}, ...],   // 회의록 레코드. 이미 있으면 건너뜀(overwrite:true면 덮어씀)
 //   notices:[<보관함 item>, ...],                                        // notices_v1에 id 기준 병합(중복 건너뜀, item.overwrite:true면 교체) 후 날짜순 정렬
 //   checks:[{id,addFacts:[],addRelated:[],status?,memo?}, ...] }         // checks_v1 항목에 사실·연결 추가(중복 사실은 무시)
-// 저장 규칙: notices_v1/checks_v1은 45,000자 초과 시 주제 요약과 같은 조각 방식({chunked,parts}+id_pN 슬라이스)으로 자동 분할(docs/DATA.md §8).
+// 저장 규칙: notices_v1/checks_v1은 30,000자 초과 시 주제 요약과 같은 조각 방식(v83부터 임계 30,000자)({chunked,parts}+id_pN 슬라이스)으로 자동 분할(docs/DATA.md §8).
 //            회의록 단일 레코드는 49,000자 초과 시 저장 거부(시트 셀 50,000자 한도) — 자료 분리 필요.
 // 검증 실패 시 throw — "검증 실패" 없이 끝났을 때만 적재 완료로 기록할 것(CHANGELOG·메모리).
 (function(){
   var URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
-  var LIMIT=45000;
+  var LIMIT=30000; // v83: 한도(50,000) 대비 여유 40% — 임계 도달 전에 미리 조각
   function key(){var k=localStorage.getItem("sandle_admin_key");if(!k)throw new Error("sandle_admin_key 없음 — 관리자 키 있는 기기에서 실행");return k;}
   async function api(qs){var r=await fetch(URL_+qs);return r.json();}
   async function post(body){var r=await fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});return r.json();}
