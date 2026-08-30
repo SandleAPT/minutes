@@ -1,4 +1,4 @@
-﻿// data.json 재생성 스크립트 (2026-08-31: 2025.12.30 정기회의 t_2025_12b_v1 적재 후 재발행) (GitHub Actions `refresh-data`에서 실행, 로컬에서는 `node scripts/build-data.mjs`) (re: 2026-08-26 임차 2023·2024 적재 반영)
+﻿// data.json 재생성 스크립트 (2026-08-31 2차: 임차 2022년 10건 t_2022_* 적재 + 김아도 재키 15건 반영 재발행) (GitHub Actions `refresh-data`에서 실행, 로컬에서는 `node scripts/build-data.mjs`)
 // 클라우드(Apps Script)의 회의록 전체를 받아 정적 사본 data.json으로 저장한다.
 // 형식: { generatedAt, items: [{ id, name, date(YYYY-MM-DD), updatedAt, json }] } — 앱의 StaticData가 그대로 읽는다.
 // 항목 내용이 이전과 같으면 파일을 건드리지 않는다(불필요한 커밋 방지).
