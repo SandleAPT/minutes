@@ -97,7 +97,7 @@ var Notices=(function(){
   function loadInvestigations(){
     if(st.investigations||st.investigationsLoading) return;
     st.investigationsLoading=true;
-    fetch("investigations.json?v=2").then(function(r){return r.json()}).then(function(j){
+    fetch("investigations.json?v=3").then(function(r){return r.json()}).then(function(j){
       st.investigationsLoading=false;st.investigations=j;draw();
     }).catch(function(){st.investigationsLoading=false;st.err="절차 점검 현황을 불러오지 못했습니다.";draw();});
   }
@@ -288,6 +288,7 @@ var Notices=(function(){
     return '<div class="nt-rel">관련 기록: '+rel.map(function(r){
       if(r.type==='minutes') return '<button type="button" class="nt-chip" onclick="Cloud._open(\''+esc(r.id)+'\')">'+esc(r.label||r.id)+'</button>';
       if(r.type==='notice') return '<button type="button" class="nt-chip" onclick="Notices.jump(\''+esc(r.id)+'\')">'+esc(r.label||r.id)+'</button>';
+      if(r.type==='check') return '<button type="button" class="nt-chip" onclick="Notices.jumpCheck(\''+esc(r.id)+'\')">🔗 '+esc(r.label||r.id)+'</button>';
       return '<span class="nt-chip">'+esc(r.label||r.id)+'</span>';
     }).join(' ')+'</div>';
   }
@@ -313,7 +314,7 @@ var Notices=(function(){
     return '<div style="margin-top:13px"><div class="nt-sec" style="margin-top:0">'+esc(title)+'</div><ul class="nt-facts">'+arr.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
   }
   function investigationCard(i){
-    return '<details class="nt-card" style="padding:0;overflow:hidden;margin:0">'+
+    return '<details class="nt-card" id="chk-'+esc(i.id||'')+'" style="padding:0;overflow:hidden;margin:0">'+
       '<summary style="list-style:none;cursor:pointer;padding:15px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start">'+
         '<div style="min-width:0"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:7px">'+
           '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span><span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
@@ -330,7 +331,7 @@ var Notices=(function(){
   // 클라우드 절차 점검 항목(checks_v1)을 조사 현황과 같은 카드 형태로 변환
   function checkAsInv(c){
     return {
-      status:c.status||'확인중', severity:c.severity||'medium', category:'규약 대조',
+      id:c.id, status:c.status||'확인중', severity:c.severity||'medium', category:'규약 대조',
       title:c.title, summary:c.summary||'', facts:c.facts,
       rules:(c.rules||[]).map(function(r){return r.ref+(r.text?': '+r.text:'')+(r.verified===false?' (원문 대조 전)':'');}),
       question:c.question, next:null, related:c.related, updatedAt:c.updatedAt
@@ -414,7 +415,9 @@ var Notices=(function(){
         else if(msg)msg.textContent='비밀번호가 올바르지 않습니다.';
       }).catch(function(){st.verifying=false;if(msg)msg.textContent='확인 실패 — 네트워크 상태를 확인해 주세요.';});
     },
-    jump:function(id){if(locked())return;st.sub='notices';draw();var el=document.getElementById('nt-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}}
+    jump:function(id){if(locked())return;st.sub='notices';draw();var el=document.getElementById('nt-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}},
+    // 연관 점검 칩: 절차 점검 목록 안에서 대상 카드로 이동해 펼쳐 보여준다(조사 현황·규약 대조 공통)
+    jumpCheck:function(id){if(locked())return;st.sub='checks';st.checkFilter='전체';draw();var el=document.getElementById('chk-'+id);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}}
   };
 })();
 window.Notices=Notices;
