@@ -39,7 +39,19 @@ var Notices=(function(){
   ];
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
   function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
-  function getRec(id){return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){return x&&x.ok&&x.item?JSON.parse(x.item.json):null});}
+  // v81: 45,000자 초과 레코드는 주제 요약과 같은 조각 방식({chunked,parts} + id_pN 원문 슬라이스)으로 저장된다 — 읽을 때 이어 붙여 파싱.
+  function getRec(id){
+    return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){
+      if(!(x&&x.ok&&x.item))return null;
+      var j=null;try{j=JSON.parse(x.item.json);}catch(e){return null;}
+      if(!(j&&j.chunked&&j.parts))return j;
+      var ps=[];for(var i=1;i<=j.parts;i++)ps.push(fetch(URL_+"?action=get&token="+TOKEN+"&id="+id+"_p"+i).then(function(r){return r.json()}));
+      return Promise.all(ps).then(function(arr){
+        var s="";for(var i=0;i<arr.length;i++){if(!(arr[i]&&arr[i].ok&&arr[i].item))return null;s+=arr[i].item.json;}
+        try{return JSON.parse(s);}catch(e){return null;}
+      });
+    });
+  }
   function verifyKey(k){return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_key___",adminKey:k,token:TOKEN})}).then(function(r){return r.json()}).then(function(x){return !!(x&&x.ok);});}
 
   function load(){
