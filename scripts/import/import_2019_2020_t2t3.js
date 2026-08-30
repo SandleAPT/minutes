@@ -18,6 +18,9 @@
     return { id: id, title: title, summary: opts.summary || "", isOther: !!opts.isOther, noRemarks: true, remarks: {}, decision: decision, votes: votes || {}, category: "", tags: [], followup: "", showFollowup: false, materials: [], showMaterials: false };
   }
   function mk(o) {
+    return { id: o.id, name: o.name, date: o.date, json: mkJson(o) };
+  }
+  function mkJson(o) {
     return {
       cloudId: o.id,
       meeting: { body: "임차", termNo: o.term, year: o.year, month: o.month, type: o.type, date: o.date, time: o.time, place: o.place || "관리사무소 대표회의 회의실", name: o.name, attendance: o.att, guests: [], audience: { count: 0 }, sequence: ["개회", "안건 상정·심의·의결", "폐회"] },
