@@ -1,4 +1,4 @@
-# 데이터 규칙 (DATA)
+﻿# 데이터 규칙 (DATA)
 
 ## 1. 회의록 레코드
 - 클라우드 레코드 = `{id, name, date, updatedAt, json}`; `json`은 앱 상태 전체:
@@ -46,13 +46,13 @@
   `text`는 PDF(카페 캡처)를 읽어 **원문 그대로 옮겨 적은 전문**(표 구조는 "항목: 내용" 줄로 펴서, 줄바꿈 유지, 오탈자도 원문대로). `notes`는 적재자가 남기는 비고(추정·미확인 사항).
 - 미리보기(①) 맨 아래 "📄 원문 전문" 접이식 상자로 보이고, 인쇄·Word에는 들어가지 않는다. 앱은 `source`를 건드리지 않고 그대로 저장한다(`migrateState`가 모르는 키를 보존).
 - 원본 PDF는 사용자 드라이브(`산들마을 기록/`)에 두고 `file`(파일명)과 `link`(드라이브 링크, 있으면)로 가리킨다. 깃에는 올리지 않는다.
-- **적재 절차(v81부터, 다른 PC에서도 동일)**: ① PDF를 로컬 서버로 서빙 + pdf.js로 페이지를 JPEG로 렌더(숨은 탭이면 `intent:"print"`; 스캔 PDF는 내장 JPEG를 바로 추출해도 됨) → ② 페이지 이미지를 읽어 안건·의결·명단·원문 전문을 옮김 → ③ **`scripts/import/_importer.js`를 앱 페이지에 script 태그로 로드하고, 데이터 스크립트는 JOB 객체(meetings/notices/checks)만 정의해 `await SandleImporter.run(JOB)`** — 저장·재조회 대조·목록 대조 검증까지 한 단계로 실행되고 실패 시 throw → ④ "검증 실패" 없이 끝났을 때만 완료로 기록 → ⑤ 요약 갱신("요약 갱신해줘") → ⑥ CHANGELOG/PLAN/DATA 갱신. 스크립트는 저장소 `scripts/import/`에 남긴다.
+- **적재 절차(v81부터, 다른 PC에서도 동일)**: ① PDF를 로컬 서버로 서빙 + pdf.js로 페이지를 JPEG로 렌더(숨은 탭이면 `intent:"print"`; 스캔 PDF는 내장 JPEG를 바로 추출해도 됨) → ② 페이지 이미지를 읽어 안건·의결·명단·원문 전문을 옮김 → ③ **`scripts/import/importer.js`를 앱 페이지에 script 태그로 로드하고, 데이터 스크립트는 JOB 객체(meetings/notices/checks)만 정의해 `await SandleImporter.run(JOB)`** — 저장·재조회 대조·목록 대조 검증까지 한 단계로 실행되고 실패 시 throw → ④ "검증 실패" 없이 끝났을 때만 완료로 기록 → ⑤ 요약 갱신("요약 갱신해줘") → ⑥ CHANGELOG/PLAN/DATA 갱신. 스크립트는 저장소 `scripts/import/`에 남긴다.
   (교훈 2026-08-31: 구식 콘솔 붙여넣기 방식의 tenant_2022.js가 혼입 줄 SyntaxError로 통째로 미실행이었는데 기록만 남았음 — run()의 자동 검증 없이 적재 완료로 적지 말 것.)
 - 임차 명단 좌석 = 선거구 번호(당선인 공고 기준). 선거구를 모르는 사람은 1번 칸에 두고 `notes`에 적는다(예: 제4기 김아도 감사).
 
 ## 8. 공고·기록 보관함 / 절차 점검 (v65, 2026-08-24)
 - 시스템 레코드 2개(목록·주제 집계·data.json 제외): `notices_v1` = {version, items:[{id(n_YYYYMMDD_slug), date(공고일), body(임차|입대의|선관위(임차)|관리사무소), kind(당선인공고|선거공고|사퇴공고|안내|결과공고|기타), title, noticeNo, postRange, summary, facts[], tags[], file, link(드라이브), related[{type:notice|minutes,id,label}], text(원문 전문), notes}]}, `checks_v1` = {version, items:[{id(c_slug), title, status(확인중|질의함|해소|문제없음), opened, facts[], rules[{ref,text,verified}], question, memo, related[], updatedAt}]}.
-- **한도 대응(v81)**: `notices_v1`·`checks_v1`은 JSON이 45,000자를 넘으면 주제 요약과 같은 조각 방식 — 본 레코드 `{version, chunked:true, parts:N, totalLen, updatedAt}` + `notices_v1_p1..pN`(원문 슬라이스) — 으로 저장한다. 저장은 `_importer.js`의 `saveFull()`이 자동 분할·잉여 조각 삭제까지 처리하고, 앱(`notices.js getRec`)은 조각을 이어 붙여 읽는다. items를 직접 수정할 때도 반드시 `SandleImporter.getFull()/saveFull()`을 쓸 것(단일 레코드 가정 금지).
+- **한도 대응(v81)**: `notices_v1`·`checks_v1`은 JSON이 45,000자를 넘으면 주제 요약과 같은 조각 방식 — 본 레코드 `{version, chunked:true, parts:N, totalLen, updatedAt}` + `notices_v1_p1..pN`(원문 슬라이스) — 으로 저장한다. 저장은 `importer.js`의 `saveFull()`이 자동 분할·잉여 조각 삭제까지 처리하고, 앱(`notices.js getRec`)은 조각을 이어 붙여 읽는다. items를 직접 수정할 때도 반드시 `SandleImporter.getFull()/saveFull()`을 쓸 것(단일 레코드 가정 금지).
 - ⑤ 공고·기록 화면(`noticeView`)의 `Notices` 모듈이 GAS에서 읽어 표시(localStorage `sandle_notices_cache_v1` 사본). 적재·갱신은 `scripts/import/notices_*.js` 방식.
 - **절차 점검 원칙**: 사실(공고·회의록 기재)과 규정 조문만 싣고 특정인에 대한 판단·평가는 싣지 않는다. `rules[].verified`는 조문 원문을 확인한 뒤에만 true. `memo`는 관리자 키 있는 화면에서만 보이지만 **저장소 자체는 비공개가 아니므로**(GAS 토큰이 공개 HTML에 있음) 민감한 내용은 넣지 않는다 — 진짜 비공개가 필요하면 GAS에 읽기 제한을 추가해야 한다.
 - 개인정보: 공고 원문의 성별·나이 등은 전문에서 생략하고 생략 사실을 남긴다. 이름·동호수는 공고에 이미 공개된 범위만.

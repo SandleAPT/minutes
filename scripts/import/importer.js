@@ -1,7 +1,7 @@
-// 공통 적재 모듈 (v81, 2026-08-31) — 모든 클라우드 적재는 이 모듈의 run()으로: 저장 → 재조회 대조 → 목록 대조까지 한 단계.
+﻿// 공통 적재 모듈 (v81, 2026-08-31) — 모든 클라우드 적재는 이 모듈의 run()으로: 저장 → 재조회 대조 → 목록 대조까지 한 단계.
 // 배경: tenant_2022.js가 혼입 줄 SyntaxError로 통째로 미실행이었는데 CHANGELOG에는 완료로 남았던 사고(08-31 발견) → 검증 자동화.
 // 사용(회의록 앱 https://sandleapt.github.io/minutes/ 을 연 브라우저, 관리자 키 필요):
-//   var s=document.createElement("script");s.src="scripts/import/_importer.js?v="+Date.now();document.head.appendChild(s);
+//   var s=document.createElement("script");s.src="scripts/import/importer.js?v="+Date.now();document.head.appendChild(s);
 //   (데이터 스크립트도 같은 방식으로 로드 — 데이터 스크립트는 JOB 객체만 정의) → await SandleImporter.run(JOB)
 // JOB = { label:"설명",
 //   meetings:[{id,name,date,json:<앱 상태 객체>,overwrite:false}, ...],   // 회의록 레코드. 이미 있으면 건너뜀(overwrite:true면 덮어씀)
