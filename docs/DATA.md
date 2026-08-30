@@ -50,6 +50,11 @@
   (교훈 2026-08-31: 구식 콘솔 붙여넣기 방식의 tenant_2022.js가 혼입 줄 SyntaxError로 통째로 미실행이었는데 기록만 남았음 — run()의 자동 검증 없이 적재 완료로 적지 말 것.)
 - 임차 명단 좌석 = 선거구 번호(당선인 공고 기준). 선거구를 모르는 사람은 1번 칸에 두고 `notes`에 적는다(예: 제4기 김아도 감사).
 
+## 8-0. 카페 게시판 대조 진행 현황 (이어서 할 때 여기부터)
+- **임차 게시판**(관리사무소, 회의록·공고): 30개씩 보기 기준 **1~6페이지 대조·적재 완료, 미수집 0** — 마지막 확인 index **23838**(제3기 2020.12월 결과공고, 2020.12.30 게시). 다음 작업: **7페이지부터**(23838 이전 — 3기 초·2기, 3기 선거 공고 예상). 게시 안 된 것으로 보이는 것: 커뮤니티센터 2차 투표 실시 공고, 6기 선관위원 보궐 선출 결과 공고, 2021년 2·6·9·10월 임차 결과공고. 미확인: 30798(6기 1차 선출공고) 첨부 4건 중 3건.
+- **입대의 게시판**: 대조 미시작(입대의 회의록은 2024.01부터만 적재돼 있음 — 2023년 이전과 2020~2022년 결과공고 대조 필요).
+- 갱신일 2026-08-31. 페이지를 더 볼 때마다 이 절의 index·페이지를 갱신할 것.
+
 ## 8. 공고·기록 보관함 / 절차 점검 (v65, 2026-08-24)
 - 시스템 레코드 2개(목록·주제 집계·data.json 제외): `notices_v1` = {version, items:[{id(n_YYYYMMDD_slug), date(공고일), body(임차|입대의|선관위(임차)|관리사무소), kind(당선인공고|선거공고|사퇴공고|안내|결과공고|기타), title, noticeNo, postRange, summary, facts[], tags[], file, link(드라이브), related[{type:notice|minutes,id,label}], text(원문 전문), notes}]}, `checks_v1` = {version, items:[{id(c_slug), title, status(확인중|질의함|해소|문제없음), opened, facts[], rules[{ref,text,verified}], question, memo, related[], updatedAt}]}.
 - **한도 대응(v81)**: `notices_v1`·`checks_v1`은 JSON이 45,000자를 넘으면 주제 요약과 같은 조각 방식 — 본 레코드 `{version, chunked:true, parts:N, totalLen, updatedAt}` + `notices_v1_p1..pN`(원문 슬라이스) — 으로 저장한다. 저장은 `importer.js`의 `saveFull()`이 자동 분할·잉여 조각 삭제까지 처리하고, 앱(`notices.js getRec`)은 조각을 이어 붙여 읽는다. items를 직접 수정할 때도 반드시 `SandleImporter.getFull()/saveFull()`을 쓸 것(단일 레코드 가정 금지).

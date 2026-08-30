@@ -1,4 +1,4 @@
-﻿// 정적 사본 재생성 스크립트 (v83: 연도 샤딩 — data-index.json + data-YYYY.json) (GitHub Actions `refresh-data`에서 실행, 로컬에서는 `node scripts/build-data.mjs`)
+﻿// 정적 사본 재생성 스크립트 (2026-08-31 3차: 임차 3기 2020.12~2021 10건 적재 반영 — data-2020/2021.json 신규) (v83: 연도 샤딩 — data-index.json + data-YYYY.json) (GitHub Actions `refresh-data`에서 실행, 로컬에서는 `node scripts/build-data.mjs`)
 // 클라우드(Apps Script)의 회의록 전체를 받아 연도별 정적 사본으로 저장한다:
 //   data-index.json = { generatedAt, years:[{year, file, count, updatedAt(그 해 최신 updatedAt)}] } — 앱이 no-cache로 읽는 작은 목차
 //   data-YYYY.json  = { generatedAt, items:[{id,name,date,updatedAt,json}] } — 앱이 ?v=<updatedAt> 캐시 키로 읽음(안 바뀐 연도는 브라우저 캐시 재사용)
