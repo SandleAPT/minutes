@@ -19,7 +19,14 @@ function sheet_() {
   }
   var sh = ss.getSheetByName('records');
   if (!sh) sh = ss.insertSheet('records');
+  sh.getRange('C:G').setNumberFormat('@'); // 날짜/텍스트 자동변환 방지(문자 그대로 저장)
   return sh;
+}
+
+// 기존 행에서 시트가 이미 Date로 바꿔버린 값 → KST 날짜 문자열로 복원
+function fmtD_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
+  return String(v == null ? '' : v);
 }
 
 function json_(o) {
@@ -53,7 +60,7 @@ function doPost(e) {
       var rows = sh.getLastRow() ? sh.getRange(1, 1, sh.getLastRow(), 7).getValues() : [];
       var out = [];
       rows.forEach(function (r) {
-        if (r[0] && (r[1] === 0 || r[1] === '0')) out.push({ id: r[0], title: r[2], date: r[3], updatedAt: r[4], size: Number(r[6] || 0) });
+        if (r[0] && (r[1] === 0 || r[1] === '0')) out.push({ id: r[0], title: r[2], date: fmtD_(r[3]), updatedAt: fmtD_(r[4]), size: Number(r[6] || 0) });
       });
       out.sort(function (a, c) { return String(c.date).localeCompare(String(a.date)); });
       return json_({ ok: true, items: out });
@@ -66,7 +73,7 @@ function doPost(e) {
       if (!rows2.length) return json_({ ok: false, error: 'not_found' });
       var s = '';
       rows2.forEach(function (r) { s += r[5]; });
-      return json_({ ok: true, item: { id: b.id, title: rows2[0][2], date: rows2[0][3], updatedAt: rows2[0][4], json: s } });
+      return json_({ ok: true, item: { id: b.id, title: rows2[0][2], date: fmtD_(rows2[0][3]), updatedAt: fmtD_(rows2[0][4]), json: s } });
     }
 
     if (b.action === 'save') {
