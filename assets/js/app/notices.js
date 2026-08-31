@@ -54,7 +54,8 @@ var Notices=(function(){
       });
     });
   }
-  function verifyKey(k){return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_key___",adminKey:k,token:TOKEN})}).then(function(r){return r.json()}).then(function(x){return !!(x&&x.ok);});}
+  // v92: 2단계 비밀번호 — 열람 잠금은 서버 verify 액션으로 확인(열람 키 또는 수정 키 인정)
+  function verifyKey(k){return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})}).then(function(r){return r.json()}).then(function(x){return !!(x&&x.ok);});}
 
   function load(){
     if(st.loading) return; st.loading=true; st.err="";
@@ -273,7 +274,7 @@ var Notices=(function(){
   }
 
   function lockHtml(){
-    return '<div class="nt-lock"><div class="nt-lock-ic">🔒</div><b>관리자 확인이 필요한 기록입니다</b>'+
+    return '<div class="nt-lock"><div class="nt-lock-ic">🔒</div><b>비밀번호 확인이 필요한 기록입니다</b> <span class="small">(열람용 또는 수정용 비밀번호)</span>'+
       '<p>공고·안내 보관함과 절차 점검 기록은 관리자 비밀번호를 입력한 기기에서만 열람할 수 있습니다.</p>'+
       '<div class="nt-lock-row"><input id="ntKeyInput" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key===\'Enter\')Notices.unlock()">'+
       '<button type="button" class="btn gold" onclick="Notices.unlock()">'+(st.verifying?'확인 중…':'확인')+'</button></div>'+

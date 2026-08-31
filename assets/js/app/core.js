@@ -380,9 +380,10 @@ const AdminGate=(function(){
   function saved(){ try{ const k=localStorage.getItem(KEY)||""; if(k&&expired()){ forget(); return ""; } return k; }catch(e){return "";} }
   function remember(k){ try{ localStorage.setItem(KEY,k); localStorage.setItem(AT_KEY,String(Date.now())); }catch(e){} }
   function forget(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(AT_KEY); }catch(e){} verified=false; }
+  // v92: 2단계 비밀번호 — 편집 화면은 '수정용' 키만 통과(열람 키는 role:'view'라 거부)
   function verify(k){
-    return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_agenda_key___",adminKey:k,token:TOKEN})})
-      .then(r=>r.json()).then(x=>!!(x&&x.ok));
+    return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})})
+      .then(r=>r.json()).then(x=>!!(x&&x.ok&&x.role==="edit"));
   }
   function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
   function finish(ok){
@@ -395,7 +396,7 @@ const AdminGate=(function(){
     bd.style.cssText="position:fixed;inset:0;z-index:10002;background:rgba(30,30,28,.48);display:flex;align-items:center;justify-content:center;padding:16px";
     bd.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="agendaAdminTitle" style="background:#fff;border-radius:16px;max-width:390px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25);font-size:14px;line-height:1.6">'+
       '<div id="agendaAdminTitle" style="font-weight:800;font-size:16px;margin-bottom:6px">🔒 관리자 전용 메뉴</div>'+
-      '<div style="color:#666;font-size:13px;margin-bottom:12px">안건 입력 화면은 관리자 비밀번호를 확인한 뒤 열립니다.</div>'+
+      '<div style="color:#666;font-size:13px;margin-bottom:12px">작성·수정 화면은 <b>수정용</b> 관리자 비밀번호를 확인한 뒤 열립니다(열람용 비밀번호로는 열리지 않습니다).</div>'+
       '<input id="agendaAdminInput" type="password" autocomplete="current-password" placeholder="관리자 비밀번호" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border:1px solid #d9d4c8;border-radius:10px">'+
       '<div id="agendaAdminMsg" style="min-height:22px;color:#a33;font-size:12px;margin-top:5px">'+esc(message)+'</div>'+
       '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn" id="agendaAdminCancel">취소</button><button class="btn gold" id="agendaAdminOk">확인</button></div></div>';

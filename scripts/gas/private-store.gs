@@ -38,7 +38,8 @@ function doGet() { return json_({ ok: false, error: 'post_only' }); }
 function doPost(e) {
   var b;
   try { b = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad_json' }); }
-  var stored = PROP.getProperty('ADMIN_KEY');
+  var stored = PROP.getProperty('ADMIN_KEY'); // 수정용 키
+  var viewK = PROP.getProperty('VIEW_KEY') || ''; // 열람용 키(v3) — 없으면 수정 키만 유효
 
   if (b.action === 'setup') { // 최초 1회만: 관리자 비밀번호 등록
     if (stored) return json_({ ok: false, error: 'already_setup' });
@@ -48,7 +49,12 @@ function doPost(e) {
     return json_({ ok: true, setup: true });
   }
 
-  if (!stored || String(b.adminKey || '') !== stored) return json_({ ok: false, error: 'denied' });
+  // v3(2026-08-31) 2단계 키: 읽기(list/get)는 열람·수정 키 모두, 쓰기(save/delete)는 수정 키만
+  var k = String(b.adminKey || '');
+  var isEdit = !!stored && k === stored;
+  var isView = isEdit || (!!viewK && k === viewK);
+  if (!isView) return json_({ ok: false, error: 'denied' });
+  if ((b.action === 'save' || b.action === 'delete') && !isEdit) return json_({ ok: false, error: 'edit_required' });
 
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);

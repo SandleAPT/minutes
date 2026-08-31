@@ -23,7 +23,7 @@
     // v91: 24시간 만료 규칙(core.js AdminGate 공통) — 만료된 키는 지우고 다시 입력받는다
     var k = ""; try { k = (window.AdminGate ? AdminGate.savedKey() : localStorage.getItem(ADMIN_LS)) || ""; } catch (e) {}
     if (!k && ask) {
-      k = (prompt("관리자 비밀번호를 입력하세요.\n(비공개 자료는 서버에서 비밀번호를 검증합니다)") || "").trim();
+      k = (prompt("비밀번호를 입력하세요 — 열람용은 보기만, 수정용은 추가·삭제까지 가능합니다.\n(비공개 자료는 서버에서 비밀번호를 검증합니다)") || "").trim();
       if (k) try { localStorage.setItem(ADMIN_LS, k); localStorage.setItem("sandle_admin_unlock_at", String(Date.now())); } catch (e) {}
     }
     return k;
@@ -36,6 +36,7 @@
       .then(function (r) { return r.json(); })
       .then(function (x) {
         if (x && !x.ok && x.error === "denied") { try { localStorage.removeItem(ADMIN_LS); } catch (e) {} throw new Error("비밀번호가 올바르지 않습니다 — 다시 열면 재입력합니다"); }
+        if (x && !x.ok && x.error === "edit_required") { throw new Error("수정용 비밀번호가 필요합니다 — 지금 비밀번호로는 열람만 가능합니다"); }
         return x;
       });
   }
