@@ -39,7 +39,8 @@ var Notices=(function(){
     {t:"별지 서식",b:["__form__"],n:["__form__"]}
   ];
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});}
-  function hasKey(){try{return !!localStorage.getItem("sandle_admin_key");}catch(e){return false;}}
+  // v91: 24시간 만료 규칙 포함(core.js AdminGate와 동일) — 만료 시 키 제거·재입력
+  function hasKey(){try{return !!(window.AdminGate?AdminGate.savedKey():localStorage.getItem("sandle_admin_key"));}catch(e){return false;}}
   // v81: 임계(v83부터 30,000자) 초과 레코드는 주제 요약과 같은 조각 방식({chunked,parts} + id_pN 원문 슬라이스)으로 저장된다 — 읽을 때 이어 붙여 파싱.
   function getRec(id){
     return fetch(URL_+"?action=get&token="+TOKEN+"&id="+id).then(function(r){return r.json()}).then(function(x){
@@ -388,13 +389,13 @@ var Notices=(function(){
 
   function draw(){
     var box=document.getElementById('noticeBody');if(!box)return;
-    var lockMark=locked()?' 🔒':'';
+    // v91: 🔒는 '비밀번호가 필요한 탭' 표시로 항상 보여준다(풀린 기기에서도) — 사용자 요청: 남들에게 뭐가 잠겼는지 확인용
     var checkCount=(st.investigations&&st.investigations.items?st.investigations.items.length:0)+(st.checks&&st.checks.items?st.checks.items.length:0);
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
       '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
-      '<button type="button" class="btn'+(st.sub==='notices'?' gold':'')+'" onclick="Notices.sub(\'notices\')">공고·안내'+(!locked()&&st.notices?' ('+st.notices.items.length+')':lockMark)+'</button>'+
-      '<button type="button" class="btn'+(st.sub==='checks'?' gold':'')+'" onclick="Notices.sub(\'checks\')">절차 점검'+(!locked()&&checkCount?' ('+checkCount+')':lockMark)+'</button></div>';
+      '<button type="button" class="btn'+(st.sub==='notices'?' gold':'')+'" onclick="Notices.sub(\'notices\')">공고·안내 🔒'+(!locked()&&st.notices?' ('+st.notices.items.length+')':'')+'</button>'+
+      '<button type="button" class="btn'+(st.sub==='checks'?' gold':'')+'" onclick="Notices.sub(\'checks\')">절차 점검 🔒'+(!locked()&&checkCount?' ('+checkCount+')':'')+'</button></div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==='rules'){box.innerHTML=h+rulesHtml();return;}
     if(st.sub==='contracts'){box.innerHTML=h+contractsHtml();if(!st.contracts&&!st.contractsLoading)loadContracts();return;}
@@ -440,7 +441,7 @@ var Notices=(function(){
       if(st.verifying)return;st.verifying=true;if(msg)msg.textContent='확인 중…';
       verifyKey(k).then(function(ok){
         st.verifying=false;
-        if(ok){try{localStorage.setItem('sandle_admin_key',k);}catch(e){}st.unlocked=true;if(st.sub==='checks')loadInvestigations();load();draw();}
+        if(ok){try{localStorage.setItem('sandle_admin_key',k);localStorage.setItem('sandle_admin_unlock_at',String(Date.now()));}catch(e){}st.unlocked=true;if(st.sub==='checks')loadInvestigations();load();draw();}
         else if(msg)msg.textContent='비밀번호가 올바르지 않습니다.';
       }).catch(function(){st.verifying=false;if(msg)msg.textContent='확인 실패 — 네트워크 상태를 확인해 주세요.';});
     },

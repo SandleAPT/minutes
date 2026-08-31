@@ -20,10 +20,11 @@
     return u;
   }
   function getKey(ask) {
-    var k = ""; try { k = localStorage.getItem(ADMIN_LS) || ""; } catch (e) {}
+    // v91: 24시간 만료 규칙(core.js AdminGate 공통) — 만료된 키는 지우고 다시 입력받는다
+    var k = ""; try { k = (window.AdminGate ? AdminGate.savedKey() : localStorage.getItem(ADMIN_LS)) || ""; } catch (e) {}
     if (!k && ask) {
       k = (prompt("관리자 비밀번호를 입력하세요.\n(비공개 자료는 서버에서 비밀번호를 검증합니다)") || "").trim();
-      if (k) try { localStorage.setItem(ADMIN_LS, k); } catch (e) {}
+      if (k) try { localStorage.setItem(ADMIN_LS, k); localStorage.setItem("sandle_admin_unlock_at", String(Date.now())); } catch (e) {}
     }
     return k;
   }

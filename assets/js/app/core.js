@@ -371,11 +371,15 @@ const AdminGate=(function(){
   const URL_="https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   const TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
   const KEY="sandle_admin_key";
+  // v91 보안: 비밀번호 확인 후 24시간이 지나면 저장된 키를 지우고 다시 입력받는다(사용자 요청).
+  // 확인 시각은 AT_KEY에 기록 — fees(관리비)·포털도 같은 키·같은 규칙을 본다. 시각이 없는 기존 키는 만료로 취급.
+  const AT_KEY="sandle_admin_unlock_at", TTL=24*60*60*1000;
   let verified=false, checking=false, pending=null, denied=null;
 
-  function saved(){ try{return localStorage.getItem(KEY)||"";}catch(e){return "";} }
-  function remember(k){ try{localStorage.setItem(KEY,k);}catch(e){} }
-  function forget(){ try{localStorage.removeItem(KEY);}catch(e){} verified=false; }
+  function expired(){ try{ const at=+localStorage.getItem(AT_KEY)||0; return !at || (Date.now()-at)>TTL; }catch(e){ return true; } }
+  function saved(){ try{ const k=localStorage.getItem(KEY)||""; if(k&&expired()){ forget(); return ""; } return k; }catch(e){return "";} }
+  function remember(k){ try{ localStorage.setItem(KEY,k); localStorage.setItem(AT_KEY,String(Date.now())); }catch(e){} }
+  function forget(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(AT_KEY); }catch(e){} verified=false; }
   function verify(k){
     return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"delete",id:"___verify_agenda_key___",adminKey:k,token:TOKEN})})
       .then(r=>r.json()).then(x=>!!(x&&x.ok));
@@ -425,7 +429,7 @@ const AdminGate=(function(){
       else{forget();showDialog("저장된 비밀번호를 다시 확인해 주세요.");}
     }).catch(()=>{checking=false;showDialog("자동 확인에 실패했습니다. 비밀번호를 다시 입력해 주세요.");});
   }
-  return {require:requireAccess,forget};
+  return {require:requireAccess,forget,savedKey:saved};
 })();
 window.AdminGate=AdminGate;
 
@@ -850,7 +854,7 @@ function outputAgendaItems(includeDrafts=false){
   others.forEach((agenda,index)=>items.push({agenda,label:`제${listedRegular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length,draft:!isAgendaComplete(agenda)}));
   return items;
 }
-function isAdminDevice(){ try{ return !!localStorage.getItem("sandle_admin_key"); }catch(e){ return false; } }
+function isAdminDevice(){ try{ return !!(window.AdminGate&&AdminGate.savedKey()); }catch(e){ return false; } } // v91: 24시간 만료 반영
 const AGENDA_CATS=["헬스장","도서관","커뮤니티센터","주차","수광선","LH·관리이관","회계·결산","관리비","잡수입·예산","관리규약","선거·임원","장기수선","승강기","화재·소방","조경·환경","지원사업","저수조·청소","교통·버스","전기·설비","기타"];
 // ---- 주제 태그 (v30) ----
 // 안건 하나가 여러 주제에 속할 수 있다. a.tags(직접 지정)가 비어 있으면 자동 분류(window.autoTags)를 따른다.
