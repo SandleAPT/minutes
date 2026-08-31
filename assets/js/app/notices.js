@@ -319,7 +319,9 @@ var Notices=(function(){
     return '<details class="nt-card" id="chk-'+esc(i.id||'')+'" style="padding:0;overflow:hidden;margin:0">'+
       '<summary style="list-style:none;cursor:pointer;padding:15px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start">'+
         '<div style="min-width:0"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:7px">'+
-          '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span><span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
+          '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span>'+
+          (i.statusDetail?'<span class="small" style="font-weight:800;color:#6a5a2a">'+esc(i.statusDetail)+'</span>':'')+
+          '<span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
           '<div class="nt-title" style="margin:0 0 5px">'+esc(i.title)+'</div><div class="nt-sum" style="margin:0">'+esc(i.summary||'')+'</div></div>'+
         '<span aria-hidden="true" style="font-size:18px;color:var(--muted);padding-top:4px">⌄</span>'+
       '</summary>'+
@@ -333,7 +335,7 @@ var Notices=(function(){
   // 클라우드 절차 점검 항목(checks_v1)을 조사 현황과 같은 카드 형태로 변환
   function checkAsInv(c){
     return {
-      id:c.id, status:c.status||'확인중', severity:c.severity||'medium', category:'규약 대조',
+      id:c.id, status:c.status||'확인중', statusDetail:c.statusDetail||'', severity:c.severity||'medium', category:'규약 대조',
       title:c.title, summary:c.summary||'', facts:c.facts,
       rules:(c.rules||[]).map(function(r){return r.ref+(r.text?': '+r.text:'')+(r.verified===false?' (원문 대조 전)':'');}),
       question:c.question, next:null, related:c.related, updatedAt:c.updatedAt

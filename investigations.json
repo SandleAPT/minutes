@@ -6,7 +6,7 @@
   "items": [
     {
       "id": "tenant-election-qualification",
-      "status": "위촉 확인·위반 소견(LH)",
+      "status": "위반·미충족 확인","statusDetail": "선관위원 위촉 확인·위반 소견(LH)",
       "severity": "confirmed",
       "category": "선거·자격",
       "title": "제6기 선거관리위원 위촉 및 동대표 자격",
@@ -46,7 +46,7 @@
     },
     {
       "id": "lh-missing-application",
-      "status": "경위 확인중",
+      "status": "확인중","statusDetail": "신청서 누락 경위 조사",
       "severity": "high",
       "category": "자료·보고",
       "title": "LH 사실확인 과정의 선거관리위원 신청서 누락",
@@ -77,7 +77,7 @@
     },
     {
       "id": "tenant-expense-violation",
-      "status": "위반 확인",
+      "status": "위반·미충족 확인","statusDetail": "규약과 다른 운영·집행 — LH 공식 확인",
       "severity": "confirmed",
       "category": "회계·운영비",
       "title": "임차인대표회의 운영경비 관리규약 위반 집행",
@@ -108,7 +108,7 @@
     },
     {
       "id": "tenant-election-delay",
-      "status": "경위 확인",
+      "status": "확인중","statusDetail": "선거 지연 경위",
       "severity": "medium",
       "category": "선거·일정",
       "title": "제6기 임차인대표회의 선거 지연 및 임기 공백",
@@ -137,7 +137,7 @@
     },
     {
       "id": "management-responsibility",
-      "status": "후속조치 대기",
+      "status": "후속조치 대기","statusDetail": "LH 공문 후 본사 시정 요구",
       "severity": "high",
       "category": "관리주체",
       "title": "관리사무소·신대한관리의 관리책임 및 시정체계",
