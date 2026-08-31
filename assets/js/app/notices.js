@@ -99,7 +99,7 @@ var Notices=(function(){
   function loadInvestigations(){
     if(st.investigations||st.investigationsLoading) return;
     st.investigationsLoading=true;
-    fetch("investigations.json?v=3").then(function(r){return r.json()}).then(function(j){
+    fetch("investigations.json?v=4").then(function(r){return r.json()}).then(function(j){
       st.investigationsLoading=false;st.investigations=j;draw();
     }).catch(function(){st.investigationsLoading=false;st.err="절차 점검 현황을 불러오지 못했습니다.";draw();});
   }
