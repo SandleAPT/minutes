@@ -478,7 +478,8 @@ function openNavView(btn){
 }
 document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
   btn.addEventListener("click",()=>{
-    if(btn.dataset.view==="agendaView"){
+    // v93: ⑥ 회의 설정·⑦ 동대표 명단·⑧ 안건·발언 모두 수정용 비밀번호 게이트(기존엔 ⑧만 잠겨 있었음 — 🔒 표시·2단계 키와 일관되게)
+    if(btn.dataset.view==="setupView"||btn.dataset.view==="repsView"||btn.dataset.view==="agendaView"){
       AdminGate.require(
         ()=>openNavView(btn),
         ()=>{ const cur=document.querySelector(".nav button[data-view].active"); if(cur&&window.Embed) Embed.notify(cur.dataset.view); }
