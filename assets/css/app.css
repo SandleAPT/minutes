@@ -568,9 +568,16 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .pc-filters{padding:2px 0 12px;border-bottom:1px solid var(--line);margin-bottom:0}
 .pc-filters .btn{display:inline-flex;align-items:center;gap:6px}
 .pc-filters .btn span{min-width:18px;border-radius:99px;padding:1px 5px;background:rgba(0,0,0,.055);font-size:10.5px;text-align:center}
-.pc-thread{margin-top:24px}
-.pc-thread-head{margin-bottom:10px}
+.pc-thread{margin-top:12px;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
+.pc-thread-head{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.pc-thread-head::-webkit-details-marker{display:none}.pc-thread-head::marker{display:none;content:''}
 .pc-thread-head h2{font-size:15.5px;line-height:1.45;margin:0;color:#3c3a35}
+.pc-thread-head p{font-size:12px;line-height:1.4;color:var(--muted);margin:3px 0 0}
+.pc-thread .pc-toggle-label::before{content:'펼치기'}
+.pc-thread[open]>.pc-thread-head{background:#fdfbf7;border-bottom:1px solid var(--line)}
+.pc-thread[open]>.pc-thread-head .pc-toggle-label::before{content:'접기'}
+.pc-thread[open]>.pc-thread-head .pc-toggle-arrow{transform:rotate(180deg)}
+.pc-thread-body{padding:12px 14px 14px}
 .pc-flow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;margin-top:8px;padding:10px 12px;border-left:3px solid #cbb984;border-radius:0 9px 9px 0;background:#f8f5ed}
 .pc-flow b{font-size:11px;color:#765d21;padding-top:2px}
 .pc-flow p{font-size:12.5px;line-height:1.7;color:#5c5b56;margin:0}
@@ -583,14 +590,22 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .pc-card-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .pc-status-detail{font-size:11.5px;font-weight:800;color:#6a5a2a}
 .pc-card-title{font-weight:850;font-size:15px;line-height:1.45;color:#2f2e2a;margin:0}
-.pc-card-lead{font-size:13px;color:#4a4841;margin:6px 0 0;line-height:1.7}
 .pc-toggle{display:flex;align-items:center;gap:6px;color:#746f64;font-size:11.5px;white-space:nowrap;align-self:center}
 .pc-toggle-label::before{content:'근거·자료 보기'}
 .pc-toggle-arrow{font-size:17px;line-height:1;transition:transform .18s ease}
 .pc-card[open] .pc-toggle-label::before{content:'접기'}
 .pc-card[open] .pc-toggle-arrow{transform:rotate(180deg)}
 .pc-card[open]>.pc-card-summary{background:#fdfbf7}
-.pc-card-body{border-top:1px solid var(--line);padding:4px 16px 16px;background:#fff}
+.pc-card-body{border-top:1px solid var(--line);padding:12px 16px 16px;background:#fff}
+.pc-story{border-left:3px solid #b7a56f;border-radius:0 10px 10px 0;background:#faf7ef;padding:11px 13px}
+.pc-story h4{font-size:11.5px;line-height:1.4;color:#765d21;margin:0 0 5px}
+.pc-story p{font-size:13px;line-height:1.72;color:#4a4841;margin:0;white-space:pre-wrap}
+.pc-detail{margin-top:10px;border:1px solid #e8e2d7;border-radius:10px;background:#fff}
+.pc-detail>summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#5c5b56;font-size:12.5px;font-weight:750}
+.pc-detail>summary::-webkit-details-marker{display:none}.pc-detail>summary::marker{display:none;content:''}
+.pc-detail[open]>summary{border-bottom:1px solid #ece7de;background:#fcfbf8}
+.pc-detail-arrow{font-size:17px;line-height:1;transition:transform .18s ease}.pc-detail[open] .pc-detail-arrow{transform:rotate(180deg)}
+.pc-detail-body{padding:0 12px 12px}
 .pc-section{margin-top:12px;border:1px solid #ece7de;border-radius:10px;padding:11px 13px;background:#fcfbf8}
 .pc-section h4{font-size:12px;line-height:1.4;margin:0 0 7px;color:#5c5b56}
 .pc-section .nt-facts{margin:0;padding-left:18px;line-height:1.72}
@@ -608,6 +623,8 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
   .pc-stats span{white-space:normal;line-height:1.3}
   .pc-flow{display:block}
   .pc-flow b{display:block;margin-bottom:4px}
+  .pc-thread-head{padding:13px 14px}
+  .pc-thread-body{padding:10px 11px 12px}
   .pc-card-summary{padding:14px;display:block}
   .pc-toggle{margin-top:10px;justify-content:flex-end}
   .pc-card-body{padding:3px 13px 14px}
