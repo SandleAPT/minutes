@@ -311,25 +311,26 @@ var Notices=(function(){
     if(i.severity==='medium') return 'background:#edf2f7;color:#4a5568;border-color:#cbd5e0';
     return 'background:#edf5ed;color:#3f6840;border-color:#bdd6bd';
   }
-  function invList(title,arr){
+  function invList(title,arr,kind){
     if(!arr||!arr.length) return '';
-    return '<div style="margin-top:13px"><div class="nt-sec" style="margin-top:0">'+esc(title)+'</div><ul class="nt-facts">'+arr.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+    return '<section class="pc-section'+(kind?' '+kind:'')+'"><h4>'+esc(title)+'</h4><ul class="nt-facts">'+arr.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></section>';
   }
   function investigationCard(i){
-    return '<details class="nt-card" id="chk-'+esc(i.id||'')+'" style="padding:0;overflow:hidden;margin:0">'+
-      '<summary style="list-style:none;cursor:pointer;padding:15px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start">'+
-        '<div style="min-width:0"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:7px">'+
+    return '<details class="nt-card pc-card" id="chk-'+esc(i.id||'')+'">'+
+      '<summary class="pc-card-summary">'+
+        '<div class="pc-card-main"><div class="pc-card-meta">'+
           '<span class="nt-badge" style="'+invStatusStyle(i)+'">'+esc(i.status)+'</span>'+
-          (i.statusDetail?'<span class="small" style="font-weight:800;color:#6a5a2a">'+esc(i.statusDetail)+'</span>':'')+
+          (i.statusDetail?'<span class="pc-status-detail">'+esc(i.statusDetail)+'</span>':'')+
           '<span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
-          '<div class="nt-title" style="margin:0 0 5px">'+esc(i.title)+'</div><div class="nt-sum" style="margin:0">'+esc(i.summary||'')+'</div></div>'+
-        '<span aria-hidden="true" style="font-size:18px;color:var(--muted);padding-top:4px">⌄</span>'+
+          '<h3 class="pc-card-title">'+esc(i.title)+'</h3>'+
+          (i.summary?'<p class="pc-card-lead">'+esc(i.summary)+'</p>':'')+'</div>'+
+        '<span class="pc-toggle" aria-hidden="true"><span class="pc-toggle-label"></span><span class="pc-toggle-arrow">⌄</span></span>'+
       '</summary>'+
-      '<div style="border-top:1px solid var(--line);padding:2px 16px 16px">'+
-        invList('확인된 사실',i.facts)+invList('적용 기준',i.rules)+invList('확인자료',i.evidence)+
-        (i.question?'<div style="margin-top:13px"><div class="nt-sec" style="margin-top:0">판단이 필요한 부분</div><div class="nt-sum">'+esc(i.question)+'</div></div>':'')+
-        (i.next?'<div class="nt-note" style="margin-top:13px"><b>다음 조치</b><br>'+esc(i.next)+'</div>':'')+
-        relChips(i.related)+
+      '<div class="pc-card-body">'+
+        invList('확인된 사실',i.facts,'pc-facts')+invList('적용 기준',i.rules,'pc-rules')+invList('확인자료',i.evidence,'pc-evidence')+
+        (i.question?'<section class="pc-section pc-question"><h4>판단이 필요한 부분</h4><p>'+esc(i.question)+'</p></section>':'')+
+        (i.next?'<section class="pc-section pc-next"><h4>다음 조치</h4><p>'+esc(i.next)+'</p></section>':'')+
+        '<div class="pc-related">'+relChips(i.related)+'</div>'+
       '</div></details>';
   }
   // 클라우드 절차 점검 항목(checks_v1)을 조사 현황과 같은 카드 형태로 변환
@@ -362,11 +363,10 @@ var Notices=(function(){
     var statuses=['전체'].concat(Array.from(new Set(all.map(function(i){return i.status;}))));
     var confirmed=all.filter(function(i){return i.severity==='confirmed';}).length;
     var active=all.filter(function(i){return i.status!=='해소'&&i.status!=='문제없음';}).length;
-    var h='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin:4px 0 12px">'+
-      '<div><div style="font-size:17px;font-weight:900">절차 점검 현황</div><div class="small" style="margin-top:3px">'+esc((st.investigations&&st.investigations.updated)||'')+' 기준 조사 '+(((st.investigations&&st.investigations.items)||[]).length)+'건 · 규약 대조 '+cloud.length+'건</div></div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap"><span class="nt-badge">진행중 '+active+'</span><span class="nt-badge" style="background:#fbe9e7;color:#9b2c23;border-color:#efb3ad">위반·미충족 확인 '+confirmed+'</span></div></div>';
-    h+='<div class="nt-note" style="margin-bottom:12px">'+esc((st.investigations&&st.investigations.note)||'')+' <b>규약 대조</b> 항목은 카페 게시판 공고·회의록 전수 대조와 규약 조문 원문 확인을 바탕으로 한 기록으로, 빨간 배지는 문서상 요건 미충족이 확인된 건입니다. 이어지는 문제끼리 묶어 흐름 순서로 보여줍니다.</div>';
-    h+='<div class="nt-filters" style="margin-bottom:12px">'+statuses.map(function(s){return '<button type="button" class="btn'+(st.checkFilter===s?' gold':'')+'" onclick="Notices.checkFilter(\''+esc(s)+'\')">'+esc(s)+'</button>';}).join('')+'</div>';
+    var h='<header class="pc-overview"><div class="pc-overview-title"><h2>절차 점검 현황</h2><p>'+esc((st.investigations&&st.investigations.updated)||'')+' 기준 · 조사 '+(((st.investigations&&st.investigations.items)||[]).length)+'건 · 규약 대조 '+cloud.length+'건</p></div>'+
+      '<div class="pc-stats"><div><b>'+all.length+'</b><span>전체 점검</span></div><div><b>'+active+'</b><span>진행중</span></div><div class="danger"><b>'+confirmed+'</b><span>위반·미충족 확인</span></div></div></header>';
+    h+='<div class="nt-note pc-guide"><p>'+esc((st.investigations&&st.investigations.note)||'')+'</p><p><b>규약 대조</b> 항목은 카페 게시판 공고·회의록 전수 대조와 규약 조문 원문 확인을 바탕으로 한 기록으로, 빨간 배지는 문서상 요건 미충족이 확인된 건입니다. 이어지는 문제끼리 묶어 흐름 순서로 보여줍니다.</p><p class="pc-guide-tip">각 항목의 제목을 누르면 확인된 사실과 근거 자료를 볼 수 있습니다.</p></div>';
+    h+='<div class="nt-filters pc-filters" aria-label="절차 점검 상태 필터">'+statuses.map(function(s){var count=s==='전체'?all.length:all.filter(function(i){return i.status===s;}).length;return '<button type="button" class="btn'+(st.checkFilter===s?' gold':'')+'" onclick="Notices.checkFilter(\''+esc(s)+'\')">'+esc(s)+' <span>'+count+'</span></button>';}).join('')+'</div>';
     var byId={};all.forEach(function(i){if(i.id)byId[i.id]=i;});
     var used={},shown=0;
     CHECK_THREADS.forEach(function(th){
@@ -374,17 +374,16 @@ var Notices=(function(){
         .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;});
       if(!items.length) return;
       shown+=items.length;
-      h+='<div style="margin:20px 0 10px"><div style="font-size:15px;font-weight:900">'+esc(th.t)+'</div>'+
-        '<div class="small" style="margin-top:4px;line-height:1.7;color:var(--muted)">'+esc(th.flow)+'</div></div>'+
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+items.map(investigationCard).join('')+'</div>';
+      h+='<section class="pc-thread"><header class="pc-thread-head"><h2>'+esc(th.t)+'</h2><div class="pc-flow"><b>흐름</b><p>'+esc(th.flow)+'</p></div></header>'+
+        '<div class="pc-card-list">'+items.map(investigationCard).join('')+'</div></section>';
     });
     var rest=all.filter(function(i){return !(i.id&&used[i.id]);})
       .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;})
       .sort(function(a,b){return sevRank(a)-sevRank(b);});
     if(rest.length){
       shown+=rest.length;
-      h+='<div style="margin:20px 0 10px;font-size:15px;font-weight:900">그 밖의 점검</div>'+
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px">'+rest.map(investigationCard).join('')+'</div>';
+      h+='<section class="pc-thread"><header class="pc-thread-head"><h2>그 밖의 점검</h2></header>'+
+        '<div class="pc-card-list">'+rest.map(investigationCard).join('')+'</div></section>';
     }
     if(!shown) h+='<div class="nt-empty">선택한 상태의 점검 건이 없습니다.</div>';
     return h;
