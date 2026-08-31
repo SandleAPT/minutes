@@ -315,6 +315,14 @@ var Notices=(function(){
     if(!arr||!arr.length) return '';
     return '<section class="pc-section'+(kind?' '+kind:'')+'"><h4>'+esc(title)+'</h4><ul class="nt-facts">'+arr.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></section>';
   }
+  function cardDetail(i){
+    var sections=invList('확인된 사실',i.facts,'pc-facts')+invList('적용 기준',i.rules,'pc-rules')+invList('확인자료',i.evidence,'pc-evidence')+
+      (i.question?'<section class="pc-section pc-question"><h4>판단이 필요한 부분</h4><p>'+esc(i.question)+'</p></section>':'')+
+      (i.next?'<section class="pc-section pc-next"><h4>다음 조치</h4><p>'+esc(i.next)+'</p></section>':'')+
+      '<div class="pc-related">'+relChips(i.related)+'</div>';
+    if(!sections) return '';
+    return '<details class="pc-detail"><summary><span>확인된 사실·적용 기준·자료 자세히 보기</span><span class="pc-detail-arrow" aria-hidden="true">⌄</span></summary><div class="pc-detail-body">'+sections+'</div></details>';
+  }
   function investigationCard(i){
     return '<details class="nt-card pc-card" id="chk-'+esc(i.id||'')+'">'+
       '<summary class="pc-card-summary">'+
@@ -323,18 +331,35 @@ var Notices=(function(){
           (i.statusDetail?'<span class="pc-status-detail">'+esc(i.statusDetail)+'</span>':'')+
           '<span class="small">'+esc(i.category||'')+(i.updatedAt?' · 갱신 '+esc(i.updatedAt):'')+'</span></div>'+
           '<h3 class="pc-card-title">'+esc(i.title)+'</h3>'+
-          (i.summary?'<p class="pc-card-lead">'+esc(i.summary)+'</p>':'')+'</div>'+
+          '</div>'+
         '<span class="pc-toggle" aria-hidden="true"><span class="pc-toggle-label"></span><span class="pc-toggle-arrow">⌄</span></span>'+
       '</summary>'+
       '<div class="pc-card-body">'+
-        invList('확인된 사실',i.facts,'pc-facts')+invList('적용 기준',i.rules,'pc-rules')+invList('확인자료',i.evidence,'pc-evidence')+
-        (i.question?'<section class="pc-section pc-question"><h4>판단이 필요한 부분</h4><p>'+esc(i.question)+'</p></section>':'')+
-        (i.next?'<section class="pc-section pc-next"><h4>다음 조치</h4><p>'+esc(i.next)+'</p></section>':'')+
-        '<div class="pc-related">'+relChips(i.related)+'</div>'+
+        '<section class="pc-story"><h4>핵심 이야기</h4><p>'+esc(i.summary||'세부 확인 내용이 정리 중입니다.')+'</p></section>'+
+        cardDetail(i)+
       '</div></details>';
   }
   // 클라우드 절차 점검 항목(checks_v1)을 조사 현황과 같은 카드 형태로 변환
   function checkAsInv(c){
+    // 중임 항목은 '공개 공고에서 확인되지 않음'과 '요건 미충족 확정'을 구분해 표시한다.
+    // 2020.4.18 규약은 4기 이후 판단에 적용하고, 3기는 당시 규약 원본을 확보한 뒤 별도 판단한다.
+    if(c.id==='c_term_limit'){
+      return {
+        id:c.id, status:'확인중', statusDetail:'예외 요건 확인자료 필요', severity:'medium', category:'규약 대조', updatedAt:c.updatedAt,
+        title:'3회 이상 재임한 동별 대표자 — 중임 예외 절차 확인 필요',
+        summary:'4~6기 공개 공고만으로는 중임 예외 요건을 충족했는지 판단할 수 없습니다. 중임 자체가 곧 위반을 뜻하는 것은 아니지만, 예외 선출이었다면 필요한 공고·후보등록·찬성표 기록을 확인해야 합니다.',
+        facts:[
+          '현재 정리된 기수 기록상 진세택(1~6기), 한경열(2~5기), 원영해(3~6기), 강명순(4기 보궐~6기)은 3회 이상 재임한 것으로 나타납니다.',
+          '강명순의 4기 보궐 임기는 약 18개월로, 2020.4.18 규약 제16조제5항의 ‘6개월 미만’ 예외에는 해당하지 않습니다.',
+          '확보된 4기·4기 보궐·5기·6기 당선인 공고에는 득표수·투표수·찬성수는 기재되어 있지 않습니다.',
+          '4기와 5기는 1·2차 공고의 무입후보 사실이 공고에서 확인되지만, 6기는 차수별 후보 등록 결과가 공개 공고에서 확인되지 않습니다.',
+          '3기 선거 공고류는 현재 확보된 공개 기록에서 확인되지 않습니다. 3기 선거는 당시 적용 규약과 선관위 원본기록을 함께 확인해야 합니다.'
+        ],
+        rules:(c.rules||[]), evidence:c.evidence,
+        question:'각 대상 선거구별로 ① 두 차례 공고의 후보자 등록 결과, ② 중임자가 등록한 후속 공고, ③ 비중임 후보 등록 여부, ④ 선거구 임차인 총수와 찬성표를 선관위 원본기록 또는 전자투표 집계로 대조해야 합니다. 이 자료가 확인되기 전에는 당선 무효나 규약 위반으로 단정하지 않습니다.',
+        next:'관리주체에 대상 선거별 후보등록부·개표결과·전자투표 집계와 당시 적용 규약을 확인해 달라고 요청', related:c.related
+      };
+    }
     return {
       id:c.id, status:c.status||'확인중', statusDetail:c.statusDetail||'', severity:c.severity||'medium', category:'규약 대조',
       title:c.title, summary:c.summary||'', facts:c.facts,
@@ -374,16 +399,16 @@ var Notices=(function(){
         .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;});
       if(!items.length) return;
       shown+=items.length;
-      h+='<section class="pc-thread"><header class="pc-thread-head"><h2>'+esc(th.t)+'</h2><div class="pc-flow"><b>흐름</b><p>'+esc(th.flow)+'</p></div></header>'+
-        '<div class="pc-card-list">'+items.map(investigationCard).join('')+'</div></section>';
+      h+='<details class="pc-thread"><summary class="pc-thread-head"><div><h2>'+esc(th.t)+'</h2><p>'+items.length+'건의 점검 기록</p></div><span class="pc-toggle"><span class="pc-toggle-label"></span><span class="pc-toggle-arrow">⌄</span></span></summary>'+
+        '<div class="pc-thread-body"><div class="pc-flow"><b>흐름</b><p>'+esc(th.flow)+'</p></div><div class="pc-card-list">'+items.map(investigationCard).join('')+'</div></div></details>';
     });
     var rest=all.filter(function(i){return !(i.id&&used[i.id]);})
       .filter(function(i){return st.checkFilter==='전체'||i.status===st.checkFilter;})
       .sort(function(a,b){return sevRank(a)-sevRank(b);});
     if(rest.length){
       shown+=rest.length;
-      h+='<section class="pc-thread"><header class="pc-thread-head"><h2>그 밖의 점검</h2></header>'+
-        '<div class="pc-card-list">'+rest.map(investigationCard).join('')+'</div></section>';
+      h+='<details class="pc-thread"><summary class="pc-thread-head"><div><h2>그 밖의 점검</h2><p>'+rest.length+'건의 점검 기록</p></div><span class="pc-toggle"><span class="pc-toggle-label"></span><span class="pc-toggle-arrow">⌄</span></span></summary>'+
+        '<div class="pc-thread-body"><div class="pc-card-list">'+rest.map(investigationCard).join('')+'</div></div></details>';
     }
     if(!shown) h+='<div class="nt-empty">선택한 상태의 점검 건이 없습니다.</div>';
     return h;
