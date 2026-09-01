@@ -29,7 +29,10 @@ jobs:
           node-version: "20"
       - name: Build data.json from cloud
         run: node scripts/build-data.mjs
+      # always(): 한 연도가 실패해도 성공한 연도는 저장한다.
+      # 빌드 단계가 실패로 남아 문제는 그대로 드러난다(연도별로 쪼갠 이유).
       - name: Commit if changed
+        if: always()
         run: |
           git add data-*.json system-backup.json data-health.json
           if git diff --cached --quiet; then
