@@ -114,7 +114,12 @@
         // json 은 읽은 그대로 되돌려 넣는다. 날짜 칸만 채우는 것이 목적이다.
         await save({ id: t.id, name: t.name, date: t.date, json: t.json });
         var back = await get(t.id);
-        if (String(back.date || "") !== t.date) throw new Error("재조회 불일치 (" + back.date + ")");
+        // 시트가 "2016-07-29"를 Date 값으로 자동 변환해 돌려주므로 문자열이 아니라 날짜로 비교한다.
+        // (문자열 비교로 했다가 정상 저장을 전부 실패로 잡은 적이 있다.)
+        if (new Date(back.date).toDateString() !== new Date(t.date).toDateString()) {
+          throw new Error("재조회 불일치 (" + back.date + ")");
+        }
+        if (String(back.json) !== String(t.json)) throw new Error("본문 변형됨");
         ok++;
         console.log("(" + (i + 1) + "/" + p.고칠것.length + ") " + t.id + " → " + t.date);
       } catch (e) {

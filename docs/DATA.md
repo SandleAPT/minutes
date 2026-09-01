@@ -48,6 +48,20 @@
 - 원본 PDF는 사용자 드라이브(`산들마을 기록/`)에 두고 `file`(파일명)과 `link`(드라이브 링크, 있으면)로 가리킨다. 깃에는 올리지 않는다.
 - **적재 절차(v81부터, 다른 PC에서도 동일)**: ① PDF를 로컬 서버로 서빙 + pdf.js로 페이지를 JPEG로 렌더(숨은 탭이면 `intent:"print"`; 스캔 PDF는 내장 JPEG를 바로 추출해도 됨) → ② 페이지 이미지를 읽어 안건·의결·명단·원문 전문을 옮김 → ③ **`scripts/import/importer.js`를 앱 페이지에 script 태그로 로드하고, 데이터 스크립트는 JOB 객체(meetings/notices/checks)만 정의해 `await SandleImporter.run(JOB)`** — 저장·재조회 대조·목록 대조 검증까지 한 단계로 실행되고 실패 시 throw → ④ "검증 실패" 없이 끝났을 때만 완료로 기록 → ⑤ 요약 갱신("요약 갱신해줘") → ⑥ CHANGELOG/PLAN/DATA 갱신. 스크립트는 저장소 `scripts/import/`에 남긴다.
   (교훈 2026-08-31: 구식 콘솔 붙여넣기 방식의 tenant_2022.js가 혼입 줄 SyntaxError로 통째로 미실행이었는데 기록만 남았음 — run()의 자동 검증 없이 적재 완료로 적지 말 것.)
+
+- **레코드를 다시 저장할 때는 `date`를 반드시 실어 보낼 것.** 시트 열은 `id | name | date | updatedAt | json` 이고, GAS는 받은 값을 그대로 덮어쓴다(`rec.date || ''`). 그래서 `date`를 빼거나 `""`로 보내면 **기존 날짜가 지워진다.** 다시 저장할 때는 `json.meeting.date`를 바깥으로 올린다.
+
+  ```js
+  record: { id, name, date: (obj.meeting && obj.meeting.date) || "", json: JSON.stringify(obj) }
+  ```
+
+  (사고 2026-09-01: 명단 보정 스크립트가 `date: ""`로 하드코딩해 64건의 날짜가 지워졌다. 목록은 날짜가 없으면 회의명에서 `YYYY년 M월`을 찾아 대부분 가려졌고, 이름이 차수 형식인 제1기 8건만 '기타'로 드러났다. 복구는 `scripts/import/date_repair_2026-09-01.js`.)
+
+- **재조회 검증은 `json`뿐 아니라 `date`도 대조할 것.** 위 사고의 저장은 "저장·재조회 검증 OK"를 통과했다. `json`만 비교하고 날짜 칸은 보지 않았기 때문이다. 다만 시트가 날짜 문자열을 Date 값으로 자동 변환하므로, 문자열 일치가 아니라 **같은 날을 가리키는지**로 비교한다.
+
+  ```js
+  var 같은날 = new Date(back.date).toDateString() === new Date(보낸값).toDateString();
+  ```
 - 임차 명단 좌석 = 선거구 번호(당선인 공고 기준). 선거구를 모르는 사람은 1번 칸에 두고 `notes`에 적는다(예: 제4기 김아도 감사).
 
 ## 8-0. 카페 게시판 대조 진행 현황 (이어서 할 때 여기부터)
