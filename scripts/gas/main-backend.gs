@@ -8,6 +8,7 @@
  *  - VIEW_KEY  : 열람용 — action 'verify' 에서 인정(잠긴 화면 열람 확인용). 수정 키도 열람을 겸한다.
  *  - TOKEN     : 공개 읽기 토큰(기존과 동일)
  * [v3, 2026-09-02] `setTags` 추가 — 안건 태그만 바꾸는 부분 수정(아래 함수 주석 참조).
+ * [v4, 2026-09-02] 인증 기록(`auth_log` 시트) 추가 — 아래 `logAuth_` 주석 참조.
  *
  * 이 파일은 코드 사본(진본은 Apps Script 프로젝트 '제목 없는 프로젝트'). 수정 시 양쪽을 함께 갱신할 것.
  * **저장소 파일만 고치면 서버는 바뀌지 않는다.** Apps Script 편집기에 붙여넣고 배포까지 해야 한다.
@@ -28,6 +29,61 @@ function checkToken(t) {
   const server = getToken();
   return !!server && String(t) === server;
 }
+/**
+ * 인증 기록 (v4, 2026-09-02 — Archive 4.3c)
+ *
+ * 왜 서버에 두는가: 기록을 브라우저에 두면 자기 기기 것만 보이고 지우면 그만이라 아무 의미가 없다.
+ * 비밀번호를 확인하는 곳은 여기뿐이므로 기록도 여기서 남긴다.
+ *
+ * 무엇을 남기는가: 시각 / 무슨 동작이었나 / 통과했나 / 기기가 스스로 밝힌 표시.
+ * **무엇을 남기지 않는가: 비밀번호는 어떤 형태로도 남기지 않는다.** 틀린 비밀번호도 남기지 않는다
+ * (오타가 대개 진짜 비밀번호와 한두 글자 차이라, 그것을 모아두면 비밀번호를 적어두는 것과 같아진다).
+ *
+ * 한계 — 이것을 알고 써야 한다:
+ *  - Apps Script는 요청한 쪽의 IP를 알 수 없다. 그래서 **누구인지는 기록할 수 없다.**
+ *  - `dev`는 기기가 스스로 말한 값이라 **믿을 수 없다.** 같은 기기를 묶어 보는 용도일 뿐이다.
+ * 그래도 쓸모는 있다: 실패가 몰아서 찍히면 누가 비밀번호를 찍어보고 있는 것이고,
+ * 내가 일하지 않은 시각에 수정용 통과가 찍히면 비밀번호가 샌 것이다.
+ *
+ * 기록이 실패해도 본 동작은 막지 않는다(try/catch). 로그 때문에 저장이 안 되는 쪽이 더 나쁘다.
+ */
+const LOG_SHEET = 'auth_log';
+const LOG_KEEP = 500;   // 이만큼만 남기고 옛것부터 지운다 — 시트가 무한정 커지지 않게
+
+function logAuth_(action, result, dev) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sh = ss.getSheetByName(LOG_SHEET);
+    if (!sh) {
+      sh = ss.insertSheet(LOG_SHEET);
+      sh.appendRow(['at', 'action', 'result', 'dev']);
+    }
+    sh.appendRow([
+      new Date().toISOString(),
+      String(action || ''),
+      String(result || ''),
+      String(dev || '').slice(0, 40)   // 기기가 보낸 값 — 길이만 자른다
+    ]);
+    const last = sh.getLastRow();
+    if (last > LOG_KEEP + 1) sh.deleteRows(2, last - LOG_KEEP - 1);
+  } catch (err) { /* 기록 실패가 본 동작을 막지 않는다 */ }
+}
+
+// 기록 읽기는 **수정용 키만**. 열람용(입주민)에게 접근 기록을 보여주지 않는다.
+function readAuthLog_(limit) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(LOG_SHEET);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const n = Math.min(Math.max(Number(limit) || 50, 1), LOG_KEEP);
+  const start = Math.max(2, sh.getLastRow() - n + 1);
+  const rows = sh.getRange(start, 1, sh.getLastRow() - start + 1, 4).getValues();
+  return rows.map(function (r) {
+    // 시트가 시각 칸을 Date 로 바꿔놓는 경우가 있어 문자열로 되돌린다.
+    const at = (r[0] instanceof Date) ? r[0].toISOString() : String(r[0] || '');
+    return { at: at, action: String(r[1] || ''), result: String(r[2] || ''), dev: String(r[3] || '') };
+  }).reverse();   // 최근 것이 먼저
+}
+
 function jsonOut(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
@@ -58,8 +114,21 @@ function doPost(e) {
   catch (err) { return jsonOut({ ok: false, error: 'bad json' }); }
   if (!checkToken(body.token)) return jsonOut({ ok: false, error: 'unauthorized' });
   const action = body.action || '';
-  if (action === 'verify') return jsonOut({ ok: checkView(body.adminKey), role: checkAdmin(body.adminKey) ? 'edit' : (checkView(body.adminKey) ? 'view' : '') });
-  if ((action === 'save' || action === 'delete' || action === 'setTags') && !checkAdmin(body.adminKey)) return jsonOut({ ok: false, error: 'admin_required' });
+  if (action === 'verify') {
+    const role = checkAdmin(body.adminKey) ? 'edit' : (checkView(body.adminKey) ? 'view' : '');
+    logAuth_('verify', role || 'fail', body.dev);
+    return jsonOut({ ok: !!role, role: role });
+  }
+  // 인증 기록 읽기 — 수정용 키만. 입주민(열람용)에게는 보여주지 않는다.
+  if (action === 'authLog') {
+    if (!checkAdmin(body.adminKey)) { logAuth_('authLog', 'denied', body.dev); return jsonOut({ ok: false, error: 'admin_required' }); }
+    return jsonOut({ ok: true, items: readAuthLog_(body.limit) });
+  }
+  if ((action === 'save' || action === 'delete' || action === 'setTags') && !checkAdmin(body.adminKey)) {
+    // 수정용 키 없이 쓰기를 시도한 것 — 보안상 알아야 할 일이라 남긴다.
+    logAuth_(action, 'denied', body.dev);
+    return jsonOut({ ok: false, error: 'admin_required' });
+  }
   if (action === 'save')   return jsonOut({ ok: true, id: saveItem(body.record || {}) });
   if (action === 'delete') return jsonOut({ ok: true, deleted: deleteItem(body.id) });
   if (action === 'setTags') return jsonOut(setTags(body.id, body.tags || {}));
