@@ -646,6 +646,11 @@
     toast("관리자 비밀번호가 필요합니다"); cb(false);
   }
 
+  /* Archive에서 안건을 눌러 넘어올 때 그 회의를 바로 연다 (v105).
+   *   /minutes/?open=<회의id>
+   * Archive는 회의록을 복제하지 않고 "찾아가게" 하는 것이 목적이라,
+   * 원문은 언제나 이 앱이 보여준다. 주소만 받아 기존 열기 경로를 그대로 쓴다.
+   * 연 뒤에는 주소에서 open을 지운다 — 새로고침할 때마다 다시 열리면 성가시다. */
   window.Cloud = {
     setArchiveBody: function (b) { archiveBodyFilter = b || "전체"; renderArchiveList(); },
     openMonth: openMonth, // 기록 범위의 달 칸 → 그 달 회의록 열기 (v59)
@@ -679,7 +684,27 @@
   };
   function bootCloud() {
     // data.json 로드를 먼저 기다렸다가(실패해도 진행) 목록 조회 → 최신 회의록 자동 열기
-    var go = function () { fetchList(function () { if (!autoOpenLatest()) checkStartupBanner(); }); };
+    /* Archive에서 안건을 눌러 넘어오면 그 회의를 연다 (v105).
+     *   /minutes/?open=<회의id>
+     * Archive는 회의록을 복제하지 않고 '찾아가게' 하는 것이 목적이라 원문은 늘 이 앱이 보여준다.
+     * 주소로 지정된 회의가 있으면 최신 회의록 자동 열기 대신 그것을 연다. */
+    var 지정 = null;
+    try { 지정 = new URLSearchParams(location.search).get("open"); } catch (e) {}
+    var go = function () {
+      fetchList(function () {
+        if (지정) {
+          try { window.Cloud._open(지정); } catch (e) {}
+          // 연 뒤 주소에서 open을 지운다 — 새로고침마다 다시 열리면 성가시다.
+          try {
+            var u = new URL(location.href);
+            u.searchParams.delete("open");
+            history.replaceState(null, "", u.pathname + u.search + u.hash);
+          } catch (e) {}
+          return;
+        }
+        if (!autoOpenLatest()) checkStartupBanner();
+      });
+    };
     if (window.StaticData && window.StaticData.ready) window.StaticData.ready.then(go, go);
     else go();
   }
