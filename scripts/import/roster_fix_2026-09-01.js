@@ -18,9 +18,17 @@
   var TOKEN = "ITDXaUBDTmrz6DbQ3tv9R";
   function key() { var k = localStorage.getItem("sandle_admin_key"); if (!k) throw new Error("관리자 키 없음"); return k; }
   async function get(id) { var r = await fetch(URL_ + "?action=get&token=" + TOKEN + "&id=" + id); var x = await r.json(); if (!x.ok) throw new Error("get fail " + id); return { item: x.item, json: JSON.parse(x.item.json) }; }
-  async function save(id, name, obj) {
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  // 연속 저장 시 Apps Script가 간헐적으로 unauthorized를 돌려주는 일이 있어(요청이 몰릴 때) 잠깐 쉬고 다시 시도한다.
+  async function save(id, name, obj, tries) {
+    tries = tries || 0;
     var r = await fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "save", record: { id: id, name: name, date: "", json: JSON.stringify(obj) }, adminKey: key(), token: TOKEN }) });
-    var x = await r.json(); if (!x.ok) throw new Error("save fail " + id + " " + JSON.stringify(x)); return x;
+    var x = await r.json();
+    if (!x.ok) {
+      if (tries < 3) { await wait(1200 * (tries + 1)); return save(id, name, obj, tries + 1); }
+      throw new Error("save fail " + id + " " + JSON.stringify(x));
+    }
+    return x;
   }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   // 동호수 미확인 인물 — 구성현황 문서에도 없어 좌석을 못 정한다. 회차 계산에 잡히도록 '취임' 기록만 남긴다.
@@ -86,7 +94,7 @@
               if (r.dong === s.dong && String(r.name || "").trim() !== s.name) { r.name = s.name; r.role = s.role; ch = true; }
             });
           });
-          if (ch) { await save(ids[i], rec.item.name, j); seatN++; }
+          if (ch) { await save(ids[i], rec.item.name, j); seatN++; await wait(200); }
         }
       }
       log.push("좌석 보강 회의록 " + seatN + "건");
