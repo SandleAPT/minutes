@@ -31,7 +31,7 @@ jobs:
         run: node scripts/build-data.mjs
       - name: Commit if changed
         run: |
-          git add data-*.json system-backup.json
+          git add data-*.json system-backup.json data-health.json
           if git diff --cached --quiet; then
             echo "정적 사본 변경 없음"
             exit 0

@@ -32,16 +32,20 @@ if (!list || !list.ok) throw new Error("list failed: " + JSON.stringify(list).sl
 
 const items = [];
 const sysItems = [];
+// [2026-09-01] 예전에는 get이 실패하면 경고만 찍고 그 레코드를 빼고 저장했다.
+// 그러면 Apps Script가 잠깐 느려진 것만으로 회의록이 백업에서 조용히 사라진다.
+// 백업은 '일부라도 남기는 것'보다 '틀린 걸 남기지 않는 것'이 중요하므로, 한 건이라도
+// 못 받으면 아무것도 쓰지 않고 실패한다. 다음 크론이나 수동 실행에서 다시 만들면 된다.
 for (const it of list.items || []) {                 // 순차 호출 (Apps Script 동시 실행 제한 배려)
   if (!it || !it.id) continue;
   if (isSystemRecord(it.id)) {                        // 시스템 레코드는 앱이 클라우드에서 직접 읽지만, 백업으로는 남긴다
     const rs = await api({ action: "get", id: it.id });
-    if (rs && rs.ok && rs.item) sysItems.push({ id: rs.item.id, name: rs.item.name || "", updatedAt: rs.item.updatedAt || "", json: rs.item.json || "" });
-    else console.warn("skip (sys get failed):", it.id);
+    if (!rs || !rs.ok || !rs.item) throw new Error(`시스템 레코드 조회 실패: ${it.id} — 불완전한 백업을 쓰지 않고 중단한다`);
+    sysItems.push({ id: rs.item.id, name: rs.item.name || "", updatedAt: rs.item.updatedAt || "", json: rs.item.json || "" });
     continue;
   }
   const r = await api({ action: "get", id: it.id });
-  if (!r || !r.ok || !r.item) { console.warn("skip (get failed):", it.id); continue; }
+  if (!r || !r.ok || !r.item) throw new Error(`회의록 조회 실패: ${it.id} — 불완전한 백업을 쓰지 않고 중단한다`);
   let date = "";
   try { const st = JSON.parse(r.item.json || "{}"); date = (st.meeting && st.meeting.date) || ""; } catch {}
   if (!date && it.date) { const d = new Date(it.date); if (!isNaN(d)) date = d.toISOString().slice(0, 10); }
@@ -58,8 +62,35 @@ items.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.up
 sysItems.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
 const SYS_OUT = "system-backup.json";
-let prevSys = null;
-if (existsSync(SYS_OUT)) { try { prevSys = JSON.parse(readFileSync(SYS_OUT, "utf8")).items; } catch {} }
+
+/* ── 줄어듦 방지 ──────────────────────────────────────────────
+ * 백업이 백업 구실을 하려면, 나쁜 실행이 좋은 사본을 덮어쓰지 못해야 한다.
+ * 회의는 지우는 일이 거의 없으므로 건수가 줄었다면 사고를 의심하는 것이 맞다.
+ * 정말로 지운 뒤 다시 만들 때는 ALLOW_SHRINK=1 로 실행한다.
+ */
+const 이전목차 = existsSync("data-index.json")
+  ? (() => { try { return JSON.parse(readFileSync("data-index.json", "utf8")); } catch { return null; } })()
+  : null;
+const 이전총계 = 이전목차 ? (이전목차.years || []).reduce((n, y) => n + (y.count || 0), 0) : 0;
+if (이전총계 && items.length < 이전총계 && process.env.ALLOW_SHRINK !== "1") {
+  throw new Error(
+    `회의 건수가 줄었다: ${이전총계} → ${items.length} (${이전총계 - items.length}건 감소). ` +
+    `사고일 수 있어 사본을 쓰지 않는다. 의도한 삭제라면 ALLOW_SHRINK=1 로 실행할 것.`
+  );
+}
+const 이전시스템 = existsSync(SYS_OUT)
+  ? (() => { try { return JSON.parse(readFileSync(SYS_OUT, "utf8")).items || []; } catch { return []; } })()
+  : [];
+for (const 옛 of 이전시스템) {
+  const 새 = sysItems.find((x) => x.id === 옛.id);
+  if (!새) throw new Error(`시스템 레코드가 사라졌다: ${옛.id} — 사본을 쓰지 않는다`);
+  // 조각 하나가 통째로 비면 앞선 백업이 유일한 사본이 된다. 덮어쓰기 전에 멈춘다.
+  if (String(새.json || "").length === 0 && String(옛.json || "").length > 0) {
+    throw new Error(`시스템 레코드 내용이 비었다: ${옛.id} — 사본을 쓰지 않는다`);
+  }
+}
+
+const prevSys = 이전시스템.length ? 이전시스템 : null;
 if (!(prevSys && JSON.stringify(prevSys) === JSON.stringify(sysItems))) {
   writeFileSync(SYS_OUT, JSON.stringify({ generatedAt: new Date().toISOString(), items: sysItems }) + "\n");
   console.log(`system-backup.json 갱신: ${sysItems.length}건`);
@@ -97,4 +128,29 @@ if (!(prevIdx && JSON.stringify(prevIdx) === JSON.stringify(yearsMeta))) {
   console.log(`data-index.json 갱신: ${yearsMeta.length}개 연도, 총 ${items.length}건`);
 }
 if (!changedFiles) console.log(`연도 사본 변경 없음 (${items.length}건, ${yearsMeta.length}개 연도)`);
+
+/* ── 건강 요약 ───────────────────────────────────────────────
+ * 2026-09-01 사고(회의 64건의 date 열이 지워졌는데 화면에는 8건만 티가 났다)의 교훈.
+ * 숫자로 남겨두면 다음에 같은 일이 생겼을 때 깃 diff에서 바로 보인다.
+ * generatedAt은 넣지 않는다 — 매일 값이 달라져 의미 없는 커밋이 쌓인다.
+ */
+const 건강 = { 총: items.length, 날짜없음: 0, 안건없음: 0, 원문없음: 0, 회의정보없음: 0, 명단없음: 0 };
+for (const it of items) {
+  if (!it.date) 건강.날짜없음++;
+  let st = null;
+  try { st = JSON.parse(it.json || "{}"); } catch { 건강.회의정보없음++; continue; }
+  if (!st.meeting) 건강.회의정보없음++;
+  if (!Array.isArray(st.agendas) || !st.agendas.length) 건강.안건없음++;
+  if (!String(st.source || "").trim()) 건강.원문없음++;
+  if (!st.rosters || !Object.keys(st.rosters).length) 건강.명단없음++;
+}
+const HEALTH_OUT = "data-health.json";
+let 이전건강 = null;
+if (existsSync(HEALTH_OUT)) { try { 이전건강 = JSON.parse(readFileSync(HEALTH_OUT, "utf8")); } catch {} }
+if (!(이전건강 && JSON.stringify(이전건강) === JSON.stringify(건강))) {
+  writeFileSync(HEALTH_OUT, JSON.stringify(건강, null, 2) + "\n");
+  console.log("data-health.json 갱신:", JSON.stringify(건강));
+} else {
+  console.log("건강 요약 변경 없음:", JSON.stringify(건강));
+}
 // 예전 단일 data.json(OUT)은 v83부터 동결 — 파일은 옛 클라이언트 폴백용으로 남긴다.
