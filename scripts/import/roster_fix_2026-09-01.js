@@ -20,12 +20,17 @@
   async function get(id) { var r = await fetch(URL_ + "?action=get&token=" + TOKEN + "&id=" + id); var x = await r.json(); if (!x.ok) throw new Error("get fail " + id); return { item: x.item, json: JSON.parse(x.item.json) }; }
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   // 연속 저장 시 Apps Script가 간헐적으로 unauthorized를 돌려주는 일이 있어(요청이 몰릴 때) 잠깐 쉬고 다시 시도한다.
-  async function save(id, name, obj, tries) {
+  // [2026-09-01 수정] date를 ""로 하드코딩해 두었더니, 저장한 61건의 시트 date 열이 전부 지워졌다.
+  // GAS는 받은 값을 그대로 쓴다(rec.date || ''). 목록 화면이 그 칸으로 연도를 묶기 때문에
+  // 회의명에 월이 없는 제1기 기록들이 '기타'로 떨어졌다. 복구는 date_repair_2026-09-01.js.
+  // 이제 저장할 레코드의 json 안에 있는 회의 날짜를 그대로 바깥으로 올린다.
+  async function save(id, name, obj, tries, date) {
     tries = tries || 0;
-    var r = await fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "save", record: { id: id, name: name, date: "", json: JSON.stringify(obj) }, adminKey: key(), token: TOKEN }) });
+    if (date === undefined) date = (obj && obj.meeting && obj.meeting.date) || "";
+    var r = await fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "save", record: { id: id, name: name, date: date, json: JSON.stringify(obj) }, adminKey: key(), token: TOKEN }) });
     var x = await r.json();
     if (!x.ok) {
-      if (tries < 3) { await wait(1200 * (tries + 1)); return save(id, name, obj, tries + 1); }
+      if (tries < 3) { await wait(1200 * (tries + 1)); return save(id, name, obj, tries + 1, date); }
       throw new Error("save fail " + id + " " + JSON.stringify(x));
     }
     return x;

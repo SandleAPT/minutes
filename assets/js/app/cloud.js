@@ -553,7 +553,7 @@
   function autoOpenLatest() {
     if (!listCache || !listCache.length) return false;
     var unchanged = false;
-    try { unchanged = (localStorage.getItem(STORAGE_KEY) || "") === (localStorage.getItem(SNAP_KEY) || " "); } catch (e) {}
+    try { unchanged = (localStorage.getItem(STORAGE_KEY) || "") === (localStorage.getItem(SNAP_KEY) || "\u0000"); } catch (e) {}
     if (!unchanged && !isPristine()) return false; // 저장 안 된 작업이 있으면 건드리지 않음 → 배너로 안내
     var newest = listCache.slice().sort(function (a, b) {
       var d = new Date(b.date || 0) - new Date(a.date || 0);
