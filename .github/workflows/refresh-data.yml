@@ -39,4 +39,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "정적 사본(data-*.json·system-backup.json) 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
-          git push
+          # 이 작업은 클라우드에서 239건을 순차로 받느라 10~15분 걸린다.
+          # 그 사이 사람이 한 번만 push해도 예전에는 마지막 push가 거부돼 통째로 실패했다
+          # (2026-09-01 run #29). 사본은 생성 결과만 담고 있어 남의 커밋 위에 그대로 얹으면 된다.
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            echo "push 재시도 $i (그 사이 새 커밋이 올라온 듯)"
+            sleep 5
+          done
+          echo "3회 시도 후에도 push 실패"
+          exit 1
