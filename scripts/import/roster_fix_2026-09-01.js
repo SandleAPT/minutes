@@ -57,17 +57,27 @@
         added++; log.push("이력 추가 " + u.term + "기 " + u.name);
       });
       if (fixed || added) await save("roster_history_v1", rh.item.name || "동대표 변동 이력 (시스템)", h);
-      // (3) 입대의 1~3기 회의록의 좌석 보강 — 대상 회의록은 브라우저에 캐시된 회의록 사본에서 자동으로 찾는다
+      // (3) 입대의 1~3기 회의록의 좌석 보강
+      // 대상 회의록은 브라우저 사본에서 찾고, 사본이 없으면(휴대폰 첫 접속 등) 아래 고정 목록을 쓴다.
       var cache = {}; try { cache = JSON.parse(localStorage.getItem("sandle_topic_records_v1") || "{}"); } catch (e) {}
-      var seatN = 0;
+      var FALLBACK = {
+        "1": ["m_2016_05_v1", "m_2016_06_v1", "m_2016_07_v1", "m_2016_10_v1", "m_2016_11_v1", "m_2016_12_v1", "m_2017_02_v1", "m_2017_04_v1", "m_2017_05_v1", "m_2017_05s_v1", "m_2017_07_v1", "m_2017_08_v1", "m_2017_09_v1", "m_2017_10_v1", "m_2017_11_v1", "m_2017_12_v1", "m_2018_02_v1", "m_2018_03_v1", "m_2018_04_v1", "m_2018_04s_v1"],
+        "2": ["m_2018_06_v1", "m_2018_07_v1", "m_2018_08_v1", "m_2018_09_v1", "m_2018_10_v1", "m_2018_11_v1", "m_2018_12s_v1", "m_2019_01_v1", "m_2019_02_v1", "m_2019_03_v1", "m_2019_04_v1", "m_2019_05_v1", "m_2019_06_v1", "m_2019_07s_v1", "m_2019_07_v1", "m_2019_08_v1", "m_2019_09_v1", "m_2019_10_v1", "m_2019_11_v1", "m_2019_12_v1"],
+        "3": ["m_2020_11_v1", "m_2020_11s_v1", "m_2020_12_v1", "m_2021_01_v1", "m_2021_03_v1", "m_2021_04_v1", "m_2021_05_v1", "m_2021_07_v1", "m_2021_08_v1", "m_2021_10_v1", "m_2021_11_v1", "m_2021_12_v1", "m_2022_01_v1", "m_2022_02_v1", "m_2022_03_v1", "m_2022_04_v1", "m_2022_05_v1", "m_2022_06_v1", "m_2022_07_v1", "m_2022_08_v1", "m_2022_09_v1"]
+      };
+      var seatN = 0, doneN = 0;
       var termKeys = Object.keys(SEATS);
+      var totalN = termKeys.reduce(function (a, k) { return a + (FALLBACK[k] || []).length; }, 0);
+      var say = function (m) { var el = document.getElementById("rosterFixStatus"); if (el) el.textContent = m; };
       for (var t = 0; t < termKeys.length; t++) {
         var tk = termKeys[t];
         var ids = Object.keys(cache).filter(function (id) {
           try { var jj = JSON.parse(cache[id].json); return !!(jj.rosters && jj.rosters[tk]); } catch (e) { return false; }
         });
+        if (!ids.length) ids = FALLBACK[tk] || [];
         log.push("제" + tk + "기 대상 회의록 " + ids.length + "건");
         for (var i = 0; i < ids.length; i++) {
+          doneN++; say("보정 중… " + doneN + "/" + totalN + " (제" + tk + "기)");
           var rec; try { rec = await get(ids[i]); } catch (e) { log.push(ids[i] + " 없음"); continue; }
           var j = rec.json; var rs = (j.rosters && j.rosters[tk]) || null; if (!rs) continue;
           var ch = false;

@@ -164,3 +164,28 @@
   // 접속 후 미리 준비(사본 즉시, 클라우드 대조는 백그라운드) → 명단 표 변동 칸이 바로 채워진다
   setTimeout(function () { if (data === null) { if (!loadCache()) data = { terms: {} }; fetchCloud(function () { if (typeof renderRepMaster === "function") renderRepMaster(); }); if (typeof renderRepMaster === "function") renderRepMaster(); } }, 1800);
 })();
+
+// 일회성 명단 보정 실행 (v100) — ⑦ 동대표 명단 화면의 버튼에서 호출.
+// 콘솔 없이 휴대폰에서도 누를 수 있게 만든 것. 보정이 끝나면 이 함수와 index.html의 rosterFixBox를 지운다.
+function runRosterFix(btn) {
+  var st = document.getElementById("rosterFixStatus");
+  var say = function (m, err) { if (st) { st.textContent = m; st.style.color = err ? "#b3261e" : "#3f6b37"; } };
+  if (!confirm("입대의 1~3기 좌석을 채우고, 임원 선출 기록의 '임기 미산입' 표시를 정리합니다.\n한 번만 실행하면 됩니다. 진행할까요?")) return;
+  if (btn) btn.disabled = true;
+  say("보정 중…");
+  var run = function () {
+    window.RosterFix.run().then(function (r) {
+      say("완료 — 플래그 정리 " + r.플래그정리 + "건, 이력 추가 " + r.이력추가 + "건, 회의록 좌석 보강 " + r.좌석보강 + "건. 새로고침하면 반영됩니다.");
+      if (window.RosterHistory && RosterHistory.reload) RosterHistory.reload();
+    }).catch(function (e) {
+      say("실패: " + (e && e.message ? e.message : e), true);
+      if (btn) btn.disabled = false;
+    });
+  };
+  if (window.RosterFix && RosterFix.run) { run(); return; }
+  var s = document.createElement("script");
+  s.src = "scripts/import/roster_fix_2026-09-01.js?cb=" + Date.now();
+  s.onload = function () { if (window.RosterFix && RosterFix.run) run(); else { say("보정 스크립트를 불러오지 못했습니다.", true); if (btn) btn.disabled = false; } };
+  s.onerror = function () { say("보정 스크립트를 불러오지 못했습니다.", true); if (btn) btn.disabled = false; };
+  document.head.appendChild(s);
+}
