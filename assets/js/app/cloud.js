@@ -167,6 +167,7 @@
         markSynced({ id: res.id }); // 일단 현재 시각으로 기록, 목록 갱신 후 서버 updatedAt으로 보정
         removeSyncBanner();
         toast("클라우드 저장 완료");
+        delete openedCache[res.id]; // 방금 고쳤으니 세션 캐시의 옛 판본을 버린다 (v104)
         listCache = null;
         fetchList(function () { markSyncedFromList(res.id); renderArchiveList(); });
         try { if (window.Topic) Topic.reload(); } catch (e2) {}
@@ -259,12 +260,28 @@
     toast("불러오기 완료: " + (item.name || ""));
     try { if (window.track) track("open_minutes", { name: item.name || "", id: item.id || "" }); } catch (e) {}
   }
+  // 이번 세션에서 클라우드로 받아온 회의록 (v104)
+  // 같은 회의를 다시 열 때 또 받아오지 않는다. 목록의 updatedAt이 달라졌으면
+  // 남이 고쳤다는 뜻이므로 캐시를 버리고 다시 받는다.
+  var openedCache = {};
+  function cachedFresh(id) {
+    var c = openedCache[id];
+    if (!c) return null;
+    var li = null;
+    if (listCache) for (var i = 0; i < listCache.length; i++) if (listCache[i].id === id) { li = listCache[i]; break; }
+    // 목록이 더 새 판본을 가리키면 캐시를 쓰지 않는다.
+    if (li && li.updatedAt && c.item.updatedAt && new Date(li.updatedAt) - new Date(c.item.updatedAt) > 1000) return null;
+    return c.item;
+  }
   function doLoad(cfg, id) {
     var sd = staticFresh(id);
     if (sd) { try { applyLoadedItem(sd); return; } catch (e) {} }
+    var cached = cachedFresh(id);
+    if (cached) { try { applyLoadedItem(cached); return; } catch (e) { delete openedCache[id]; } }
     toast("불러오는 중...");
     apiGet(cfg, { action: "get", token: cfg.token, id: id }).then(function (res) {
       if (!res || !res.ok || !res.item) { toast("불러오기 실패"); return; }
+      openedCache[id] = { item: res.item };
       applyLoadedItem(res.item);
     }).catch(function (e) {
       // 클라우드 실패 시 정적 사본이라도 사용 (오프라인 대비)
