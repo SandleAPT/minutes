@@ -35,25 +35,38 @@
         if (rows.some(function (r) { return String((r && r.name) || "").trim() === name; }) && out.indexOf(n) < 0) out.push(n);
       });
     } catch (e) {}
-    // 이력 기반 보정: 산입 제외 플래그(countTerm===false)가 있는 기수 제거, 취임 기록만 있고 명단에 없는 기수 추가
+    // 이력 기반 보정 (v99): 산입 제외(countTerm===false)는 '취임' 계열 기록에만 적용한다.
+    // 회장·부회장·감사 '선출'은 임원 직책 변경일 뿐 동별 대표자 임기와 무관한데, 여기에 붙은 미산입 표시를
+    // 기수 제거로 해석해 재임 기수가 통째로 빠지던 버그가 있었다(예: 진세택 t2·t3 회장 선출 → 1·4·5·6기만 남음).
     if (data && data.terms) Object.keys(data.terms).forEach(function (k) {
       if ((k.charAt(0) === "t") !== tenant) return;
       var n = parseInt(k.replace(/^t/, ""), 10); if (!n) return;
       (data.terms[k] || []).forEach(function (e) {
         if (String(e.name || "").trim() !== name) return;
-        if (e.countTerm === false) out = out.filter(function (x) { return x !== n; });
-        else if (/취임|선출/.test(e.event || "") && out.indexOf(n) < 0) out.push(n);
+        var joined = /취임/.test(e.event || ""); // 취임·보궐취임
+        if (e.countTerm === false && joined) out = out.filter(function (x) { return x !== n; });
+        else if ((joined || /선출/.test(e.event || "")) && out.indexOf(n) < 0) out.push(n);
       });
     });
     return out.sort(function (a, b) { return a - b; });
   }
+  // 회차 라벨 (v99): '이 기수가 그 사람의 몇 번째 임기인가'를 표시한다.
+  // - 지금 보는 기수의 명단에 이름이 없으면 회차를 매길 수 없으므로 표시하지 않는다(예전엔 재임 기수 총개수를 잘못 찍었다).
+  // - 2회차 = 중임(한도 도달), 3회차 이상 = 중임 초과로 예외 요건(임차 규약 제16조④·시행령 제13조) 확인 대상.
   function termsLabel(name, key) {
     var ts = termsServed(name, key); if (!ts.length) return "";
     var cur = parseInt(String(termKey(key)).replace(/^t/, ""), 10);
-    var idx = ts.indexOf(cur); var nth = idx >= 0 ? idx + 1 : ts.length;
-    var cls = nth >= 2 ? "rh-badge rh-etc" : "rh-badge rh-in";
-    var tip = "재임 기수: " + ts.map(function (n) { return "제" + n + "기"; }).join(", ") + (nth >= 2 ? " (중임 1회 — 연임 한도 도달)" : "");
-    return '<span class="' + cls + '" title="' + esc(tip) + '">' + nth + '회차' + (ts.length > 1 ? ' (제' + ts.join('·') + '기)' : '') + (nth >= 2 ? ' · 연임 한도' : '') + '</span>';
+    var idx = ts.indexOf(cur);
+    var all = ts.length > 1 ? ' (제' + ts.join('·') + '기)' : '';
+    if (idx < 0) { // 이 기수 명단엔 없고 다른 기수에만 이름이 있는 경우
+      return '<span class="rh-badge" title="' + esc("이 기수 명단에는 없습니다. 재임 기수: " + ts.map(function (n) { return "제" + n + "기"; }).join(", ")) + '">타 기수 재임' + all + '</span>';
+    }
+    var nth = idx + 1;
+    var over = nth >= 3, dup = nth === 2;
+    var cls = over ? "rh-badge rh-out" : (dup ? "rh-badge rh-etc" : "rh-badge rh-in");
+    var tip = "재임 기수: " + ts.map(function (n) { return "제" + n + "기"; }).join(", ") +
+      (over ? " — 중임 초과(3회 이상). 예외 요건(2회 공고 무후보 + 해당 선거구 과반 찬성 등) 확인 대상" : (dup ? " — 중임 1회(한도 도달)" : ""));
+    return '<span class="' + cls + '" title="' + esc(tip) + '">' + nth + '회차' + all + (over ? ' · 중임 초과' : (dup ? ' · 중임' : '')) + '</span>';
   }
   function loadCache() { try { var c = JSON.parse(localStorage.getItem(CACHE_KEY)); if (c && c.data) { data = c.data; updatedAt = c.updatedAt || null; return true; } } catch (e) {} return false; }
   function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ updatedAt: updatedAt, data: data })); } catch (e) {} }

@@ -386,6 +386,7 @@ details.haja-dong[open]>summary::before{content:"▾"}
 .rh-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid #d8d3c8;background:#f3f1ea;color:#5c5b56;margin:1px 2px 1px 0;white-space:nowrap}
 .rh-badge.rh-out{background:#fbeaea;border-color:#e7b8b3;color:#8a433d}
 .rh-badge.rh-in{background:#e9f3e6;border-color:#bfd8b7;color:#3f6b37}
+.rh-badge.rh-etc{background:#fdf4e3;border-color:#e6d3a8;color:#7a5c1e} /* 2회차(중임 한도 도달) */
 .roster-change-cell{font-size:11px;max-width:260px}
 /* 회의체 테마 (v43): 임차인대표회의는 포인트 색을 청록으로 */
 html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"] .btn.gold{color:#fff}html[data-body="임차"] .agenda-head .num{background:#2f5f80}
