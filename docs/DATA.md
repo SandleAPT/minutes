@@ -80,3 +80,4 @@
 - **관리규약 전문(`rules.json`, v66)**: 정적 파일. `{title, effective, source, transcribed, preamble, chapters[{no,title,articles[{no,title,text}]}], appendices([별표]), forms([별지 서식 — 명칭·용도만)}`. 2024.10.30 최종본 PDF(이미지)를 전사한 사본 — 효력은 원본에 있음 표기. ⑤ 관리규약 탭에서 검색(부분일치·하이라이트) 제공. 재전사 절차: PDF를 pdf.js로 페이지 렌더 → 보조 에이전트 분담 전사(scratchpad rules_part*.txt) → `mkrules.pl` 파서로 JSON 생성.
 - **임대주택 관리규약(`trules.json`, v67)**: 같은 구조, 2020.4.18 개정본(공공주택특별법 제50조). 규약 탭 문서 전환(RULE_DOCS). 원문 특이점: 제42·43조 결번, 본문에 제72조 없음(목차엔 있음), 부칙은 2020.4.18 단일 블록.
 - **⑤ 잠금(v66)**: 공고·안내/절차 점검 탭은 관리자 비밀번호 확인 후 표시. 검증은 GAS에 존재하지 않는 id의 delete 요청(키 맞음 → {ok:true,deleted:false}, 틀림 → admin_required) — 데이터 무변경. 이 잠금은 화면 가림이며 GAS 데이터 자체는 토큰만으로 읽힘(완전 비공개는 GAS 수정 필요).
+- **⑨ 비공개 자료 저장소**: 민감 자료는 이쪽에 넣는다. 넣는 방법·주의·현재 보관 목록은 `docs/PRIVATE_STORE.md`. 요점 — 저장은 반드시 페이지 안에서(비밀번호가 밖으로 나오면 안 됨), 저장 뒤 되읽어 대조, 덮어쓸 땐 id 유지.
