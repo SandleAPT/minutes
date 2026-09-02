@@ -99,7 +99,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=1").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=2").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -394,6 +394,44 @@ var Notices=(function(){
       '<ul class="nt-facts" style="margin:8px 0">'+(p.항목||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
       (p.출처?'<div class="small">'+esc(p.출처)+'</div>':'')+'</details>';
   }
+  // 동대표 선거가 아니라 단지 전체에 묻는 찬반투표(주택관리업자 재계약, 잡수입 사용 등).
+  // 전자투표와 방문투표를 나누어 적힌 그대로 보여준다 — 어느 쪽이 결과를 갈랐는지는 그 표에서만 보인다.
+  function 투표방식표(집계){
+    if(!집계) return '';
+    var 줄=[];
+    if(집계.전자투표) 줄.push(['전자투표',집계.전자투표]);
+    if(집계.방문투표) 줄.push(['방문투표',집계.방문투표]);
+    if(집계.합계) 줄.push(['합계',집계.합계]);
+    if(!줄.length) return '';
+    var h='<div style="overflow-x:auto"><table class="nt-table"><thead><tr><th>구분</th><th>투표수<br>(투표율)</th><th>찬성<br>(찬성률)</th><th>반대·무효</th></tr></thead><tbody>';
+    줄.forEach(function(p){
+      var k=p[0],v=p[1];
+      h+='<tr'+(k==='합계'?' style="font-weight:800"':'')+'><td>'+esc(k)+'</td>'+
+        '<td style="text-align:right">'+esc(String(v.투표수==null?'':v.투표수))+(v.투표율?' ('+esc(v.투표율)+')':'')+'</td>'+
+        '<td style="text-align:right">'+esc(String(v.찬성==null?'':v.찬성))+(v.찬성률?' ('+esc(v.찬성률)+')':'')+'</td>'+
+        '<td style="text-align:right">'+esc(String(v.반대무효==null?'':v.반대무효))+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    return h;
+  }
+  function 찬반카드(v){
+    var g=v.집계||{};
+    var 줄=[v.투표기간, (g.합계&&g.합계.투표율)?('투표율 '+g.합계.투표율):'', v.결과||''].filter(Boolean).join(' · ');
+    var 안=(v.요약?'<div class="nt-sum" style="margin:8px 0">'+esc(v.요약)+'</div>':'');
+    안+='<div class="nt-sum" style="margin:8px 0 4px">'+
+      (v.투표기간?'투표기간: '+esc(v.투표기간):'')+(v.공고일?' · 공고일: '+esc(v.공고일):'')+
+      (g.총세대수?'<br>총 세대수 '+esc(String(g.총세대수))+' · 선거인명부 등재자수 '+esc(String(g['선거인명부 등재자수'])):'')+
+      (v.근거?'<br><span class="small">결정 근거: '+esc(v.근거)+'</span>':'')+
+      (v.출처?'<br><span class="small">'+esc(v.출처)+'</span>':'')+'</div>';
+    안+=투표방식표(g);
+    if(v.메모&&v.메모.length) 안+='<div class="nt-note" style="margin:10px 0"><b>함께 볼 것</b><ul class="nt-facts" style="margin:6px 0 0">'+v.메모.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+    return '<details class="rl-art"><summary><b>'+esc(v.제목||'')+'</b> <span class="small">'+esc(줄)+'</span></summary>'+안+'</details>';
+  }
+  function 구성카드(c){
+    return '<details class="rl-art"><summary><b>선거관리위원회 구성 — '+esc(c.시기||'')+'</b> <span class="small">'+esc(c.위원||'')+'</span></summary>'+
+      '<div class="nt-sum" style="margin:8px 0">'+esc(c.위원||'')+(c.출처?'<br><span class="small">'+esc(c.출처)+'</span>':'')+'</div>'+
+      (c.메모?'<div class="small">'+esc(c.메모)+'</div>':'')+'</details>';
+  }
   function electionsHtml(){
     if(!st.elections) return '<div class="nt-empty">'+(st.electionsLoading?'선거 기록 불러오는 중…':'선거 기록이 없습니다.')+'</div>';
     var j=st.elections, h='<div class="rl-head"><div class="small">'+esc(j.note||'')+'</div></div>';
@@ -406,6 +444,14 @@ var Notices=(function(){
       선거.filter(function(e){return e.회차===t;}).forEach(function(e){ h+=선거카드(e); });
       (j.선관위원칙||[]).filter(function(p){return p.회차===t;}).forEach(function(p){ h+=원칙카드(p); });
     });
+    if((j.찬반투표||[]).length){
+      h+='<div class="rl-ch">단지 전체 찬반투표</div>';
+      j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
+    }
+    if((j.선관위구성||[]).length){
+      h+='<div class="rl-ch">선거관리위원회 구성</div>';
+      j.선관위구성.forEach(function(c){ h+=구성카드(c); });
+    }
     if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
     return h;
   }
