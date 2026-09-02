@@ -92,7 +92,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=10").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=11").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -247,7 +247,8 @@ var Notices=(function(){
   // 묶음 안의 계약 한 건. 접힌 줄에 연도·업체·금액만 두어, 펼치지 않고도 해마다 무엇이 달라졌는지 읽히게 한다.
   function 상대방(d){
     var p=(d.parties||[])[1]||'';
-    return p.replace(/\s*\((을|갑)\)\s*$/,'');
+    // 원문의 역할 표기(을·계약상대자·감사인·수임자…)는 이름 뒤에 붙은 꼬리표라 접힌 줄에서는 걷어낸다.
+    return p.replace(/\s*\([^()]{0,8}(자|인|처|방|을|갑)\)\s*$/,'');
   }
   // 계약기간이 오늘을 지났는가. 기간 문자열에서 마지막 날짜를 뽑아 본다 — 못 뽑으면 판단하지 않는다.
   function 만료(d){
@@ -256,10 +257,16 @@ var Notices=(function(){
     var 끝=m[m.length-1].replace(/\./g,'-');
     return 끝 < new Date().toISOString().slice(0,10);
   }
+  // 한 해에 두 건 이상인 묶음(보수공사 등)은 연도만으로 구분되지 않는다. 체결월까지 있으면 함께 쓴다.
+  function 카드이름(d){
+    var m=String(d.signed||'').match(/^(\d{4})-(\d{1,2})/);
+    if(m) return m[1]+'년 '+Number(m[2])+'월';
+    return d.year?String(d.year)+'년':(d.title||'');
+  }
   function 계약카드(d,현행){
     var n=contractDocClauses(d).length;
     var 줄=[상대방(d),d.amount||''].filter(Boolean).join(' · ');
-    return '<details class="rl-art" style="margin-left:10px"'+(현행?' open':'')+'><summary><b>'+esc(d.year?String(d.year)+'년':d.title)+'</b>'+
+    return '<details class="rl-art" style="margin-left:10px"'+(현행?' open':'')+'><summary><b>'+esc(카드이름(d))+'</b>'+
       (현행?' <span class="nt-badge o">현행</span>':'')+' <span class="small">'+esc(줄)+'</span></summary>'+
       '<div class="small" style="font-weight:800;margin:8px 0 0">'+esc(d.title||'')+'</div>'+
       contractDocMetaHtml(d)+(n?contractDocBodyHtml(d,''):'')+'</details>';
@@ -294,16 +301,22 @@ var Notices=(function(){
         var g정보=안내[g]||{};
         // 접힌 줄에 지금 누구와, 언제까지, 얼마에 맺고 있는지를 둔다. 히스토리는 그 아래에 접어 둔다.
         // 기간을 빼면 위·수탁관리계약 카드와 달리 "지금 유효한 계약인가"를 펼쳐야만 알 수 있다.
-        var 요약줄=[상대방(최신),최신.period,최신.amount].filter(Boolean).join(' · ');
+        var 공사머리=(안내[g]||{}).성격==='공사';
+        var 요약줄=[상대방(최신),공사머리?카드이름(최신):최신.period,최신.amount].filter(Boolean).join(' · ');
         var 안=(g정보.요약?'<div class="nt-sum" style="margin:8px 0">'+esc(g정보.요약)+'</div>':'');
-        안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지금 맺고 있는 계약</div>'+계약카드(최신,만료(최신)!==true);
+        // 이어지는 용역과 그때그때 맺는 공사는 읽는 법이 다르다.
+        // 공사 묶음에 「지금 맺고 있는 계약」이라고 쓰면 이미 끝난 공사를 현행처럼 보이게 한다.
+        var 공사=(g정보.성격==='공사');
+        안+='<div class="small" style="font-weight:800;margin:10px 0 2px">'+(공사?'가장 최근 공사':'지금 맺고 있는 계약')+'</div>'+
+          계약카드(최신,!공사&&만료(최신)!==true);
         if(g정보.살펴볼것&&g정보.살펴볼것.length)
-          안+='<div class="nt-note" style="margin:12px 0"><b>다음 계약 때 살펴볼 것</b><ul class="nt-facts" style="margin:6px 0 0">'+
+          안+='<div class="nt-note" style="margin:12px 0"><b>'+(공사?'다음 공사 때 살펴볼 것':'다음 계약 때 살펴볼 것')+'</b><ul class="nt-facts" style="margin:6px 0 0">'+
             g정보.살펴볼것.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
         if(지난.length)
-          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지난 계약 '+지난.length+'건 <span style="font-weight:400">— 기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.</span></div>'+
+          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">'+(공사?'이전 공사 ':'지난 계약 ')+지난.length+'건 <span style="font-weight:400">— '+
+            (공사?'끝난 공사입니다. 같은 곳을 다시 고치고 있지는 않은지 견주어 보는 용도입니다.':'기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.')+'</span></div>'+
             지난.map(function(d){return 계약카드(d,false);}).join('');
-        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · 계약 '+목록.length+'건'+(기간?'('+esc(기간)+')':'')+'</span></summary>'+안+'</details>';
+        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+'</span></summary>'+안+'</details>';
       }).join('');
       if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
       return h;
