@@ -457,6 +457,11 @@ var Notices=(function(){
   function electionsHtml(){
     if(!st.elections) return '<div class="nt-empty">'+(st.electionsLoading?'선거 기록 불러오는 중…':'선거 기록이 없습니다.')+'</div>';
     var j=st.elections, h='<div class="rl-head"><div class="small">'+esc(j.note||'')+'</div></div>';
+    // 기록을 늘어놓기만 하면 서로 어긋나는 대목이 보이지 않는다. 짚을 것을 맨 위에 세운다.
+    (j.짚을것||[]).forEach(function(p){
+      h+='<div class="nt-note" style="margin:10px 0 14px;border-color:#efb3ad;background:#fdf3f2"><b>★ '+esc(p.제목||'')+'</b>'+
+        '<ul class="nt-facts" style="margin:6px 0 0">'+(p.내용||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+    });
     h+=단지표(j.단지);
     var 선거=(j.선거||[]).slice();
     var 회차=[];
@@ -469,6 +474,15 @@ var Notices=(function(){
     if((j.찬반투표||[]).length){
       h+='<div class="rl-ch">단지 전체 찬반투표</div>';
       j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
+    }
+    if((j.선관위회의||[]).length){
+      h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
+      j.선관위회의.forEach(function(m){
+        h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
+          esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
+          '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
+          (m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
+      });
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
