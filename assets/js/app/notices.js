@@ -92,7 +92,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=2").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=3").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -231,6 +231,7 @@ var Notices=(function(){
   function contractDocMetaHtml(d){
     var h='<div class="nt-sum" style="margin:8px 0 4px"><b>'+esc(d.type||'계약')+'</b>'+(d.parties&&d.parties.length?' · '+esc(d.parties.join(' ↔ ')):'')+
       (d.signed?'<br>체결일: '+esc(d.signed):'')+(d.period?' · 기간: '+esc(d.period):'')+
+      (d.amount?'<br>금액: '+esc(d.amount):'')+
       (d.source?'<br><span class="small">'+esc(d.source)+'</span>':'')+'</div>';
     if(d.deal&&d.deal.length) h+='<div class="nt-note" style="margin:8px 0"><b>체결 정보</b><ul class="nt-facts" style="margin:6px 0 0">'+d.deal.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
     if(d.sourceNote) h+='<div class="small" style="margin:6px 0 10px">※ '+esc(d.sourceNote)+'</div>';
@@ -243,17 +244,65 @@ var Notices=(function(){
       return (head?'<div class="rl-ch">'+esc(head)+'</div>':'')+(ch.clauses||[]).map(function(c){return contractClauseHtml(c,q,false);}).join('');
     }).join('');
   }
+  // 묶음 안의 계약 한 건. 접힌 줄에 연도·업체·금액만 두어, 펼치지 않고도 해마다 무엇이 달라졌는지 읽히게 한다.
+  function 상대방(d){
+    var p=(d.parties||[])[1]||'';
+    return p.replace(/\s*\((을|갑)\)\s*$/,'');
+  }
+  // 계약기간이 오늘을 지났는가. 기간 문자열에서 마지막 날짜를 뽑아 본다 — 못 뽑으면 판단하지 않는다.
+  function 만료(d){
+    var m=String(d.period||'').match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/g);
+    if(!m||!m.length) return null;
+    var 끝=m[m.length-1].replace(/\./g,'-');
+    return 끝 < new Date().toISOString().slice(0,10);
+  }
+  function 계약카드(d,현행){
+    var n=contractDocClauses(d).length;
+    var 줄=[상대방(d),d.amount||''].filter(Boolean).join(' · ');
+    return '<details class="rl-art" style="margin-left:10px"'+(현행?' open':'')+'><summary><b>'+esc(d.year?String(d.year)+'년':d.title)+'</b>'+
+      (현행?' <span class="nt-badge o">현행</span>':'')+' <span class="small">'+esc(줄)+'</span></summary>'+
+      '<div class="small" style="font-weight:800;margin:8px 0 0">'+esc(d.title||'')+'</div>'+
+      contractDocMetaHtml(d)+(n?contractDocBodyHtml(d,''):'')+'</details>';
+  }
   function contractsHtml(){
     if(!st.contracts) return '<div class="nt-empty">'+(st.contractsLoading?'계약·기준문서 불러오는 중…':'계약·기준문서가 없습니다.')+'</div>';
     var q=st.cq.trim(),h='<div class="rl-head"><input id="contractSearch" class="rl-search" placeholder="모든 계약·기준문서 검색 (예: 계약해지, 위탁관리수수료, 감사, 보고)" value="'+esc(st.cq)+'" oninput="Notices.contractSearch(this.value)">';
     h+='<div class="small" style="margin-top:4px">'+esc(st.contracts.note||'')+'</div></div>';
     var items=st.contracts.items||[];
     if(!q){
-      // 검색어 없으면: 문서 제목 카드만(접힘) — 펼쳐야 조문이 보인다.
-      h+=items.map(function(d){
+      // 검색어 없으면: 접힌 카드만 — 펼쳐야 안이 보인다.
+      // group이 있는 계약은 항목별로 한 카드에 모은다. 저수조 청소처럼 해마다 다시 맺는 계약은
+      // 낱개로 늘어놓으면 90건이 평평하게 쌓여 읽히지 않고, 정작 볼 것(업체·금액이 해마다 어떻게
+      // 달라졌는가)이 보이지 않기 때문이다. group이 없는 문서(위·수탁관리계약 등)는 그대로 낱개다.
+      var 낱개=[],묶음=[],표={};
+      items.forEach(function(d){
+        if(!d.group){낱개.push(d);return;}
+        if(!표[d.group]){표[d.group]=[];묶음.push(d.group);}
+        표[d.group].push(d);
+      });
+      h+=낱개.map(function(d){
         var n=contractDocClauses(d).length;
         return '<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건</span></summary>'+
           contractDocMetaHtml(d)+contractDocBodyHtml(d,'')+'</details>';
+      }).join('');
+      var 안내=(st.contracts.groups)||{};
+      h+=묶음.map(function(g){
+        var 목록=표[g].slice().sort(function(a,b){return (b.year||0)-(a.year||0);});
+        var 최신=목록[0],지난=목록.slice(1);
+        var 해=목록.map(function(d){return d.year;}).filter(Boolean);
+        var 기간=해.length?(해[해.length-1]===해[0]?String(해[0]):해[해.length-1]+'~'+해[0]):'';
+        var g정보=안내[g]||{};
+        // 접힌 줄에 지금 누구와 얼마에 맺고 있는지를 둔다. 히스토리는 그 아래에 접어 둔다.
+        var 요약줄=[상대방(최신),최신.amount].filter(Boolean).join(' · ');
+        var 안=(g정보.요약?'<div class="nt-sum" style="margin:8px 0">'+esc(g정보.요약)+'</div>':'');
+        안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지금 맺고 있는 계약</div>'+계약카드(최신,만료(최신)!==true);
+        if(g정보.살펴볼것&&g정보.살펴볼것.length)
+          안+='<div class="nt-note" style="margin:12px 0"><b>다음 계약 때 살펴볼 것</b><ul class="nt-facts" style="margin:6px 0 0">'+
+            g정보.살펴볼것.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+        if(지난.length)
+          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지난 계약 '+지난.length+'건 <span style="font-weight:400">— 기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.</span></div>'+
+            지난.map(function(d){return 계약카드(d,false);}).join('');
+        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · 계약 '+목록.length+'건'+(기간?' · '+esc(기간):'')+'</span></summary>'+안+'</details>';
       }).join('');
       if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
       return h;
@@ -261,11 +310,12 @@ var Notices=(function(){
     var total=0,body='';
     items.forEach(function(d){
       var clauses=contractDocClauses(d).filter(function(c){return contractHay(c).indexOf(q.toLowerCase())>=0;});
-      var docHit=[d.title,d.type,d.period,(d.tags||[]).join(' '),(d.deal||[]).join(' ')].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0;
+      var docHit=[d.title,d.type,d.group,d.amount,d.period,(d.parties||[]).join(' '),(d.tags||[]).join(' '),(d.deal||[]).join(' ')].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0;
       if(!clauses.length&&!docHit) return;
       total+=clauses.length;
       body+='<div class="rl-doc-h">'+hl(d.title,q)+' <span class="small">'+esc(d.period||'')+(clauses.length?' — '+clauses.length+'건':'')+'</span></div>';
-      if(!clauses.length) body+='<div class="nt-empty" style="padding:10px">문서 기본정보에 검색어가 있습니다. 조문에는 일치하는 곳이 없습니다.</div>';
+      // 조문이 없는 계약(개별 계약 카드)은 조문 대신 체결 정보를 보여준다 — 볼 것이 거기에 있다.
+      if(!clauses.length) body+=(contractDocClauses(d).length?'<div class="nt-empty" style="padding:10px">문서 기본정보에 검색어가 있습니다. 조문에는 일치하는 곳이 없습니다.</div>':contractDocMetaHtml(d));
       else body+=clauses.map(function(c){return contractClauseHtml(c,q,true);}).join('');
     });
     h+='<div class="rl-count">"'+esc(q)+'" 검색 결과 '+total+'개 조문 — 일치하는 조문만 표시(펼침)</div>'+body;
