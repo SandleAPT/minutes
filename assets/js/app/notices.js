@@ -386,7 +386,27 @@ var Notices=(function(){
       h+='<tr><td>'+esc(String(r.동))+'</td><td style="text-align:right">'+esc(String(r.전체))+'</td><td style="text-align:right">'+(r.LH임대?esc(String(r.LH임대)):'—')+'</td><td style="text-align:right">'+esc(String(r.분양))+'</td></tr>';
     });
     h+='<tr style="font-weight:800"><td>합계</td><td style="text-align:right">'+esc(String(d.총세대))+'</td><td style="text-align:right">'+esc(String(d.LH임대))+'</td><td style="text-align:right">'+esc(String(d.분양))+'</td></tr>';
-    h+='</tbody></table></div></details>';
+    h+='</tbody></table></div>';
+    var 점검=d.임차6기중임점검;
+    if(점검&&점검.대상&&점검.대상.length){
+      h+='<div class="nt-note" style="margin:12px 0 2px"><b>임차 6기 중임 제한 대상 — 반드시 확인할 것</b>'+
+        '<div style="margin-top:6px">'+esc(점검.설명||'')+'</div>'+
+        (점검.규약?'<div class="small" style="margin-top:5px">근거: '+esc(점검.규약)+'</div>':'')+
+        '<div style="overflow-x:auto;margin-top:8px"><table class="nt-table"><thead><tr><th>대상자</th><th>선거구</th><th>재임 기록</th><th>현재 분포상<br>임차인 수</th><th>현재 분포상<br>최소 찬성표</th><th>확인 상태</th></tr></thead><tbody>';
+      점검.대상.forEach(function(r){
+        var 동현황=d.동별.filter(function(x){return Number(x.동)===Number(r.동);})[0];
+        var 임차인수=동현황?Number(동현황.LH임대||0):0;
+        var 최소찬성=임차인수?Math.ceil(임차인수/2):'';
+        h+='<tr><td>'+esc(r.성명||'')+'</td><td>'+esc((r.선거구||'')+' ('+r.동+'동)')+'</td><td>'+esc(r.재임||'')+'</td>'+
+          '<td style="text-align:right">'+(임차인수?esc(String(임차인수)):'—')+'</td>'+
+          '<td style="text-align:right;font-weight:800">'+(최소찬성?esc(String(최소찬성))+'표 이상':'—')+'</td>'+
+          '<td><span class="nt-badge" style="background:#fff3d6;color:#805b00">선거 당시 수치 확인 필요</span></td></tr>';
+      });
+      h+='</tbody></table></div>'+
+        (점검.확인?'<div style="margin-top:8px"><b>확인 방법:</b> '+esc(점검.확인)+'</div>':'')+
+        (점검.분포주의?'<div class="small" style="margin-top:5px">※ '+esc(점검.분포주의)+'</div>':'')+'</div>';
+    }
+    h+='</details>';
     return h;
   }
   function 원칙카드(p){
@@ -625,7 +645,7 @@ var Notices=(function(){
           '3기 선거 공고류는 현재 확보된 공개 기록에서 확인되지 않습니다. 3기 선거는 당시 적용 규약과 선관위 원본기록을 함께 확인해야 합니다.'
         ],
         rules:(c.rules||[]), evidence:c.evidence,
-        question:'각 대상 선거구별로 ① 두 차례 공고의 후보자 등록 결과, ② 중임자가 등록한 후속 공고, ③ 비중임 후보 등록 여부, ④ 선거구 임차인 총수와 찬성표를 선관위 원본기록 또는 전자투표 집계로 대조해야 합니다. 이 자료가 확인되기 전에는 당선 무효나 규약 위반으로 단정하지 않습니다.',
+        question:'각 대상 선거구별로 ① 두 차례 공고의 후보자 등록 결과, ② 중임자가 등록한 후속 공고, ③ 비중임 후보 등록 여부, ④ 선거 당시 선거인명부의 해당 선거구 전체 임차인 수, ⑤ 찬성표가 그 전체 임차인 수의 2분의 1 이상인지 선관위 원본기록 또는 전자투표 집계로 대조해야 합니다. 투표자 과반수 찬성만으로는 부족합니다. 이 자료가 확인되기 전에는 당선 무효나 규약 위반으로 단정하지 않습니다.',
         next:'관리주체에 대상 선거별 후보등록부·개표결과·전자투표 집계와 당시 적용 규약을 확인해 달라고 요청', related:c.related
       };
     }
