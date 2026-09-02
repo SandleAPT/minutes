@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=4").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=5").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -457,11 +457,13 @@ var Notices=(function(){
   function electionsHtml(){
     if(!st.elections) return '<div class="nt-empty">'+(st.electionsLoading?'선거 기록 불러오는 중…':'선거 기록이 없습니다.')+'</div>';
     var j=st.elections, h='<div class="rl-head"><div class="small">'+esc(j.note||'')+'</div></div>';
-    // 기록을 늘어놓기만 하면 서로 어긋나는 대목이 보이지 않는다. 짚을 것을 맨 위에 세운다.
-    (j.짚을것||[]).forEach(function(p){
-      h+='<div class="nt-note" style="margin:10px 0 14px;border-color:#efb3ad;background:#fdf3f2"><b>★ '+esc(p.제목||'')+'</b>'+
-        '<ul class="nt-facts" style="margin:6px 0 0">'+(p.내용||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
-    });
+    /* 기록을 읽기 전에 알아 두면 좋은 것을 맨 위에 짧게 둔다.
+     * 전에는 붉은 상자에 ★를 달아 두었는데, 사용자 지적(2026-09-03)대로 그러면 지난 일을
+     * 잘못이라고 가리키는 것처럼 읽힌다. 방식이 바뀌었다는 사실만 담담하게 적는다.
+     * 자세한 숫자는 각 투표 카드에 그대로 있으므로 여기서 되풀이하지 않는다. */
+    if((j.읽기전에||[]).length)
+      h+='<div class="nt-sum" style="margin:10px 0 14px"><b>이 기록을 읽기 전에</b>'+
+        '<ul class="nt-facts" style="margin:6px 0 0">'+j.읽기전에.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
     h+=단지표(j.단지);
     var 선거=(j.선거||[]).slice();
     var 회차=[];
