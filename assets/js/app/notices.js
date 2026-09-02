@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=10").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=11").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -475,7 +475,7 @@ var Notices=(function(){
     });
     if((j.찬반투표||[]).length){
       h+='<div class="rl-ch">단지 전체 찬반투표</div>';
-      j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
+      j.찬반투표.slice().sort(function(a,b){return String(b.공고일).localeCompare(String(a.공고일));}).forEach(function(v){ h+=찬반카드(v); });
     }
     if((j.선관위회의||[]).length){
       h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
