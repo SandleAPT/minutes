@@ -92,7 +92,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=14").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=15").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -349,6 +349,11 @@ var Notices=(function(){
         var 공사=(g정보.성격==='공사');
         안+='<div class="small" style="font-weight:800;margin:10px 0 2px">'+(공사?'가장 최근 공사':'지금 맺고 있는 계약')+'</div>'+
           계약카드(최신,!공사&&만료(최신)!==true);
+        // 「확인 필요」는 살펴볼 것과 성격이 다르다 — 계약서와 실제가 어긋나 보이는 지점이라
+        // 다음 계약을 기다릴 일이 아니라 지금 물어봐야 하는 것이다. 그래서 위에 따로, 눈에 띄게 둔다.
+        if(g정보.확인필요&&g정보.확인필요.length)
+          안+='<div class="nt-note" style="margin:12px 0;border-color:#efb3ad;background:#fdf3f2"><b>★ 확인이 필요한 것</b><ul class="nt-facts" style="margin:6px 0 0">'+
+            g정보.확인필요.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
         if(g정보.살펴볼것&&g정보.살펴볼것.length)
           안+='<div class="nt-note" style="margin:12px 0"><b>'+(공사?'다음 공사 때 살펴볼 것':'다음 계약 때 살펴볼 것')+'</b><ul class="nt-facts" style="margin:6px 0 0">'+
             g정보.살펴볼것.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
@@ -359,8 +364,17 @@ var Notices=(function(){
         // 성격이 붙은 묶음(공사·연례)은 '만기'라는 것이 없으므로 남은 기간을 세지 않는다.
         var 만기=g정보.성격?'':끝날(최신);
         카드.push({이름:g, 끝:만기, 성격:g정보.성격||'',
-          html:'<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+남은기간(만기)+'</span></summary>'+안+'</details>'});
+          확인:(g정보.확인필요||[]),
+          html:'<details class="rl-art"><summary><b>'+esc(g)+'</b>'+(g정보.확인필요&&g정보.확인필요.length?' <span class="nt-badge" style="background:#fdf3f2;color:#a4443c">★ 확인 필요</span>':'')+
+            ' <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+남은기간(만기)+'</span></summary>'+안+'</details>'});
       });
+      // 확인이 필요한 것은 묶음을 펼쳐야 보인다. 그러면 놓치므로 맨 위에 모아 한 번 더 보여준다.
+      var 확인목록=카드.filter(function(c){return c.확인&&c.확인.length;});
+      if(확인목록.length)
+        h+='<div class="nt-note" style="margin:10px 0 14px;border-color:#efb3ad;background:#fdf3f2"><b>★ 확인이 필요한 것</b>'+
+          '<ul class="nt-facts" style="margin:6px 0 0">'+확인목록.map(function(c){
+            return c.확인.map(function(x){return '<li><b>'+esc(c.이름)+'</b> — '+esc(x)+'</li>';}).join('');
+          }).join('')+'</ul></div>';
       h+=만기순으로(카드);
       if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
       return h;
