@@ -387,25 +387,6 @@ var Notices=(function(){
     });
     h+='<tr style="font-weight:800"><td>합계</td><td style="text-align:right">'+esc(String(d.총세대))+'</td><td style="text-align:right">'+esc(String(d.LH임대))+'</td><td style="text-align:right">'+esc(String(d.분양))+'</td></tr>';
     h+='</tbody></table></div>';
-    var 점검=d.임차6기중임점검;
-    if(점검&&점검.대상&&점검.대상.length){
-      h+='<div class="nt-note" style="margin:12px 0 2px"><b>임차 6기 중임 제한 대상 — 반드시 확인할 것</b>'+
-        '<div style="margin-top:6px">'+esc(점검.설명||'')+'</div>'+
-        (점검.규약?'<div class="small" style="margin-top:5px">근거: '+esc(점검.규약)+'</div>':'')+
-        '<div style="overflow-x:auto;margin-top:8px"><table class="nt-table"><thead><tr><th>대상자</th><th>선거구</th><th>재임 기록</th><th>현재 분포상<br>임차인 수</th><th>현재 분포상<br>최소 찬성표</th><th>확인 상태</th></tr></thead><tbody>';
-      점검.대상.forEach(function(r){
-        var 동현황=d.동별.filter(function(x){return Number(x.동)===Number(r.동);})[0];
-        var 임차인수=동현황?Number(동현황.LH임대||0):0;
-        var 최소찬성=임차인수?Math.ceil(임차인수/2):'';
-        h+='<tr><td>'+esc(r.성명||'')+'</td><td>'+esc((r.선거구||'')+' ('+r.동+'동)')+'</td><td>'+esc(r.재임||'')+'</td>'+
-          '<td style="text-align:right">'+(임차인수?esc(String(임차인수)):'—')+'</td>'+
-          '<td style="text-align:right;font-weight:800">'+(최소찬성?esc(String(최소찬성))+'표 이상':'—')+'</td>'+
-          '<td><span class="nt-badge" style="background:#fff3d6;color:#805b00">선거 당시 수치 확인 필요</span></td></tr>';
-      });
-      h+='</tbody></table></div>'+
-        (점검.확인?'<div style="margin-top:8px"><b>확인 방법:</b> '+esc(점검.확인)+'</div>':'')+
-        (점검.분포주의?'<div class="small" style="margin-top:5px">※ '+esc(점검.분포주의)+'</div>':'')+'</div>';
-    }
     h+='</details>';
     return h;
   }
@@ -635,16 +616,18 @@ var Notices=(function(){
     if(c.id==='c_term_limit'){
       return {
         id:c.id, status:'확인중', statusDetail:'예외 요건 확인자료 필요', severity:'medium', category:'규약 대조', updatedAt:c.updatedAt,
-        title:'3회 이상 재임한 동별 대표자 — 중임 예외 절차 확인 필요',
-        summary:'4~6기 공개 공고만으로는 중임 예외 요건을 충족했는지 판단할 수 없습니다. 중임 자체가 곧 위반을 뜻하는 것은 아니지만, 예외 선출이었다면 필요한 공고·후보등록·찬성표 기록을 확인해야 합니다.',
+        title:'임차 6기 중임 제한 대상 — 반드시 확인할 것',
+        summary:'제6기 당선인 중 진세택·원영해·강명순은 정리된 재임 기록상 중임 제한을 넘긴 대상으로 보입니다. 예외 선출이었다면 선행 공고 요건과 함께 해당 선거구 전체 임차인의 2분의 1 이상 찬성을 받았는지 확인해야 합니다. 투표자 과반수 찬성만으로는 부족합니다.',
         facts:[
           '현재 정리된 기수 기록상 진세택(1~6기), 한경열(2~5기), 원영해(3~6기), 강명순(4기 보궐~6기)은 3회 이상 재임한 것으로 나타납니다.',
+          '제6기 당선인 중 확인 대상은 진세택(제2선거구·203동), 원영해(제5선거구·210동), 강명순(제9선거구·216동)입니다.',
+          '2026.8.19 임대세대 분포를 단순 참고하면 203동은 31명 중 16표 이상, 210동은 27명 중 14표 이상, 216동은 28명 중 14표 이상입니다. 다만 이 자료는 2025.12.24 선거 뒤 자료이므로 충족 여부를 확정하는 수치가 아닙니다.',
           '강명순의 4기 보궐 임기는 약 18개월로, 2020.4.18 규약 제16조제5항의 ‘6개월 미만’ 예외에는 해당하지 않습니다.',
           '확보된 4기·4기 보궐·5기·6기 당선인 공고에는 득표수·투표수·찬성수는 기재되어 있지 않습니다.',
           '4기와 5기는 1·2차 공고의 무입후보 사실이 공고에서 확인되지만, 6기는 차수별 후보 등록 결과가 공개 공고에서 확인되지 않습니다.',
           '3기 선거 공고류는 현재 확보된 공개 기록에서 확인되지 않습니다. 3기 선거는 당시 적용 규약과 선관위 원본기록을 함께 확인해야 합니다.'
         ],
-        rules:(c.rules||[]), evidence:c.evidence,
+        rules:(c.rules||[]).map(function(r){return r.ref+(r.text?': '+r.text:'')+(r.verified===false?' (원문 대조 전)':'');}), evidence:c.evidence,
         question:'각 대상 선거구별로 ① 두 차례 공고의 후보자 등록 결과, ② 중임자가 등록한 후속 공고, ③ 비중임 후보 등록 여부, ④ 선거 당시 선거인명부의 해당 선거구 전체 임차인 수, ⑤ 찬성표가 그 전체 임차인 수의 2분의 1 이상인지 선관위 원본기록 또는 전자투표 집계로 대조해야 합니다. 투표자 과반수 찬성만으로는 부족합니다. 이 자료가 확인되기 전에는 당선 무효나 규약 위반으로 단정하지 않습니다.',
         next:'관리주체에 대상 선거별 후보등록부·개표결과·전자투표 집계와 당시 적용 규약을 확인해 달라고 요청', related:c.related
       };
