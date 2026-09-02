@@ -10,8 +10,8 @@ var Notices=(function(){
   var TOKEN="ITDXaUBDTmrz6DbQ3tv9R";
   var CACHE="sandle_notices_cache_v1";
   var st={
-    notices:null,checks:null,rulesDocs:{},contracts:null,investigations:null,
-    doc:"all",loading:false,contractsLoading:false,investigationsLoading:false,
+    notices:null,checks:null,rulesDocs:{},contracts:null,investigations:null,elections:null,
+    doc:"all",loading:false,contractsLoading:false,investigationsLoading:false,electionsLoading:false,
     err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",cq:"",checkFilter:"전체",
     unlocked:false,verifying:false
   };
@@ -92,9 +92,16 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=23").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=24").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
+  }
+  function loadElections(){
+    if(st.elections||st.electionsLoading) return;
+    st.electionsLoading=true;
+    fetch("elections.json?v=1").then(function(r){return r.json()}).then(function(j){
+      st.electionsLoading=false;st.elections=j;draw();
+    }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
   function loadInvestigations(){
     if(st.investigations||st.investigationsLoading) return;
@@ -323,6 +330,84 @@ var Notices=(function(){
       (현행?' <span class="nt-badge o">현행</span>':'')+' <span class="small">'+esc(줄)+'</span></summary>'+
       '<div class="small" style="font-weight:800;margin:8px 0 0">'+esc(d.title||'')+'</div>'+
       contractDocMetaHtml(d)+(n?contractDocBodyHtml(d,''):'')+'</details>';
+  }
+  /* ── 선거·선관위 ────────────────────────────────────────────────────────────
+   * 동별 대표자 명단 자체는 회의록의 명단 기록(roster_history)에 이미 있다. 여기서 값어치가 있는 것은
+   * 명단이 아니라 **선거가 어떻게 치러졌는가** — 몇 세대가 대상이었고, 몇이 투표했고, 어디가 왜 부결되었는가다.
+   * 공고에 적힌 숫자만 싣고, 동호수는 싣지 않는다.
+   */
+  function 판정배지(p){
+    if(p==='가결') return '<span class="nt-badge o">가결</span>';
+    if(p==='부결') return '<span class="nt-badge" style="background:#fdf3f2;color:#a4443c">부결</span>';
+    if(p==='후보 없음') return '<span class="nt-badge">후보 없음</span>';
+    return p?esc(p):'';
+  }
+  function 선거표(rows){
+    if(!rows||!rows.length) return '';
+    var h='<div style="overflow-x:auto"><table class="nt-table"><thead><tr>'+
+      '<th>선거구</th><th>당선인</th><th>대상<br>세대</th><th>투표수<br>(투표율)</th><th>찬성<br>(찬성률)</th><th>반대·무효</th><th>판정</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var 없음=(r.판정==='후보 없음');
+      h+='<tr'+(r.판정==='부결'?' style="background:#fdf3f2"':'')+'>'+
+        '<td>'+esc(r.선거구||'')+'</td>'+
+        '<td>'+(r.당선인?esc(r.당선인):'—')+'</td>'+
+        '<td style="text-align:right">'+(없음?'—':esc(String(r.대상세대==null?'':r.대상세대)))+'</td>'+
+        '<td style="text-align:right">'+(없음?'—':esc(String(r.투표수==null?'':r.투표수))+(r.투표율?' ('+esc(r.투표율)+')':''))+'</td>'+
+        '<td style="text-align:right">'+(없음?'—':esc(String(r.찬성==null?'':r.찬성))+(r.찬성률?' ('+esc(r.찬성률)+')':''))+'</td>'+
+        '<td style="text-align:right">'+(없음?'—':esc(String(r.반대무효==null?'':r.반대무효)))+'</td>'+
+        '<td>'+판정배지(r.판정)+'</td></tr>';
+      if(r.비고) h+='<tr><td colspan="7" class="small" style="color:#6b6656;padding-top:0">↳ '+esc(r.비고)+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    return h;
+  }
+  function 선거카드(e){
+    var 부결=(e.결과||[]).filter(function(r){return r.판정==='부결';}).length;
+    var 없음=(e.결과||[]).filter(function(r){return r.판정==='후보 없음';}).length;
+    var 가결=(e.결과||[]).filter(function(r){return r.판정==='가결';}).length;
+    var 줄=[e.투표기간, 가결?('가결 '+가결+'개 선거구'):'', 부결?('부결 '+부결):'', 없음?('후보 없음 '+없음):''].filter(Boolean).join(' · ');
+    var 안=(e.요약?'<div class="nt-sum" style="margin:8px 0">'+esc(e.요약)+'</div>':'');
+    안+='<div class="nt-sum" style="margin:8px 0 4px"><b>'+esc(e.회의체||'')+'</b>'+
+      (e.투표기간?'<br>투표기간: '+esc(e.투표기간):'')+(e.공고일?' · 공고일: '+esc(e.공고일):'')+
+      (e.임기?'<br>임기: '+esc(e.임기):'')+
+      (e.근거?'<br><span class="small">당선인 결정 근거: '+esc(e.근거)+'</span>':'')+
+      (e.출처?'<br><span class="small">'+esc(e.출처)+'</span>':'')+'</div>';
+    안+=선거표(e.결과);
+    if(e.합계) 안+='<div class="small" style="margin:6px 0">합계 — 대상세대 '+esc(String(e.합계.대상세대))+' · 투표수 '+esc(String(e.합계.투표수))+' · 찬성 '+esc(String(e.합계.찬성))+' · 반대 '+esc(String(e.합계.반대))+'</div>';
+    if(e.메모&&e.메모.length) 안+='<div class="nt-note" style="margin:10px 0"><b>공고에 함께 적힌 것</b><ul class="nt-facts" style="margin:6px 0 0">'+e.메모.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
+    return '<details class="rl-art"'+(부결?'':' ')+'><summary><b>'+esc(e.제목||'')+'</b> <span class="small">'+esc(줄)+'</span></summary>'+안+'</details>';
+  }
+  function 단지표(d){
+    if(!d||!d.동별||!d.동별.length) return '';
+    var h='<details class="rl-art"><summary><b>단지 구성 — 분양 '+esc(String(d.분양))+'세대 · LH 임대 '+esc(String(d.LH임대))+'세대</b> <span class="small">총 '+esc(String(d.총세대))+'세대</span></summary>';
+    if(d.설명) h+='<div class="nt-sum" style="margin:8px 0">'+esc(d.설명)+'</div>';
+    h+='<div style="overflow-x:auto"><table class="nt-table"><thead><tr><th>동</th><th>전체 세대</th><th>LH 임대</th><th>분양</th></tr></thead><tbody>';
+    d.동별.forEach(function(r){
+      h+='<tr><td>'+esc(String(r.동))+'</td><td style="text-align:right">'+esc(String(r.전체))+'</td><td style="text-align:right">'+(r.LH임대?esc(String(r.LH임대)):'—')+'</td><td style="text-align:right">'+esc(String(r.분양))+'</td></tr>';
+    });
+    h+='<tr style="font-weight:800"><td>합계</td><td style="text-align:right">'+esc(String(d.총세대))+'</td><td style="text-align:right">'+esc(String(d.LH임대))+'</td><td style="text-align:right">'+esc(String(d.분양))+'</td></tr>';
+    h+='</tbody></table></div></details>';
+    return h;
+  }
+  function 원칙카드(p){
+    return '<details class="rl-art"><summary><b>'+esc(p.제목||'')+'</b> <span class="small">'+esc(p.회차||'')+' · '+esc(p.날짜||'')+'</span></summary>'+
+      '<ul class="nt-facts" style="margin:8px 0">'+(p.항목||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
+      (p.출처?'<div class="small">'+esc(p.출처)+'</div>':'')+'</details>';
+  }
+  function electionsHtml(){
+    if(!st.elections) return '<div class="nt-empty">'+(st.electionsLoading?'선거 기록 불러오는 중…':'선거 기록이 없습니다.')+'</div>';
+    var j=st.elections, h='<div class="rl-head"><div class="small">'+esc(j.note||'')+'</div></div>';
+    h+=단지표(j.단지);
+    var 선거=(j.선거||[]).slice();
+    var 회차=[];
+    선거.forEach(function(e){ if(회차.indexOf(e.회차)<0) 회차.push(e.회차); });
+    회차.forEach(function(t){
+      h+='<div class="rl-ch">'+esc(t)+'</div>';
+      선거.filter(function(e){return e.회차===t;}).forEach(function(e){ h+=선거카드(e); });
+      (j.선관위원칙||[]).filter(function(p){return p.회차===t;}).forEach(function(p){ h+=원칙카드(p); });
+    });
+    if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
+    return h;
   }
   function contractsHtml(){
     if(!st.contracts) return '<div class="nt-empty">'+(st.contractsLoading?'계약·기준문서 불러오는 중…':'계약·기준문서가 없습니다.')+'</div>';
@@ -559,11 +644,13 @@ var Notices=(function(){
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
       '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
+      '<button type="button" class="btn'+(st.sub==='elections'?' gold':'')+'" onclick="Notices.sub(\'elections\')">선거·선관위</button>'+
       '<button type="button" class="btn'+(st.sub==='notices'?' gold':'')+'" onclick="Notices.sub(\'notices\')">공고·안내 🔒'+(!locked()&&st.notices?' ('+st.notices.items.length+')':'')+'</button>'+
       '<button type="button" class="btn'+(st.sub==='checks'?' gold':'')+'" onclick="Notices.sub(\'checks\')">절차 점검 🔒'+(!locked()&&checkCount?' ('+checkCount+')':'')+'</button></div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==='rules'){box.innerHTML=h+rulesHtml();return;}
     if(st.sub==='contracts'){box.innerHTML=h+contractsHtml();if(!st.contracts&&!st.contractsLoading)loadContracts();return;}
+    if(st.sub==='elections'){box.innerHTML=h+electionsHtml();if(!st.elections&&!st.electionsLoading)loadElections();return;}
     if(locked()){box.innerHTML=h+lockHtml();return;}
     if(st.sub==='notices'){
       if(!st.notices){h+='<div class="nt-empty">'+(st.loading?'불러오는 중…':'기록이 없습니다.')+'</div>';box.innerHTML=h;if(!st.loading)load();return;}
@@ -586,13 +673,13 @@ var Notices=(function(){
   }
 
   return {
-    render:function(){draw();if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();},
+    render:function(){draw();if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks')loadInvestigations();},
     reload:function(){
-      st.notices=null;st.checks=null;st.rulesDocs={};st.contracts=null;st.investigations=null;st.err='';
-      if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();else if(!locked())load();
+      st.notices=null;st.checks=null;st.rulesDocs={};st.contracts=null;st.investigations=null;st.elections=null;st.err='';
+      if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks')loadInvestigations();else if(!locked())load();
       draw();
     },
-    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='checks'){loadInvestigations();if(!locked()&&!st.checks)load();}else if(!locked()&&!st.notices)load();},
+    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='elections')loadElections();else if(s==='checks'){loadInvestigations();if(!locked()&&!st.checks)load();}else if(!locked()&&!st.notices)load();},
     fBody:function(b){st.fBody=b;draw();},
     doc:function(d){st.doc=d;draw();loadRules();},
     fKind:function(k){st.fKind=k;draw();},

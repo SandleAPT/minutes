@@ -525,6 +525,10 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .nt-head{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
 .nt-date{font-size:12px;color:#8a857a;font-weight:700}
 .nt-badge{font-size:11px;font-weight:700;border-radius:99px;padding:2px 9px;background:#f2eee5;color:#6b6656}
+/* 선거 결과표 — 좁은 화면에서는 표만 가로로 밀린다(본문은 밀리지 않게 감싸는 쪽에서 overflow-x) */
+.nt-table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+.nt-table th,.nt-table td{border:1px solid #e6e0d4;padding:5px 8px;vertical-align:middle}
+.nt-table thead th{background:#f7f4ec;font-weight:800;font-size:12px;white-space:nowrap}
 .nt-badge.t{background:#e3eef5;color:#2f5f80}
 .nt-badge.e{background:#efe6f5;color:#6d4b8a}
 .nt-badge.o{background:#e8efe5;color:#3c6134}
