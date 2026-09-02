@@ -92,7 +92,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=13").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=14").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -248,14 +248,51 @@ var Notices=(function(){
   function 상대방(d){
     var p=(d.parties||[])[1]||'';
     // 원문의 역할 표기(을·계약상대자·감사인·수임자…)는 이름 뒤에 붙은 꼬리표라 접힌 줄에서는 걷어낸다.
-    return p.replace(/\s*\([^()]{0,8}(자|인|처|방|을|갑)\)\s*$/,'');
+    return p.replace(/\s*\([^()]{0,8}(자|인|처|방|사|을|갑)\)\s*$/,'');
   }
-  // 계약기간이 오늘을 지났는가. 기간 문자열에서 마지막 날짜를 뽑아 본다 — 못 뽑으면 판단하지 않는다.
-  function 만료(d){
-    var m=String(d.period||'').match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/g);
-    if(!m||!m.length) return null;
-    var 끝=m[m.length-1].replace(/\./g,'-');
-    return 끝 < new Date().toISOString().slice(0,10);
+  // 계약이 끝나는 날. 기간 문자열에서 마지막 날짜를 뽑는다 — 못 뽑으면 빈 문자열(판단하지 않음).
+  function 끝날(d){
+    var m=String(d&&d.period||'').match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/g);
+    if(!m||!m.length) return '';
+    return m[m.length-1].replace(/\./g,'-').replace(/-(\d)(?=-|$)/g,'-0$1');
+  }
+  function 오늘(){return new Date().toISOString().slice(0,10);}
+  function 만료(d){var e=끝날(d);return e?(e<오늘()):null;}
+  // 만기가 코앞인 계약은 접힌 줄에서 바로 보여야 한다. 재계약 준비를 놓치는 것이 이 화면이 막을 일이다.
+  function 남은기간(끝){
+    if(!끝) return '';
+    var 일=Math.round((new Date(끝+'T00:00:00')-new Date(오늘()+'T00:00:00'))/86400000);
+    if(일<0) return ' <span class="nt-badge">만기 지남</span>';
+    if(일<=30) return ' <span class="nt-badge k">만기 '+일+'일 남음</span>';
+    if(일<=90) return ' <span class="nt-badge t">만기 '+일+'일 남음</span>';
+    return '';
+  }
+  /*
+   * 만기가 가까운 것부터 늘어놓는다(사용자 지시, 2026-09-02).
+   * 적재한 순서로 두면 무엇을 먼저 준비해야 하는지가 화면에 드러나지 않는다.
+   * 같은 해에 끝나는 것끼리 묶고, 그 안에서는 끝나는 날 순, 날짜가 같으면 이름 ㄱㄴㄷ 순.
+   * 만기라는 것이 없는 것(그때그때 맺는 공사, 해마다 새로 맺는 감사)은 맨 아래에 따로 둔다.
+   */
+  function 만기순으로(카드){
+    var 기간있음=[],기타=[];
+    카드.forEach(function(c){ (c.끝&&!c.성격?기간있음:기타).push(c); });
+    기간있음.sort(function(a,b){ return a.끝<b.끝?-1:a.끝>b.끝?1:a.이름.localeCompare(b.이름,'ko'); });
+    기타.sort(function(a,b){ return (a.성격||'힣').localeCompare(b.성격||'힣','ko')||a.이름.localeCompare(b.이름,'ko'); });
+    var h='',해='';
+    기간있음.forEach(function(c){
+      var y=c.끝.slice(0,4), 지남=c.끝<오늘();
+      var 머리=지남?'만기 지남':(y+'년에 만기');
+      if(머리!==해){해=머리;h+='<div class="rl-ch">'+esc(머리)+'</div>';}
+      h+=c.html;
+    });
+    var 라벨={'공사':'그때그때 맺는 공사','연례':'해마다 새로 맺는 것'};
+    var 앞='';
+    기타.forEach(function(c){
+      var 머리=라벨[c.성격]||'만기가 적혀 있지 않은 것';
+      if(머리!==앞){앞=머리;h+='<div class="rl-ch">'+esc(머리)+'</div>';}
+      h+=c.html;
+    });
+    return h;
   }
   // 한 해에 두 건 이상인 묶음(보수공사 등)은 연도만으로 구분되지 않는다. 체결월까지 있으면 함께 쓴다.
   function 카드이름(d){
@@ -287,13 +324,16 @@ var Notices=(function(){
         if(!표[d.group]){표[d.group]=[];묶음.push(d.group);}
         표[d.group].push(d);
       });
-      h+=낱개.map(function(d){
-        var n=contractDocClauses(d).length;
-        return '<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건</span></summary>'+
-          contractDocMetaHtml(d)+contractDocBodyHtml(d,'')+'</details>';
-      }).join('');
       var 안내=(st.contracts.groups)||{};
-      h+=묶음.map(function(g){
+      // 카드를 만들어 두고 뒤에서 만기순으로 늘어놓는다(적재 순서가 아니라).
+      var 카드=[];
+      낱개.forEach(function(d){
+        var n=contractDocClauses(d).length;
+        카드.push({이름:d.title||'', 끝:끝날(d), 성격:'',
+          html:'<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건'+남은기간(끝날(d))+'</span></summary>'+
+            contractDocMetaHtml(d)+contractDocBodyHtml(d,'')+'</details>'});
+      });
+      묶음.forEach(function(g){
         var 목록=표[g].slice().sort(function(a,b){return (b.year||0)-(a.year||0);});
         var 최신=목록[0],지난=목록.slice(1);
         var 해=목록.map(function(d){return d.year;}).filter(Boolean);
@@ -316,8 +356,12 @@ var Notices=(function(){
           안+='<div class="small" style="font-weight:800;margin:10px 0 2px">'+(공사?'이전 공사 ':'지난 계약 ')+지난.length+'건 <span style="font-weight:400">— '+
             (공사?'끝난 공사입니다. 같은 곳을 다시 고치고 있지는 않은지 견주어 보는 용도입니다.':'기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.')+'</span></div>'+
             지난.map(function(d){return 계약카드(d,false);}).join('');
-        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+'</span></summary>'+안+'</details>';
-      }).join('');
+        // 성격이 붙은 묶음(공사·연례)은 '만기'라는 것이 없으므로 남은 기간을 세지 않는다.
+        var 만기=g정보.성격?'':끝날(최신);
+        카드.push({이름:g, 끝:만기, 성격:g정보.성격||'',
+          html:'<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+남은기간(만기)+'</span></summary>'+안+'</details>'});
+      });
+      h+=만기순으로(카드);
       if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
       return h;
     }
