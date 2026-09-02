@@ -292,8 +292,9 @@ var Notices=(function(){
         var 해=목록.map(function(d){return d.year;}).filter(Boolean);
         var 기간=해.length?(해[해.length-1]===해[0]?String(해[0]):해[해.length-1]+'~'+해[0]):'';
         var g정보=안내[g]||{};
-        // 접힌 줄에 지금 누구와 얼마에 맺고 있는지를 둔다. 히스토리는 그 아래에 접어 둔다.
-        var 요약줄=[상대방(최신),최신.amount].filter(Boolean).join(' · ');
+        // 접힌 줄에 지금 누구와, 언제까지, 얼마에 맺고 있는지를 둔다. 히스토리는 그 아래에 접어 둔다.
+        // 기간을 빼면 위·수탁관리계약 카드와 달리 "지금 유효한 계약인가"를 펼쳐야만 알 수 있다.
+        var 요약줄=[상대방(최신),최신.period,최신.amount].filter(Boolean).join(' · ');
         var 안=(g정보.요약?'<div class="nt-sum" style="margin:8px 0">'+esc(g정보.요약)+'</div>':'');
         안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지금 맺고 있는 계약</div>'+계약카드(최신,만료(최신)!==true);
         if(g정보.살펴볼것&&g정보.살펴볼것.length)
@@ -302,7 +303,7 @@ var Notices=(function(){
         if(지난.length)
           안+='<div class="small" style="font-weight:800;margin:10px 0 2px">지난 계약 '+지난.length+'건 <span style="font-weight:400">— 기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.</span></div>'+
             지난.map(function(d){return 계약카드(d,false);}).join('');
-        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · 계약 '+목록.length+'건'+(기간?' · '+esc(기간):'')+'</span></summary>'+안+'</details>';
+        return '<details class="rl-art"><summary><b>'+esc(g)+'</b> <span class="small">'+esc(요약줄)+' · 계약 '+목록.length+'건'+(기간?'('+esc(기간)+')':'')+'</span></summary>'+안+'</details>';
       }).join('');
       if(!items.length) h+='<div class="nt-empty">등록된 계약·기준문서가 없습니다.</div>';
       return h;
