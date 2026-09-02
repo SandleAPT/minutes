@@ -194,9 +194,49 @@
     }).catch(function () { if (summaries === null) summaries = { version: 1, topics: {} }; summariesLoading = false; if (cb) cb(); });
   }
   // 처음: 이 브라우저 사본이 있으면 즉시 사용(클라우드 대조는 refreshFromCloud가), 없으면 클라우드에서 받아온다
+  /*
+   * 다시 쓴 요약 덮어쓰기 (v108, 2026-09-02)
+   *
+   * 요약을 다시 쓰는 중인데, 클라우드(topic_summaries)에 저장하려면 관리자 비밀번호가 필요하다.
+   * 사용자가 집이 아니라 넣을 수 없는 상황이라, 다시 쓴 글을 깃허브에 정적 파일로 올리고
+   * **양쪽 앱이 그것을 먼저 읽게** 한다(Archive는 같은 파일을 이미 읽는다).
+   * 그래야 회의록 앱과 Archive가 서로 다른 요약을 보여주지 않는다.
+   *
+   * 덮어쓰는 것은 「요점」과 「현재 상태」뿐이고 **「시간 흐름」은 클라우드 원본을 그대로** 쓴다.
+   * 파일이 없거나 못 읽으면 조용히 원본만 쓴다 — 이 기능 때문에 화면이 비면 안 된다.
+   *
+   * 나중에 비밀번호를 넣을 수 있게 되면 클라우드로 옮기고 그 파일을 비운다.
+   */
+  var OVERRIDE_URL = "/archive-v1/data/topic-summaries.json";
+  var overrideDone = false;
+  function 덮어쓰기적용(cb) {
+    if (overrideDone || !summaries || !summaries.topics) { if (cb) cb(); return; }
+    overrideDone = true;
+    fetch(OVERRIDE_URL, { cache: "no-cache" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (o) {
+        if (!o) return;
+        Object.keys(o).forEach(function (label) {
+          if (label.charAt(0) === "_") return;                 // _설명 같은 메모는 건너뛴다
+          var v = o[label];
+          if (!v || (!v.요점 && !v.현재상태)) return;
+          var 옛 = String((summaries.topics[label] || {}).text || "");
+          var 흐름 = "";
+          var m = 옛.match(/^##\s*시간 흐름\s*$[\s\S]*/m);
+          if (m) 흐름 = "\n" + m[0].replace(/^[-*]\s*현재\s*상태\s*[:：].*$/m, "").replace(/\n{3,}/g, "\n\n");
+          var 줄 = [];
+          if (v.요점 && v.요점.length) { 줄.push("## 요점"); v.요점.forEach(function (x) { 줄.push("- " + x); }); }
+          if (v.현재상태) 줄.push("- 현재 상태: " + v.현재상태);
+          summaries.topics[label] = Object.assign({}, summaries.topics[label] || {}, { text: 줄.join("\n") + 흐름 });
+        });
+      })
+      .catch(function () { /* 못 읽으면 원본 그대로 */ })
+      .then(function () { if (cb) cb(); });
+  }
   function loadSummaries(cb) {
-    if (summaries === null && loadSumCache()) { if (cb) cb(); return; }
-    fetchSummaries(cb);
+    var 뒤 = function () { 덮어쓰기적용(cb); };
+    if (summaries === null && loadSumCache()) { 뒤(); return; }
+    fetchSummaries(뒤);
   }
   // 목록의 updatedAt과 비교해 바뀐 경우에만 다시 받아온다
   function refreshSummaries(sumItem) {
