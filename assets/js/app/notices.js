@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=3").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=4").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -477,7 +477,7 @@ var Notices=(function(){
     }
     if((j.선관위회의||[]).length){
       h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
-      j.선관위회의.forEach(function(m){
+      j.선관위회의.slice().sort(function(a,b){return String(b.날짜).localeCompare(String(a.날짜));}).forEach(function(m){
         h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
           esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
           '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
