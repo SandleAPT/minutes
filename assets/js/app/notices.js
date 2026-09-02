@@ -92,7 +92,7 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=22").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=23").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
@@ -256,12 +256,28 @@ var Notices=(function(){
     if(!m||!m.length) return '';
     return m[m.length-1].replace(/\./g,'-').replace(/-(\d)(?=-|$)/g,'-0$1');
   }
-  function 오늘(){return new Date().toISOString().slice(0,10);}
+  // toISOString()은 UTC라 한국 시각으로 오전 9시 이전이면 하루 전 날짜가 나온다.
+  // 기한을 세는 화면에서 하루가 어긋나면 안 되므로 보는 사람의 시간대로 맞춘다.
+  function 오늘(){var d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
   function 만료(d){var e=끝날(d);return e?(e<오늘()):null;}
-  // 만기가 코앞인 계약은 접힌 줄에서 바로 보여야 한다. 재계약 준비를 놓치는 것이 이 화면이 막을 일이다.
-  function 남은기간(끝){
+  function 날수(날){return Math.round((new Date(날+'T00:00:00')-new Date(오늘()+'T00:00:00'))/86400000);}
+  /*
+   * 자동연장 계약에서 진짜 기한은 만료일이 아니라 「통보 기한」이다(사용자 지적, 2026-09-02).
+   * 만료일만 세면 그날 전에 이미 1년이 더 붙어 버린 뒤다. 통보 기한이 적힌 계약은 그것을 먼저 센다.
+   */
+  function 기한(d){return (d&&d.통보기한)||끝날(d);}
+  function 남은기간(d){
+    if(!d) return '';
+    var 통보=d.통보기한||'', 끝=끝날(d);
+    if(통보){
+      var n=날수(통보);
+      if(n<0) return ' <span class="nt-badge">자동연장 기한 지남</span>';
+      if(n<=45) return ' <span class="nt-badge k">연장 통보 기한 '+n+'일 남음</span>';
+      if(n<=120) return ' <span class="nt-badge t">연장 통보 기한 '+n+'일 남음</span>';
+      return '';
+    }
     if(!끝) return '';
-    var 일=Math.round((new Date(끝+'T00:00:00')-new Date(오늘()+'T00:00:00'))/86400000);
+    var 일=날수(끝);
     if(일<0) return ' <span class="nt-badge">만기 지남</span>';
     if(일<=30) return ' <span class="nt-badge k">만기 '+일+'일 남음</span>';
     if(일<=90) return ' <span class="nt-badge t">만기 '+일+'일 남음</span>';
@@ -329,8 +345,8 @@ var Notices=(function(){
       var 카드=[];
       낱개.forEach(function(d){
         var n=contractDocClauses(d).length;
-        카드.push({이름:d.title||'', 끝:끝날(d), 성격:'',
-          html:'<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건'+남은기간(끝날(d))+'</span></summary>'+
+        카드.push({이름:d.title||'', 끝:기한(d), 성격:'',
+          html:'<details class="rl-art"><summary><b>'+esc(d.title)+'</b> <span class="small">'+esc(d.type||'')+(d.period?' · '+esc(d.period):'')+' · 조문 '+n+'건'+남은기간(d)+'</span></summary>'+
             contractDocMetaHtml(d)+contractDocBodyHtml(d,'')+'</details>'});
       });
       묶음.forEach(function(g){
@@ -362,11 +378,11 @@ var Notices=(function(){
             (공사?'끝난 공사입니다. 같은 곳을 다시 고치고 있지는 않은지 견주어 보는 용도입니다.':'기간이 끝난 계약입니다. 다음 계약을 준비할 때 견주어 보는 용도입니다.')+'</span></div>'+
             지난.map(function(d){return 계약카드(d,false);}).join('');
         // 성격이 붙은 묶음(공사·연례)은 '만기'라는 것이 없으므로 남은 기간을 세지 않는다.
-        var 만기=g정보.성격?'':끝날(최신);
+        var 만기=g정보.성격?'':기한(최신);
         카드.push({이름:g, 끝:만기, 성격:g정보.성격||'',
           확인:(g정보.확인필요||[]),
           html:'<details class="rl-art"><summary><b>'+esc(g)+'</b>'+(g정보.확인필요&&g정보.확인필요.length?' <span class="nt-badge" style="background:#fdf3f2;color:#a4443c">★ 확인 필요</span>':'')+
-            ' <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+남은기간(만기)+'</span></summary>'+안+'</details>'});
+            ' <span class="small">'+esc(요약줄)+' · '+(공사머리?'공사 ':'계약 ')+목록.length+'건'+(기간?'('+esc(기간)+')':'')+남은기간(g정보.성격?null:최신)+'</span></summary>'+안+'</details>'});
       });
       // 확인이 필요한 것은 묶음을 펼쳐야 보인다. 그러면 놓치므로 맨 위에 모아 한 번 더 보여준다.
       var 확인목록=카드.filter(function(c){return c.확인&&c.확인.length;});
