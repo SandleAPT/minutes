@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=11").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=12").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -483,7 +483,7 @@ var Notices=(function(){
         h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
           esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
           '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
-          (m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
+          (m.메모?'<div class="small" style="margin-bottom:6px">※ '+esc(m.메모)+'</div>':'')+(m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
       });
     }
     if((j.선관위구성||[]).length){
