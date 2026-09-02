@@ -374,11 +374,22 @@ const AdminGate=(function(){
   // v91 보안: 비밀번호 확인 후 24시간이 지나면 저장된 키를 지우고 다시 입력받는다(사용자 요청).
   // 확인 시각은 AT_KEY에 기록 — fees(관리비)·포털도 같은 키·같은 규칙을 본다. 시각이 없는 기존 키는 만료로 취급.
   const AT_KEY="sandle_admin_unlock_at", TTL=24*60*60*1000;
+  /* v107 「이 기기 기억하기」 (사용자 요청 2026-09-02).
+   * 24시간 만료는 원래 **빌린 기기**를 위한 것이었다 — "다른 사람 폰이나 컴퓨터를 빌렸는데
+   * 캐시를 못 지웠을 때를 대비해서 만들어달란 거였고". 그런데 본인 기기에서도 매일 다시
+   * 넣어야 해서 번거로웠다. 만든 의도와 실제 불편이 어긋나 있었다.
+   * 그래서 **기기별로 나눈다** — 체크하면 30일, 체크 안 하면 그대로 24시간.
+   * 빌린 기기용 안전장치는 남기고 본인 기기에서만 길게 간다. */
+  const TRUST_KEY="sandle_admin_trust", TRUST_TTL=30*24*60*60*1000;
   let verified=false, checking=false, pending=null, denied=null;
 
-  function expired(){ try{ const at=+localStorage.getItem(AT_KEY)||0; return !at || (Date.now()-at)>TTL; }catch(e){ return true; } }
+  function trusted(){ try{ return localStorage.getItem(TRUST_KEY)==="1"; }catch(e){ return false; } }
+  function ttl(){ return trusted()?TRUST_TTL:TTL; }
+  function expired(){ try{ const at=+localStorage.getItem(AT_KEY)||0; return !at || (Date.now()-at)>ttl(); }catch(e){ return true; } }
   function saved(){ try{ const k=localStorage.getItem(KEY)||""; if(k&&expired()){ forget(); return ""; } return k; }catch(e){return "";} }
-  function remember(k){ try{ localStorage.setItem(KEY,k); localStorage.setItem(AT_KEY,String(Date.now())); }catch(e){} }
+  function remember(k,trust){ try{ localStorage.setItem(KEY,k); localStorage.setItem(AT_KEY,String(Date.now()));
+    if(trust)localStorage.setItem(TRUST_KEY,"1"); else localStorage.removeItem(TRUST_KEY); }catch(e){} }
+  // 기억 표시는 지우지 않는다 — 나가기를 눌러도 "이 기기는 내 기기"라는 사실은 그대로다.
   function forget(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(AT_KEY); }catch(e){} verified=false; }
   // v92: 2단계 비밀번호 — 편집 화면은 '수정용' 키만 통과(열람 키는 role:'view'라 거부)
   function verify(k){
@@ -398,6 +409,10 @@ const AdminGate=(function(){
       '<div id="agendaAdminTitle" style="font-weight:800;font-size:16px;margin-bottom:6px">🔒 관리자 전용 메뉴</div>'+
       '<div style="color:#666;font-size:13px;margin-bottom:12px">작성·수정 화면은 <b>수정용</b> 관리자 비밀번호를 확인한 뒤 열립니다(열람용 비밀번호로는 열리지 않습니다).</div>'+
       '<input id="agendaAdminInput" type="password" autocomplete="current-password" placeholder="관리자 비밀번호" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border:1px solid #d9d4c8;border-radius:10px">'+
+      '<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:13px;cursor:pointer">'+
+        '<input type="checkbox" id="agendaAdminTrust"'+(trusted()?" checked":"")+' style="width:16px;height:16px">'+
+        '<span>이 기기 기억하기 <b style="font-weight:700">30일</b></span></label>'+
+      '<div style="color:#888;font-size:11.5px;margin:3px 0 0 23px;line-height:1.5">내 기기에서만 켜세요. 빌린 기기라면 끄면 24시간 뒤 자동으로 지워집니다.</div>'+
       '<div id="agendaAdminMsg" style="min-height:22px;color:#a33;font-size:12px;margin-top:5px">'+esc(message)+'</div>'+
       '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn" id="agendaAdminCancel">취소</button><button class="btn gold" id="agendaAdminOk">확인</button></div></div>';
     document.body.appendChild(bd);
@@ -409,7 +424,8 @@ const AdminGate=(function(){
       verify(k).then(valid=>{
         checking=false;ok.disabled=false;
         if(!valid){msg.style.color="#a33";msg.textContent="비밀번호가 올바르지 않습니다.";input.select();return;}
-        remember(k);verified=true;finish(true);
+        const trustBox=document.getElementById("agendaAdminTrust");
+        remember(k,!!(trustBox&&trustBox.checked));verified=true;finish(true);
       }).catch(()=>{checking=false;ok.disabled=false;msg.style.color="#a33";msg.textContent="확인하지 못했습니다. 네트워크 상태를 확인해 주세요.";});
     }
     ok.onclick=submit;
