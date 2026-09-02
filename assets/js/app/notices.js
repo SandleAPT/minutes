@@ -54,14 +54,35 @@ var Notices=(function(){
       });
     });
   }
+  // v137: 클라우드가 느리거나 일시적으로 응답하지 않아도 절차 점검 9건이 사라져 보이지 않게
+  // 매일 저장되는 system-backup.json의 같은 시스템 레코드를 읽기 전용 예비본으로 사용한다.
+  var backupDataPromise=null;
+  function getBackupRec(id){
+    if(!backupDataPromise){
+      backupDataPromise=fetch("system-backup.json?v=20260903",{cache:"no-cache"})
+        .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+        .catch(function(){return null;});
+    }
+    return backupDataPromise.then(function(j){
+      var items=(j&&j.items)||[],row=null;
+      for(var i=0;i<items.length;i++){if(items[i].id===id){row=items[i];break;}}
+      if(!row||!row.json)return null;
+      try{return JSON.parse(row.json);}catch(e){return null;}
+    });
+  }
+  function getRecSafe(id){
+    var timeout=new Promise(function(resolve){setTimeout(function(){resolve(null);},4000);});
+    return Promise.race([getRec(id).catch(function(){return null;}),timeout])
+      .then(function(x){return x||getBackupRec(id);});
+  }
   // v92: 2단계 비밀번호 — 열람 잠금은 서버 verify 액션으로 확인(열람 키 또는 수정 키 인정)
   function verifyKey(k){return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})}).then(function(r){return r.json()}).then(function(x){return !!(x&&x.ok);});}
 
   function load(){
     if(st.loading) return; st.loading=true; st.err="";
     Promise.all([
-      getRec("notices_v1").catch(function(){return null}),
-      getRec("checks_v1").catch(function(){return null})
+      getRecSafe("notices_v1"),
+      getRecSafe("checks_v1")
     ]).then(function(rs){
       st.loading=false;
       if(rs[0]) st.notices=rs[0];
