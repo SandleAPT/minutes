@@ -3,7 +3,10 @@
 // 만드는 것
 //   data-index.json  = { generatedAt, years:[{year, file, count, updatedAt}] } — 앱이 no-cache로 읽는 작은 목차
 //   data-YYYY.json   = { generatedAt, items:[{id,name,date,updatedAt,json}] } — 앱이 ?v=<updatedAt> 캐시 키로 읽음
-//   system-backup.json = 시스템 레코드(요약·명단이력·공고·점검, 조각 포함) 백업. 앱은 읽지 않는다.
+//   system-backup.json = 시스템 레코드(요약·명단이력·공고·점검, 조각 포함) 백업.
+//     ⚠ 2026-09-02부터 **Archive 공개 화면이 이 파일을 읽는다**(주제 흐름 요약을 주제 화면에 보여준다).
+//     Main 저장소 archive-v1/shared/topic-summary.js 가 `topic_summaries_v1_p*` 조각을 번호순으로
+//     이어 붙여 파싱한다. **id 규칙이나 조각 방식을 바꾸면 그 화면이 조용히 빈다.** 함께 고칠 것.
 //   data-health.json = 유실 감지용 숫자 요약
 //   예전 단일 data.json은 v83부터 동결(옛 클라이언트 폴백용으로 파일만 남김).
 //
