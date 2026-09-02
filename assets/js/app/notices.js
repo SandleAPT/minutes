@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=9").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=10").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -488,7 +488,7 @@ var Notices=(function(){
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
-      j.선관위구성.forEach(function(c){ h+=구성카드(c); });
+      j.선관위구성.slice().sort(function(a,b){return String(b.시기).localeCompare(String(a.시기),'ko');}).forEach(function(c){ h+=구성카드(c); });
     }
     if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
     return h;
