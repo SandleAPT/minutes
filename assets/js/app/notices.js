@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=14").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=15").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -483,7 +483,15 @@ var Notices=(function(){
     }
     /* 제기된 절차 문제 — 확인되는 사실과 주장을 나누어 보여준다.
      * 둘을 섞으면 제기된 것이 확정된 것처럼 읽힌다. 공고로 확인되는 것만 위에 두고,
-     * 민원서에 적힌 주장은 그렇다고 밝혀 아래에 둔다. */
+     * 민원서에 적힌 주장은 그렇다고 밝혀 아래에 둔다.
+     *
+     * 이 구획과 「관리규약 대조」는 **비밀번호를 넣은 기기에서만** 보인다(PLAN.md 원칙 1):
+     * 공개 화면에는 공고의 객관적 분포·결과만 두고, 특정 대상자의 자격·절차 점검은 잠금 뒤에 둔다.
+     * 특정 세대·개인이 드러나는 내용이라 공개 화면에 두면 확정되지 않은 일로 사람을 지목하게 된다. */
+    if(locked()){
+      if((j.제기된절차문제||[]).length||(j.규약대조||[]).length)
+        h+='<div class="rl-ch">절차 점검</div><div class="nt-empty">제기된 절차 문제와 관리규약 대조는 관리자 비밀번호를 입력한 기기에서만 보입니다. 특정 세대나 개인이 드러나는 내용이라 공개 화면에는 두지 않습니다.</div>';
+    } else {
     if((j.제기된절차문제||[]).length){
       h+='<div class="rl-ch">제기된 절차 문제</div>';
       j.제기된절차문제.forEach(function(p){
@@ -501,6 +509,23 @@ var Notices=(function(){
         if(p.출처) 안+='<div class="small">'+esc(p.출처)+'</div>';
         h+='<details class="rl-art"><summary><b>'+esc(p.제목||'')+'</b> <span class="small">'+esc(p.접수||'')+'</span></summary>'+안+'</details>';
       });
+    }
+    // 관리규약 조문과 공고 기록을 맞춰 본 결과. 잠금 안쪽에 둔다(위 주석 참고).
+    if((j.규약대조||[]).length){
+      h+='<div class="rl-ch">관리규약 대조 — 분양(입주자대표회의)</div>';
+      j.규약대조.forEach(function(r){
+        var 판정색={'어긋남':'background:#fdf3f2;color:#a4443c','확인 필요':'background:#f6eccf;color:#6a4d0f','맞음':'background:#e8efe5;color:#3c6134'}[r.판정]||'';
+        var 안='<div class="nt-sum" style="margin:8px 0"><b>규약</b><br>'+esc(r.조문||'')+'</div>';
+        if((r.기록||[]).length)
+          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">공고·기록에서 확인되는 것</div>'+
+            '<ul class="nt-facts" style="margin:4px 0">'+r.기록.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+        if(r.판단) 안+='<div class="nt-note" style="margin:12px 0"><b>맞춰 본 결과</b><br>'+esc(r.판단)+'</div>';
+        if(r.다음) 안+='<div class="small" style="margin:6px 0"><b>확인할 것:</b> '+esc(r.다음)+'</div>';
+        h+='<details class="rl-art"><summary><b>'+esc(r.제목||'')+'</b> '+
+          (r.판정?'<span class="nt-badge" style="'+판정색+'">'+esc(r.판정)+'</span> ':'')+
+          '<span class="small">'+esc(r.근거조문||'')+'</span></summary>'+안+'</details>';
+      });
+    }
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
