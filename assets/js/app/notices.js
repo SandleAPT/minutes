@@ -113,14 +113,14 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=25").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=26").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=13").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=14").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -468,11 +468,43 @@ var Notices=(function(){
     });
     if((j.찬반투표||[]).length){
       h+='<div class="rl-ch">단지 전체 찬반투표</div>';
-      j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
+      j.찬반투표.slice().sort(function(a,b){return String(b.공고일).localeCompare(String(a.공고일));}).forEach(function(v){ h+=찬반카드(v); });
+    }
+    // 선거관리위원회 회의 기록 — 최신순. (v350: 병합 과정에서 이 블록이 빠져 데이터가 화면에 안 나왔다)
+    if((j.선관위회의||[]).length){
+      h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
+      j.선관위회의.slice().sort(function(a,b){return String(b.날짜).localeCompare(String(a.날짜));}).forEach(function(m){
+        h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
+          esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
+          '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
+          (m.메모?'<div class="small" style="margin-bottom:6px">※ '+esc(m.메모)+'</div>':'')+
+          (m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
+      });
+    }
+    /* 제기된 절차 문제 — 확인되는 사실과 주장을 나누어 보여준다.
+     * 둘을 섞으면 제기된 것이 확정된 것처럼 읽힌다. 공고로 확인되는 것만 위에 두고,
+     * 민원서에 적힌 주장은 그렇다고 밝혀 아래에 둔다. */
+    if((j.제기된절차문제||[]).length){
+      h+='<div class="rl-ch">제기된 절차 문제</div>';
+      j.제기된절차문제.forEach(function(p){
+        var 안='<div class="nt-sum" style="margin:8px 0">'+esc(p.접수||'')+(p.상태?'<br>'+esc(p.상태):'')+'</div>';
+        if((p.확인되는사실||[]).length)
+          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">공고로 확인되는 것</div>'+
+            '<ul class="nt-facts" style="margin:4px 0">'+p.확인되는사실.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+        if((p.민원의주장||[]).length)
+          안+='<div class="small" style="font-weight:800;margin:12px 0 2px">민원서에 적힌 주장 <span style="font-weight:400">— 확정된 사실이 아닙니다</span></div>'+
+            '<ul class="nt-facts" style="margin:4px 0">'+p.민원의주장.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+        if((p.요청사항||[]).length)
+          안+='<div class="small" style="font-weight:800;margin:12px 0 2px">요청사항</div>'+
+            '<ul class="nt-facts" style="margin:4px 0">'+p.요청사항.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+        if(p.메모) 안+='<div class="nt-note" style="margin:12px 0">'+esc(p.메모)+'</div>';
+        if(p.출처) 안+='<div class="small">'+esc(p.출처)+'</div>';
+        h+='<details class="rl-art"><summary><b>'+esc(p.제목||'')+'</b> <span class="small">'+esc(p.접수||'')+'</span></summary>'+안+'</details>';
+      });
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
-      j.선관위구성.forEach(function(c){ h+=구성카드(c); });
+      j.선관위구성.slice().sort(function(a,b){return String(b.시기).localeCompare(String(a.시기),'ko');}).forEach(function(c){ h+=구성카드(c); });
     }
     if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
     return h;
