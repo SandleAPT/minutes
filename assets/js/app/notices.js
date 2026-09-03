@@ -2,6 +2,7 @@
 // 탭 1 관리규약: 정적 rules.json(조문·별표 전문, 별지 서식 목록) + 검색 — 누구나 열람.
 // 탭 2 계약·기준문서: 정적 contracts.json(v2: 조문 원문 그대로 + 해석·검토 메모 분리) — 문서는
 //   접힌 카드로만 나열하고, 검색하면 모든 문서를 훑어 일치하는 조문만 펼쳐 보여준다.
+//   v340부터 공고·안내/절차 점검과 같은 열람 비밀번호 확인 뒤에만 화면에서 불러온다.
 // 탭 3 공고·안내 / 탭 4 절차 점검: 관리자 비밀번호를 입력한 기기에서만 표시.
 // 절차 점검은 investigations.json(조사 현황)과 클라우드 checks_v1(규약 대조 기록)을 한 화면에 합쳐,
 //   심각도(위반·미충족 확인 → 소지 → 확인중) 순서로 보여준다. (v85 — 이전에는 checks_v1이 화면에 안 나왔음)
@@ -15,19 +16,6 @@ var Notices=(function(){
     err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",cq:"",checkFilter:"전체",
     unlocked:false,verifying:false
   };
-  /* 주소로 하위 탭·검색어 열기 (v352) — 포털 통합검색이 「승강기 유지관리 제5조」 같은 결과를
-     눌렀을 때 그 조문이 있는 화면까지 바로 데려가기 위한 것이다. 탭만 열고 다시 검색하게 하면
-     통합검색이 찾아낸 자리를 사용자가 손으로 되짚어야 한다.
-     ?sub=rules|contracts|elections 와 ?nq=<검색어>. 잠긴 탭(notices·checks)은 받지 않는다 —
-     주소만으로 잠금 화면에 들어가게 하면 링크가 새는 통로가 된다. */
-  (function(){
-    try{
-      var p=new URLSearchParams(location.search);
-      var s=p.get("sub"); if(s&&/^(rules|contracts|elections)$/.test(s)) st.sub=s;
-      var nq=(p.get("nq")||"").slice(0,60);
-      if(nq){ if(st.sub==="contracts") st.cq=nq; else if(st.sub==="rules") st.q=nq; }
-    }catch(e){}
-  })();
   var RULE_DOCS={
     all:{label:"◆◇ 두 규약 함께"},
     bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},
@@ -126,14 +114,14 @@ var Notices=(function(){
   function loadContracts(){
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
-    fetch("contracts.json?v=26").then(function(r){return r.json()}).then(function(j){
+    fetch("contracts.json?v=24").then(function(r){return r.json()}).then(function(j){
       st.contractsLoading=false;st.contracts=j;draw();
     }).catch(function(){st.contractsLoading=false;st.err="contracts.json을 불러오지 못했습니다.";draw();});
   }
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=15").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=3").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -481,68 +469,11 @@ var Notices=(function(){
     });
     if((j.찬반투표||[]).length){
       h+='<div class="rl-ch">단지 전체 찬반투표</div>';
-      j.찬반투표.slice().sort(function(a,b){return String(b.공고일).localeCompare(String(a.공고일));}).forEach(function(v){ h+=찬반카드(v); });
-    }
-    // 선거관리위원회 회의 기록 — 최신순. (v350: 병합 과정에서 이 블록이 빠져 데이터가 화면에 안 나왔다)
-    if((j.선관위회의||[]).length){
-      h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
-      j.선관위회의.slice().sort(function(a,b){return String(b.날짜).localeCompare(String(a.날짜));}).forEach(function(m){
-        h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
-          esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
-          '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
-          (m.메모?'<div class="small" style="margin-bottom:6px">※ '+esc(m.메모)+'</div>':'')+
-          (m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
-      });
-    }
-    /* 제기된 절차 문제 — 확인되는 사실과 주장을 나누어 보여준다.
-     * 둘을 섞으면 제기된 것이 확정된 것처럼 읽힌다. 공고로 확인되는 것만 위에 두고,
-     * 민원서에 적힌 주장은 그렇다고 밝혀 아래에 둔다.
-     *
-     * 이 구획과 「관리규약 대조」는 **비밀번호를 넣은 기기에서만** 보인다(PLAN.md 원칙 1):
-     * 공개 화면에는 공고의 객관적 분포·결과만 두고, 특정 대상자의 자격·절차 점검은 잠금 뒤에 둔다.
-     * 특정 세대·개인이 드러나는 내용이라 공개 화면에 두면 확정되지 않은 일로 사람을 지목하게 된다. */
-    if(locked()){
-      if((j.제기된절차문제||[]).length||(j.규약대조||[]).length)
-        h+='<div class="rl-ch">절차 점검</div><div class="nt-empty">제기된 절차 문제와 관리규약 대조는 관리자 비밀번호를 입력한 기기에서만 보입니다. 특정 세대나 개인이 드러나는 내용이라 공개 화면에는 두지 않습니다.</div>';
-    } else {
-    if((j.제기된절차문제||[]).length){
-      h+='<div class="rl-ch">제기된 절차 문제</div>';
-      j.제기된절차문제.forEach(function(p){
-        var 안='<div class="nt-sum" style="margin:8px 0">'+esc(p.접수||'')+(p.상태?'<br>'+esc(p.상태):'')+'</div>';
-        if((p.확인되는사실||[]).length)
-          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">공고로 확인되는 것</div>'+
-            '<ul class="nt-facts" style="margin:4px 0">'+p.확인되는사실.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
-        if((p.민원의주장||[]).length)
-          안+='<div class="small" style="font-weight:800;margin:12px 0 2px">민원서에 적힌 주장 <span style="font-weight:400">— 확정된 사실이 아닙니다</span></div>'+
-            '<ul class="nt-facts" style="margin:4px 0">'+p.민원의주장.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
-        if((p.요청사항||[]).length)
-          안+='<div class="small" style="font-weight:800;margin:12px 0 2px">요청사항</div>'+
-            '<ul class="nt-facts" style="margin:4px 0">'+p.요청사항.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
-        if(p.메모) 안+='<div class="nt-note" style="margin:12px 0">'+esc(p.메모)+'</div>';
-        if(p.출처) 안+='<div class="small">'+esc(p.출처)+'</div>';
-        h+='<details class="rl-art"><summary><b>'+esc(p.제목||'')+'</b> <span class="small">'+esc(p.접수||'')+'</span></summary>'+안+'</details>';
-      });
-    }
-    // 관리규약 조문과 공고 기록을 맞춰 본 결과. 잠금 안쪽에 둔다(위 주석 참고).
-    if((j.규약대조||[]).length){
-      h+='<div class="rl-ch">관리규약 대조 — 분양(입주자대표회의)</div>';
-      j.규약대조.forEach(function(r){
-        var 판정색={'어긋남':'background:#fdf3f2;color:#a4443c','확인 필요':'background:#f6eccf;color:#6a4d0f','맞음':'background:#e8efe5;color:#3c6134'}[r.판정]||'';
-        var 안='<div class="nt-sum" style="margin:8px 0"><b>규약</b><br>'+esc(r.조문||'')+'</div>';
-        if((r.기록||[]).length)
-          안+='<div class="small" style="font-weight:800;margin:10px 0 2px">공고·기록에서 확인되는 것</div>'+
-            '<ul class="nt-facts" style="margin:4px 0">'+r.기록.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
-        if(r.판단) 안+='<div class="nt-note" style="margin:12px 0"><b>맞춰 본 결과</b><br>'+esc(r.판단)+'</div>';
-        if(r.다음) 안+='<div class="small" style="margin:6px 0"><b>확인할 것:</b> '+esc(r.다음)+'</div>';
-        h+='<details class="rl-art"><summary><b>'+esc(r.제목||'')+'</b> '+
-          (r.판정?'<span class="nt-badge" style="'+판정색+'">'+esc(r.판정)+'</span> ':'')+
-          '<span class="small">'+esc(r.근거조문||'')+'</span></summary>'+안+'</details>';
-      });
-    }
+      j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
-      j.선관위구성.slice().sort(function(a,b){return String(b.시기).localeCompare(String(a.시기),'ko');}).forEach(function(c){ h+=구성카드(c); });
+      j.선관위구성.forEach(function(c){ h+=구성카드(c); });
     }
     if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
     return h;
@@ -636,7 +567,7 @@ var Notices=(function(){
 
   function lockHtml(){
     return '<div class="nt-lock"><div class="nt-lock-ic">🔒</div><b>비밀번호 확인이 필요한 기록입니다</b> <span class="small">(열람용 또는 수정용 비밀번호)</span>'+
-      '<p>공고·안내 보관함과 절차 점검 기록은 관리자 비밀번호를 입력한 기기에서만 열람할 수 있습니다.</p>'+
+      '<p>계약·기준문서, 공고·안내 보관함과 절차 점검 기록은 열람 비밀번호를 입력한 기기에서만 볼 수 있습니다.</p>'+
       '<div class="nt-lock-row"><input id="ntKeyInput" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key===\'Enter\')Notices.unlock()">'+
       '<button type="button" class="btn gold" onclick="Notices.unlock()">'+(st.verifying?'확인 중…':'확인')+'</button></div>'+
       '<div id="ntKeyMsg" class="nt-err" style="margin-top:8px"></div></div>';
@@ -807,15 +738,15 @@ var Notices=(function(){
     var checkCount=(st.investigations&&st.investigations.items?st.investigations.items.length:0)+(st.checks&&st.checks.items?st.checks.items.length:0);
     var h='<div class="nt-tabs">'+
       '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
-      '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서</button>'+
+      '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서 🔒</button>'+
       '<button type="button" class="btn'+(st.sub==='elections'?' gold':'')+'" onclick="Notices.sub(\'elections\')">선거·선관위</button>'+
       '<button type="button" class="btn'+(st.sub==='notices'?' gold':'')+'" onclick="Notices.sub(\'notices\')">공고·안내 🔒'+(!locked()&&st.notices?' ('+st.notices.items.length+')':'')+'</button>'+
       '<button type="button" class="btn'+(st.sub==='checks'?' gold':'')+'" onclick="Notices.sub(\'checks\')">절차 점검 🔒'+(!locked()&&checkCount?' ('+checkCount+')':'')+'</button></div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==='rules'){box.innerHTML=h+rulesHtml();return;}
-    if(st.sub==='contracts'){box.innerHTML=h+contractsHtml();if(!st.contracts&&!st.contractsLoading)loadContracts();return;}
     if(st.sub==='elections'){box.innerHTML=h+electionsHtml();if(!st.elections&&!st.electionsLoading)loadElections();return;}
     if(locked()){box.innerHTML=h+lockHtml();return;}
+    if(st.sub==='contracts'){box.innerHTML=h+contractsHtml();if(!st.contracts&&!st.contractsLoading)loadContracts();return;}
     if(st.sub==='notices'){
       if(!st.notices){h+='<div class="nt-empty">'+(st.loading?'불러오는 중…':'기록이 없습니다.')+'</div>';box.innerHTML=h;if(!st.loading)load();return;}
       var items=st.notices.items.slice();
@@ -837,13 +768,13 @@ var Notices=(function(){
   }
 
   return {
-    render:function(){draw();if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks')loadInvestigations();},
+    render:function(){draw();if(st.sub==='rules')loadRules();else if(st.sub==='contracts'&&!locked())loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks'&&!locked())loadInvestigations();},
     reload:function(){
       st.notices=null;st.checks=null;st.rulesDocs={};st.contracts=null;st.investigations=null;st.elections=null;st.err='';
-      if(st.sub==='rules')loadRules();else if(st.sub==='contracts')loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks')loadInvestigations();else if(!locked())load();
+      if(st.sub==='rules')loadRules();else if(st.sub==='contracts'&&!locked())loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks'&&!locked())loadInvestigations();else if(!locked())load();
       draw();
     },
-    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts')loadContracts();else if(s==='elections')loadElections();else if(s==='checks'){loadInvestigations();if(!locked()&&!st.checks)load();}else if(!locked()&&!st.notices)load();},
+    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts'&&!locked())loadContracts();else if(s==='elections')loadElections();else if(s==='checks'&&!locked()){loadInvestigations();if(!st.checks)load();}else if(s==='notices'&&!locked()&&!st.notices)load();},
     fBody:function(b){st.fBody=b;draw();},
     doc:function(d){st.doc=d;draw();loadRules();},
     fKind:function(k){st.fKind=k;draw();},
@@ -857,7 +788,7 @@ var Notices=(function(){
       if(st.verifying)return;st.verifying=true;if(msg)msg.textContent='확인 중…';
       verifyKey(k).then(function(ok){
         st.verifying=false;
-        if(ok){try{localStorage.setItem('sandle_admin_key',k);localStorage.setItem('sandle_admin_unlock_at',String(Date.now()));}catch(e){}st.unlocked=true;if(st.sub==='checks')loadInvestigations();load();draw();}
+        if(ok){try{localStorage.setItem('sandle_admin_key',k);localStorage.setItem('sandle_admin_unlock_at',String(Date.now()));}catch(e){}st.unlocked=true;if(st.sub==='contracts')loadContracts();else if(st.sub==='checks')loadInvestigations();if(st.sub==='notices'||st.sub==='checks')load();draw();}
         else if(msg)msg.textContent='비밀번호가 올바르지 않습니다.';
       }).catch(function(){st.verifying=false;if(msg)msg.textContent='확인 실패 — 네트워크 상태를 확인해 주세요.';});
     },
