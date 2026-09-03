@@ -694,24 +694,31 @@
       for (var i = 0; i < 목록.length; i++) if (목록[i].getAttribute("data-ag") === agId) return 목록[i];
       return null;
     };
+    /* 따라가기를 멈추는 기준은 **사용자가 실제로 손을 댔는지**여야 한다.
+       스크롤 위치가 변했는지로 판단했더니, 미리보기가 다시 그려지며 문서가 짧아져
+       브라우저가 스크롤을 자동으로 당겨 놓은 것을 "사용자가 움직였다"로 읽고
+       엉뚱한 자리(문서 맨 끝)에 멈춰 섰다(2026-09-03 확인). */
+    var 손댔다 = false;
+    var 손 = function () { 손댔다 = true; };
+    var 짓 = ["wheel", "touchstart", "keydown", "mousedown"];
+    짓.forEach(function (e) { window.addEventListener(e, 손, { passive: true }); });
+    var 정리 = function () { 짓.forEach(function (e) { window.removeEventListener(e, 손); }); };
     (function 지켜보기() {
+      if (손댔다) { 정리(); 지우기(); return; }
       var 쪽 = 찾기();
-      if (!쪽) { if (Date.now() < 끝) setTimeout(지켜보기, 150); return; }
+      if (!쪽) { if (Date.now() < 끝) setTimeout(지켜보기, 150); else 정리(); return; }
       /* 부드러운 스크롤(behavior:"smooth")을 쓰지 않는다. 다른 탭에서 막 넘어온 사람에게
          8,000px짜리 문서를 천천히 굴려 보여줄 이유가 없고, 애니메이션이 도중에 취소되면
          맨 위에 그대로 남아 아무 일도 일어나지 않은 것처럼 보인다(2026-09-03 확인). */
       쪽.scrollIntoView({ behavior: "auto", block: "start" });
       쪽.classList.add("ag-hl");
-      /* 첨부 원문은 나중에 채워져(hydrateInlineAttachments) 앞쪽 높이가 뒤늦게 늘어난다.
-         한 번만 맞추면 그만큼 자리가 밀리므로 잠깐 더 따라간다. 사용자가 이미 손으로
-         움직였으면 따라가지 않는다 — 읽고 있는 자리를 뺏는 게 더 나쁘다. */
-      if (++맞춘횟수 < 4) {
-        var 기준 = Math.round(window.scrollY);
-        setTimeout(function () { if (Math.abs(window.scrollY - 기준) < 40) 지켜보기(); }, 450);
-        return;
-      }
-      setTimeout(function () { 쪽.classList.remove("ag-hl"); }, 2600);
+      /* 미리보기는 여러 번 다시 그려지고(첨부 원문 hydrate 포함) 그때마다 쪽이 통째로
+         새 것으로 바뀐다. 그래서 한 번 잡아 둔 쪽을 붙들지 않고 매번 다시 찾는다. */
+      if (++맞춘횟수 < 6) { setTimeout(지켜보기, 400); return; }
+      정리();
+      setTimeout(지우기, 2000);
     })();
+    function 지우기() { var 끝쪽 = 찾기(); if (끝쪽) 끝쪽.classList.remove("ag-hl"); }
   }
   function bootCloud() {
     // data.json 로드를 먼저 기다렸다가(실패해도 진행) 목록 조회 → 최신 회의록 자동 열기
