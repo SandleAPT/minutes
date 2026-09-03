@@ -15,6 +15,19 @@ var Notices=(function(){
     err:"",sub:"rules",fBody:"전체",fKind:"전체",q:"",cq:"",checkFilter:"전체",
     unlocked:false,verifying:false
   };
+  /* 주소로 하위 탭·검색어 열기 (v352) — 포털 통합검색이 「승강기 유지관리 제5조」 같은 결과를
+     눌렀을 때 그 조문이 있는 화면까지 바로 데려가기 위한 것이다. 탭만 열고 다시 검색하게 하면
+     통합검색이 찾아낸 자리를 사용자가 손으로 되짚어야 한다.
+     ?sub=rules|contracts|elections 와 ?nq=<검색어>. 잠긴 탭(notices·checks)은 받지 않는다 —
+     주소만으로 잠금 화면에 들어가게 하면 링크가 새는 통로가 된다. */
+  (function(){
+    try{
+      var p=new URLSearchParams(location.search);
+      var s=p.get("sub"); if(s&&/^(rules|contracts|elections)$/.test(s)) st.sub=s;
+      var nq=(p.get("nq")||"").slice(0,60);
+      if(nq){ if(st.sub==="contracts") st.cq=nq; else if(st.sub==="rules") st.q=nq; }
+    }catch(e){}
+  })();
   var RULE_DOCS={
     all:{label:"◆◇ 두 규약 함께"},
     bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},
