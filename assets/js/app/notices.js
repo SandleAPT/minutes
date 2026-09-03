@@ -54,7 +54,7 @@ var Notices=(function(){
       });
     });
   }
-  // v137: 클라우드가 느리거나 일시적으로 응답하지 않아도 절차 점검 9건이 사라져 보이지 않게
+  // v339: 클라우드가 느리거나 일시적으로 응답하지 않아도 절차 점검 9건이 사라져 보이지 않게
   // 매일 저장되는 system-backup.json의 같은 시스템 레코드를 읽기 전용 예비본으로 사용한다.
   var backupDataPromise=null;
   function getBackupRec(id){
@@ -120,7 +120,7 @@ var Notices=(function(){
   function loadElections(){
     if(st.elections||st.electionsLoading) return;
     st.electionsLoading=true;
-    fetch("elections.json?v=12").then(function(r){return r.json()}).then(function(j){
+    fetch("elections.json?v=3").then(function(r){return r.json()}).then(function(j){
       st.electionsLoading=false;st.elections=j;draw();
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
@@ -457,13 +457,6 @@ var Notices=(function(){
   function electionsHtml(){
     if(!st.elections) return '<div class="nt-empty">'+(st.electionsLoading?'선거 기록 불러오는 중…':'선거 기록이 없습니다.')+'</div>';
     var j=st.elections, h='<div class="rl-head"><div class="small">'+esc(j.note||'')+'</div></div>';
-    /* 기록을 읽기 전에 알아 두면 좋은 것을 맨 위에 짧게 둔다.
-     * 전에는 붉은 상자에 ★를 달아 두었는데, 사용자 지적(2026-09-03)대로 그러면 지난 일을
-     * 잘못이라고 가리키는 것처럼 읽힌다. 방식이 바뀌었다는 사실만 담담하게 적는다.
-     * 자세한 숫자는 각 투표 카드에 그대로 있으므로 여기서 되풀이하지 않는다. */
-    if((j.읽기전에||[]).length)
-      h+='<div class="nt-sum" style="margin:10px 0 14px"><b>이 기록을 읽기 전에</b>'+
-        '<ul class="nt-facts" style="margin:6px 0 0">'+j.읽기전에.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></div>';
     h+=단지표(j.단지);
     var 선거=(j.선거||[]).slice();
     var 회차=[];
@@ -475,20 +468,11 @@ var Notices=(function(){
     });
     if((j.찬반투표||[]).length){
       h+='<div class="rl-ch">단지 전체 찬반투표</div>';
-      j.찬반투표.slice().sort(function(a,b){return String(b.공고일).localeCompare(String(a.공고일));}).forEach(function(v){ h+=찬반카드(v); });
-    }
-    if((j.선관위회의||[]).length){
-      h+='<div class="rl-ch">선거관리위원회 회의 기록</div>';
-      j.선관위회의.slice().sort(function(a,b){return String(b.날짜).localeCompare(String(a.날짜));}).forEach(function(m){
-        h+='<details class="rl-art"><summary><b>'+esc(m.날짜||'')+' '+esc(m.회차||'')+' 선거관리위원회</b> <span class="small">'+
-          esc(m.공고번호||'')+(m.참석?' · 참석 '+esc(m.참석):'')+'</span></summary>'+
-          '<ul class="nt-facts" style="margin:8px 0">'+(m.안건||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'+
-          (m.메모?'<div class="small" style="margin-bottom:6px">※ '+esc(m.메모)+'</div>':'')+(m.출처?'<div class="small">'+esc(m.출처)+'</div>':'')+'</details>';
-      });
+      j.찬반투표.forEach(function(v){ h+=찬반카드(v); });
     }
     if((j.선관위구성||[]).length){
       h+='<div class="rl-ch">선거관리위원회 구성</div>';
-      j.선관위구성.slice().sort(function(a,b){return String(b.시기).localeCompare(String(a.시기),'ko');}).forEach(function(c){ h+=구성카드(c); });
+      j.선관위구성.forEach(function(c){ h+=구성카드(c); });
     }
     if(!선거.length) h+='<div class="nt-empty">아직 적재된 선거 기록이 없습니다.</div>';
     return h;
