@@ -682,22 +682,59 @@
     _invalidate: function () { listCache = null; },
     peekList: function () { return { items: rawListCache, at: rawListAt }; } // 주제별 보기가 최근 목록을 재사용
   };
+  /* 넘어온 안건 자리로 데려간다 (v353).
+   * 미리보기가 그려지는 시점이 경로마다 다르다 — 정적 사본이면 바로, 클라우드면 응답 뒤다.
+   * 그래서 시간을 정해 기다리지 않고 그려질 때까지 잠깐 지켜본다(최대 8초).
+   * 못 찾으면 아무 말 없이 둔다: 회의는 이미 열려 있고, 그게 예전 동작이다.
+   * (미완성 안건은 방문자 미리보기에 안 나오므로 못 찾는 경우가 실제로 있다.) */
+  function 안건으로(agId) {
+    var 끝 = Date.now() + 8000, 맞춘횟수 = 0;
+    var 찾기 = function () {
+      var 목록 = document.querySelectorAll("#previewShell [data-ag]");
+      for (var i = 0; i < 목록.length; i++) if (목록[i].getAttribute("data-ag") === agId) return 목록[i];
+      return null;
+    };
+    (function 지켜보기() {
+      var 쪽 = 찾기();
+      if (!쪽) { if (Date.now() < 끝) setTimeout(지켜보기, 150); return; }
+      /* 부드러운 스크롤(behavior:"smooth")을 쓰지 않는다. 다른 탭에서 막 넘어온 사람에게
+         8,000px짜리 문서를 천천히 굴려 보여줄 이유가 없고, 애니메이션이 도중에 취소되면
+         맨 위에 그대로 남아 아무 일도 일어나지 않은 것처럼 보인다(2026-09-03 확인). */
+      쪽.scrollIntoView({ behavior: "auto", block: "start" });
+      쪽.classList.add("ag-hl");
+      /* 첨부 원문은 나중에 채워져(hydrateInlineAttachments) 앞쪽 높이가 뒤늦게 늘어난다.
+         한 번만 맞추면 그만큼 자리가 밀리므로 잠깐 더 따라간다. 사용자가 이미 손으로
+         움직였으면 따라가지 않는다 — 읽고 있는 자리를 뺏는 게 더 나쁘다. */
+      if (++맞춘횟수 < 4) {
+        var 기준 = Math.round(window.scrollY);
+        setTimeout(function () { if (Math.abs(window.scrollY - 기준) < 40) 지켜보기(); }, 450);
+        return;
+      }
+      setTimeout(function () { 쪽.classList.remove("ag-hl"); }, 2600);
+    })();
+  }
   function bootCloud() {
     // data.json 로드를 먼저 기다렸다가(실패해도 진행) 목록 조회 → 최신 회의록 자동 열기
     /* Archive에서 안건을 눌러 넘어오면 그 회의를 연다 (v105).
      *   /minutes/?open=<회의id>
      * Archive는 회의록을 복제하지 않고 '찾아가게' 하는 것이 목적이라 원문은 늘 이 앱이 보여준다.
      * 주소로 지정된 회의가 있으면 최신 회의록 자동 열기 대신 그것을 연다. */
-    var 지정 = null;
-    try { 지정 = new URLSearchParams(location.search).get("open"); } catch (e) {}
+    var 지정 = null, 안건 = null;
+    try {
+      var qs = new URLSearchParams(location.search);
+      지정 = qs.get("open");
+      안건 = qs.get("ag");   // 안건 id — 그 안건 자리까지 데려간다 (v353)
+    } catch (e) {}
     var go = function () {
       fetchList(function () {
         if (지정) {
           try { window.Cloud._open(지정); } catch (e) {}
+          if (안건) 안건으로(안건);
           // 연 뒤 주소에서 open을 지운다 — 새로고침마다 다시 열리면 성가시다.
           try {
             var u = new URL(location.href);
             u.searchParams.delete("open");
+            u.searchParams.delete("ag");
             history.replaceState(null, "", u.pathname + u.search + u.hash);
           } catch (e) {}
           return;

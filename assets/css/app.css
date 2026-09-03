@@ -939,3 +939,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
   }
   .paper:last-child{page-break-after:auto}
 }
+
+/* Archive 통합검색에서 안건을 눌러 넘어왔을 때, 어느 쪽으로 데려왔는지 잠깐 표시한다 (v353).
+   스크롤만 시키면 "여기가 그 안건이 맞나"를 사용자가 다시 확인해야 한다. */
+.paper.ag-hl{box-shadow:0 0 0 3px #e8c76a,0 10px 30px rgba(0,0,0,.10);transition:box-shadow .25s}

@@ -1525,7 +1525,9 @@ function agendaPageHtml(item,currentPage,totalPages){
       }</tbody></table>`
     : "";
   const materials=materialListHtml(a);
-  return `<section class="paper${item.draft?" draft-page":""}">
+  // data-ag: Archive 통합검색에서 안건 하나를 눌러 넘어왔을 때 그 자리를 찾기 위한 표식 (v353).
+  // 쪽 번호가 아니라 안건 id를 쓴다 — 미완성 안건이 관리자에게만 보여 쪽 번호가 기기마다 다르다.
+  return `<section class="paper${item.draft?" draft-page":""}"${a.id?` data-ag="${esc(a.id)}"`:""}>
     ${draftRibbon}
     <div class="agenda-document-head">
       <div class="agenda-meeting-name">${esc(buildMeetingName())}</div>
