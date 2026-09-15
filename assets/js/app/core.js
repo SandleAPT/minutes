@@ -1542,12 +1542,13 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
   const vote=voteStatus(a);
   const voteHtml=voteIsBlank(a)
     ? `<div class="vote-consensus" style="background:#f6f4ee;border-color:#ddd6c7"><b>표결 미기입</b><span>의결 전 상정 안건</span></div>`
+    /* v416: 만장일치면 찬성·반대 집계줄 없이 한 칸만 낸다. 집계줄 아래에 따로 놓으니 두 상자가
+       끊어져 보였고("디자인이 아래 끊켜버렸네" — 사용자, 2026-09-16), "참석 N명 전원 찬성"이
+       이미 수를 다 말해 준다. 갈린 표결일 때만 집계줄과 사람별 칸이 함께 필요하다. */
+    : vote.unanimous
+    ? `<div class="vote-consensus"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
     : `<div class="vote-tally"><span class="for">찬성 ${vote.forCount}</span><span class="against">반대 ${vote.againstCount}</span></div>
-       ${vote.unanimous
-          /* v415: 전원이 같은 쪽이면 이름을 다 적을 까닭이 없다. 회의록 관례도 "만장일치"다.
-             (사용자 지적, 2026-09-16) 갈린 표결일 때만 누가 어느 쪽인지가 기록으로 의미가 있다. */
-          ? `<div class="vote-consensus" style="border-top:0"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
-          : `<div class="vote-mixed-grid">${votePeopleHtml(a)}</div>`}
+       <div class="vote-mixed-grid">${votePeopleHtml(a)}</div>
        ${vote.incomplete ? `<div class="vote-incomplete">미선택 ${vote.incomplete}명 · 표결 선택이 완료되지 않았습니다.</div>` : ""}`;
   const filledRemarks=Object.entries(a.remarks||{}).filter(([name,text])=>String(text||"").trim());
   const hasRemarks=!a.noRemarks && filledRemarks.length>0;
@@ -2427,7 +2428,7 @@ async function buildDocxBlob(){
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
     }else{
-      children.push(p([
+      if(!vote.unanimous) children.push(p([ // v416: 만장일치는 집계줄 없이 한 줄만
         run(`찬성 ${vote.forCount}`,{bold:true,size:25,color:"2F5128"}),
         run(`   ·   반대 ${vote.againstCount}`,{bold:true,size:25,color:"8A2A20"})
       ],{after:45,line:290}));
