@@ -1870,7 +1870,9 @@ function printableDocumentHtml(content){
       /* v415: 인쇄창에서 회의자료 칸의 사진을 보이게 하고(화면 인라인은 숨김 상태),
          한 장이 297mm 를 꽉 채워 빈 페이지가 따라붙던 것을 막는다. */
       .material-print-image{display:block!important}
-      .paper{min-height:294mm}
+      /* v417: 인쇄창에서도 같은 규칙 — 높이를 고정하지 않고 쪽번호를 흐름 안에서 내려 보낸다. */
+      .paper{min-height:255mm;height:auto;padding:10mm 14mm 8mm;display:flex;flex-direction:column}
+      .page-number{position:static;margin-top:auto;padding-top:4mm;left:auto;right:auto;bottom:auto;text-align:right}
       @page{size:A4;margin:0}
       @media print{
         .paper{page-break-after:always;break-after:page}
