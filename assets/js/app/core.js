@@ -1358,7 +1358,8 @@ function materialReferenceHtml(reference){
     ? `<a href="${esc(value)}" target="_blank" rel="noopener noreferrer">${esc(value)}</a>`
     : esc(value);
 }
-function materialListHtml(a){
+// printImages: {자료id: dataURL} — 인쇄·Word 경로에서만 넘어온다. 화면은 hydrateInlineAttachments 가 채운다.
+function materialListHtml(a,printImages){
   normalizeRemarks(a);
   const items=a.materials.filter(m=>m.title.trim()||m.reference.trim()||m.note.trim()||m.fileName);
   if(!items.length) return "";
@@ -1368,6 +1369,7 @@ function materialListHtml(a){
       ${m.reference?`<div>참조: ${materialReferenceHtml(m.reference)}</div>`:""}
       ${m.note?`<div>${nl2br(m.note)}</div>`:""}
       ${m.fileName?`<div class="attachment-inline" data-att-key="${esc(m.attachmentKey||m.id)}" data-att-kind="${materialKind(m)}" data-att-name="${esc(m.fileName)}"><span class="attachment-inline-tag">첨부 ${esc(m.fileName)}${materialKind(m)==="file"?" — 화면에 표시할 수 없는 형식(⑧에서 내려받기로 확인)":""}</span></div>`:""}
+      ${(printImages&&printImages[m.id])?`<div class="material-print-image"><img src="${printImages[m.id]}" alt="${esc(m.fileName)}"></div>`:""}
     </div>`).join("")}</div>`;
 }
 // 미리보기 첨부 인라인 표시 (v73): 자료 목록의 이미지·PDF 원문을 화면에서 바로 펼친다.
@@ -1532,7 +1534,7 @@ function coverHtml(totalPages){
     ${pageNumberHtml(1,totalPages)}
   </section>`;
 }
-function agendaPageHtml(item,currentPage,totalPages){
+function agendaPageHtml(item,currentPage,totalPages,printImages){
   const a=item.agenda;
   const proposer=String(a.proposer||"").trim();
   const draftRibbon=item.draft?`<div class="draft-ribbon">미완성 초안 — 관리자에게만 보이며, 인쇄·게시에는 포함되지 않습니다 (의결·표결 미기입)</div>`:"";
@@ -1541,7 +1543,11 @@ function agendaPageHtml(item,currentPage,totalPages){
   const voteHtml=voteIsBlank(a)
     ? `<div class="vote-consensus" style="background:#f6f4ee;border-color:#ddd6c7"><b>표결 미기입</b><span>의결 전 상정 안건</span></div>`
     : `<div class="vote-tally"><span class="for">찬성 ${vote.forCount}</span><span class="against">반대 ${vote.againstCount}</span></div>
-       <div class="vote-mixed-grid">${votePeopleHtml(a)}</div>
+       ${vote.unanimous
+          /* v415: 전원이 같은 쪽이면 이름을 다 적을 까닭이 없다. 회의록 관례도 "만장일치"다.
+             (사용자 지적, 2026-09-16) 갈린 표결일 때만 누가 어느 쪽인지가 기록으로 의미가 있다. */
+          ? `<div class="vote-consensus" style="border-top:0"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
+          : `<div class="vote-mixed-grid">${votePeopleHtml(a)}</div>`}
        ${vote.incomplete ? `<div class="vote-incomplete">미선택 ${vote.incomplete}명 · 표결 선택이 완료되지 않았습니다.</div>` : ""}`;
   const filledRemarks=Object.entries(a.remarks||{}).filter(([name,text])=>String(text||"").trim());
   const hasRemarks=!a.noRemarks && filledRemarks.length>0;
@@ -1553,7 +1559,7 @@ function agendaPageHtml(item,currentPage,totalPages){
         }).join("")
       }</tbody></table>`
     : "";
-  const materials=materialListHtml(a);
+  const materials=materialListHtml(a,printImages);
   // data-ag: Archive 통합검색에서 안건 하나를 눌러 넘어왔을 때 그 자리를 찾기 위한 표식 (v353).
   // 쪽 번호가 아니라 안건 id를 쓴다 — 미완성 안건이 관리자에게만 보여 쪽 번호가 기기마다 다르다.
   return `<section class="paper${item.draft?" draft-page":""}"${a.id?` data-ag="${esc(a.id)}"`:""}>
@@ -1587,9 +1593,19 @@ function agendaPageHtml(item,currentPage,totalPages){
     ${pageNumberHtml(currentPage,totalPages)}
   </section>`;
 }
+/* 이미지 첨부는 회의자료 칸 안에 바로 넣는다 (v415).
+ * 예전에는 이미지도 안건 뒤 별도 '첨부 페이지'로 나가서, 사진이 자료 목록에서 몇 장 뒤로
+ * 떨어졌다 — "이렇게 멀리 떨어지면 어떡해, 회의자료쪽에 바로 나오길 기대했는데"(사용자,
+ * 2026-09-16). 사진 한 장은 자료 설명 바로 밑에 있어야 읽힌다.
+ * 여러 쪽짜리 PDF 는 그대로 뒤쪽 첨부 페이지로 둔다 — 본문 사이에 끼우면 안건이 읽히지 않는다. */
+function includedImageMaterials(a){
+  normalizeRemarks(a);
+  return a.showMaterials?(a.materials||[]).filter(m=>m.fileName&&m.pageCount>0&&materialKind(m)==="image"):[];
+}
+// 안건 뒤에 페이지로 이어 붙일 첨부 (이미지는 위에서 본문에 들어가므로 제외)
 function includedPdfMaterials(a){
   normalizeRemarks(a);
-  return a.showMaterials?(a.materials||[]).filter(m=>m.fileName&&m.pageCount>0):[];
+  return a.showMaterials?(a.materials||[]).filter(m=>m.fileName&&m.pageCount>0&&materialKind(m)!=="image"):[];
 }
 function attachmentPageHtml(item,material,pageIndex,currentPage,totalPages,imageUrl=""){
   return `<section class="paper attachment-page">
@@ -1850,6 +1866,10 @@ function printableDocumentHtml(content){
       .sidebar,.topbar,.help,.toast,.print-helper,.export-modal-backdrop,.attachment-inline{display:none!important}
       .preview-shell{display:block}
       .paper{box-shadow:none;margin:0 auto;border-radius:0;page-break-inside:avoid;break-inside:avoid}
+      /* v415: 인쇄창에서 회의자료 칸의 사진을 보이게 하고(화면 인라인은 숨김 상태),
+         한 장이 297mm 를 꽉 채워 빈 페이지가 따라붙던 것을 막는다. */
+      .material-print-image{display:block!important}
+      .paper{min-height:294mm}
       @page{size:A4;margin:0}
       @media print{
         .paper{page-break-after:always;break-after:page}
@@ -1899,6 +1919,19 @@ async function renderPdfMaterialPages(material){
   return images;
 }
 
+/* 회의자료 칸에 넣을 이미지를 미리 변환한다 (v415).
+ * '첨부 제외 출력'을 고르면 사진도 빼는 것이 맞다 — 그 선택의 뜻이 "본문만"이다.
+ * 원본이 이 브라우저에 없으면 renderPdfMaterialPages 가 던지고, 인쇄가 중단되며
+ * 어느 파일이 없는지 알려 준다(예전 동작 그대로). */
+async function materialPrintImages(agenda,includeAttachments=true){
+  const map={};
+  if(!includeAttachments) return map;
+  for(const material of includedImageMaterials(agenda)){
+    const images=await renderPdfMaterialPages(material);
+    if(images[0]) map[material.id]=images[0];
+  }
+  return map;
+}
 async function buildPrintableContent(includeAttachments=true){
   const plan=outputPagePlan(exportIncludeDrafts).filter(entry=>includeAttachments||entry.type!=="attachment");
   const totalPages=1+plan.length;
@@ -1906,7 +1939,7 @@ async function buildPrintableContent(includeAttachments=true){
   const parts=[coverHtml(totalPages)];
   for(let i=0;i<plan.length;i++){
     const entry=plan[i];
-    if(entry.type==="agenda") parts.push(agendaPageHtml(entry.item,i+2,totalPages));
+    if(entry.type==="agenda") parts.push(agendaPageHtml(entry.item,i+2,totalPages,await materialPrintImages(entry.item.agenda,includeAttachments)));
     else{
       const key=entry.material.id;
       if(!imageCache.has(key)) imageCache.set(key,await renderPdfMaterialPages(entry.material));
@@ -2374,6 +2407,16 @@ async function buildDocxBlob(){
       const rows=[["자료명","링크 · 파일명 · 보관 위치","검토 내용 · 비고"].map((v,i)=>cell(p(v,{bold:true,size:26,alignment:AlignmentType.CENTER,after:0}),[2200,3400,4560][i]))];
       printableMaterials.forEach(m=>rows.push([cell(m.title||m.fileName||"자료명 미입력",2200),cell([m.reference,m.fileName].filter(Boolean).join("\n")||" ",3400),cell(formatted(m.note,{size:26}),4560)]));
       children.push(table(rows,[2200,3400,4560]));
+      // v415: 사진은 자료 표 바로 밑에. 문서 뒤쪽 첨부 페이지로 보내면 설명과 떨어져 읽히지 않는다.
+      for(const material of includedImageMaterials(a)){
+        const shot=(await renderPdfMaterialPages(material))[0];
+        if(!shot) continue;
+        const bytes=Uint8Array.from(atob(shot.split(",")[1]),c=>c.charCodeAt(0));
+        const dims=await new Promise(resolve=>{const im=new Image();im.onload=()=>resolve({w:im.naturalWidth||600,h:im.naturalHeight||400});im.onerror=()=>resolve({w:600,h:400});im.src=shot;});
+        const fit=Math.min(600/dims.w,330/dims.h,1); // 자료 설명과 같은 쪽에 남도록 높이를 제한
+        const w=Math.max(1,Math.round(dims.w*fit)),h=Math.max(1,Math.round(dims.h*fit));
+        children.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:70,after:70},children:[new ImageRun({data:bytes,type:"jpg",transformation:{width:w,height:h}})]}));
+      }
     }
     const filled=Object.entries(a.remarks||{}).filter(([_,text])=>String(text||"").trim());
     if(!a.noRemarks&&filled.length){
@@ -2394,7 +2437,9 @@ async function buildDocxBlob(){
         const shade=stateName==="for"?"E6F0E1":stateName==="against"?"FDE9E6":"FFF4D6";
         return [cell(actorFullLabel(rep),8160,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),2000,{shade,compact:true})];
       });
-      children.push(table(personRows,[8160,2000]));
+      // v415: 만장일치는 한 줄로. 갈린 표결만 사람별로 남긴다.
+      if(vote.unanimous) children.push(contentBox(`만장일치 — ${vote.detail}`,true));
+      else children.push(table(personRows,[8160,2000]));
     }
     if(a.showFollowup)children.push(sectionTitle("후속조치"),contentBox(a.followup,true));
     for(const material of includedPdfMaterials(a)){
@@ -2497,9 +2542,9 @@ async function printSingleAgenda(agendaId){
   try{
     // v414: '출력물에 회의자료 포함'을 켠 안건이면 첨부 원문도 뒤에 이어 붙인다.
     // 회의 전 자료 배포가 이 단추의 실제 쓰임이라, 사진이 빠지면 쓸 수 없다.
-    const atts=item.agenda.showMaterials?(item.agenda.materials||[]).filter(m=>m.fileName&&m.pageCount>0):[];
+    const atts=includedPdfMaterials(item.agenda);
     let total=1; atts.forEach(m=>total+=m.pageCount);
-    let content=agendaPageHtml(item,1,total), pageNo=2;
+    let content=agendaPageHtml(item,1,total,await materialPrintImages(item.agenda)), pageNo=2;
     for(const material of atts){
       let images=[];
       try{ images=await renderPdfMaterialPages(material); }

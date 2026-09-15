@@ -248,7 +248,7 @@ td.center,th.center{text-align:center}
 }
 .agenda-proposer b{background:#f4f6f2;padding:6px 8px;text-align:center;border-right:1px solid #9d978c}
 .agenda-proposer span{padding:6px 9px}
-.materials-box{border:1px solid #9d978c;border-top:0}
+.materials-box{border:1px solid #9d978c;border-top:0;page-break-inside:avoid;break-inside:avoid}
 .material-preview-row{padding:8px 10px;border-bottom:1px solid #d3cec4;font-size:11pt;line-height:1.5}
 .material-preview-row:last-child{border-bottom:0}
 .material-preview-row b{display:block;margin-bottom:2px}
@@ -885,7 +885,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .pdf-file-info b{display:block;margin-bottom:2px}
 .attachment-page{padding:8mm!important;display:flex;flex-direction:column}
 .attachment-head{height:9mm;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:9pt;color:#666}
-.attachment-page img{display:block;max-width:194mm;max-height:271mm;width:auto;height:auto;margin:auto;object-fit:contain}
+.attachment-page img{display:block;max-width:194mm;max-height:262mm;width:auto;height:auto;margin:auto;object-fit:contain}
 .attachment-placeholder{flex:1;display:grid;place-items:center;border:1px dashed #bbb;color:#777;text-align:center;line-height:1.7;padding:20px}
 .formatted-line.level-1{margin-left:.72em}
 .formatted-line.level-2{margin-left:1.45em}
@@ -901,6 +901,16 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .att-lightbox-hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;opacity:.8;background:rgba(0,0,0,.45);padding:5px 13px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .attachment-inline-tag{display:inline-block;font-size:11px;color:#8b867a;background:#f4f1ea;border-radius:999px;padding:3px 8px}
 @media print{.attachment-inline{display:none}}
+/* 회의자료 칸 안의 사진 (v415): 사진 한 장짜리 첨부는 자료 설명 바로 밑에 인쇄된다.
+   화면에서는 .attachment-inline 이 이미 같은 그림을 보여주므로 여기서는 감춘다. */
+.material-print-image{display:none}
+.material-print-image img{display:block;margin:7px auto 2px;max-width:100%;max-height:72mm;width:auto;height:auto;object-fit:contain;border:1px solid #c9c4b8}
+@media print{.material-print-image{display:block}}
+/* 사진이 본문에 들어가면 안건이 A4 한 장을 넘길 수 있다 (v415).
+   그때 아무 데서나 잘리지 않도록, 끊겨도 되는 자리를 정해 둔다 —
+   머리띠는 내용과 붙어 가고, 의결·표결 상자는 통째로 넘어간다. */
+.section-band{page-break-after:avoid;break-after:avoid}
+.summary-box,.decision-box,.follow-box,.vote-summary-list{page-break-inside:avoid;break-inside:avoid}
 
 /* 관리자 전용 미리보기 (v70): 미완성 초안 안건 표시 */
 .preview-admin-note{max-width:210mm;margin:0 auto 12px;padding:10px 14px;border:1px solid #e3b1aa;background:#fdf0ee;color:#8a2a20;border-radius:12px;font-size:13px;font-weight:700;line-height:1.6}
@@ -934,7 +944,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
   .preview-shell{gap:0}
   @page{size:A4;margin:0}
   .paper{
-    width:210mm;min-height:297mm;box-shadow:none;margin:0;border-radius:0;
+    width:210mm;min-height:294mm;box-shadow:none;margin:0;border-radius:0;
     page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid
   }
   .paper:last-child{page-break-after:auto}
