@@ -393,8 +393,8 @@ const AdminGate=(function(){
   function forget(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(AT_KEY); }catch(e){} verified=false; }
   // v92: 2단계 비밀번호 — 편집 화면은 '수정용' 키만 통과(열람 키는 role:'view'라 거부)
   function verify(k){
-    return fetch(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})})
-      .then(r=>r.json()).then(x=>!!(x&&x.ok&&x.role==="edit"));
+    return window.GasNet.json(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})})
+      .then(x=>!!(x&&x.ok&&x.role==="edit"));
   }
   function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
   function finish(ok){

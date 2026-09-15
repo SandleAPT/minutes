@@ -3,7 +3,7 @@
   var URL = "https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec";
   var TOKEN = "ITDXaUBDTmrz6DbQ3tv9R";
   function cfg() { try { var c = JSON.parse(localStorage.getItem("sandle_cloud_cfg")) || {}; return { url: c.url || URL, token: c.token || TOKEN }; } catch (e) { return { url: URL, token: TOKEN }; } }
-  function apiGet(p) { var c = cfg(); p.token = c.token; var q = Object.keys(p).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(p[k]); }).join("&"); return fetch(c.url + "?" + q).then(function (r) { return r.json(); }); }
+  function apiGet(p) { var c = cfg(); p.token = c.token; var q = Object.keys(p).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(p[k]); }).join("&"); return window.GasNet.json(c.url + "?" + q); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]; }); }
 
   var TAXONOMY = window.TopicTaxonomy;
@@ -38,7 +38,7 @@
   var SUM_ID = "topic_summaries_v1";
   function isSystemRecord(it) { return !!it && /^(topic_summaries|roster_history|notices_v1|checks_v1)/.test(String(it.id || "")); }
   window.isSystemRecord = isSystemRecord;
-  function apiPost(payload) { var c = cfg(); payload.token = c.token; return fetch(c.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); }); }
+  function apiPost(payload) { var c = cfg(); payload.token = c.token; return window.GasNet.json(c.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); }
 
   function pushRecord(out, rec, fallbackName) {
     if (isSystemRecord(rec)) return;

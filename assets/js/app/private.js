@@ -32,8 +32,7 @@
     var u = getUrl(true); if (!u) return Promise.reject(new Error("저장소 주소가 없습니다"));
     var k = getKey(true); if (!k) return Promise.reject(new Error("관리자 비밀번호가 필요합니다"));
     body.adminKey = k;
-    return fetch(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json(); })
+    return window.GasNet.json(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
       .then(function (x) {
         if (x && !x.ok && x.error === "denied") { try { localStorage.removeItem(ADMIN_LS); } catch (e) {} throw new Error("비밀번호가 올바르지 않습니다 — 다시 열면 재입력합니다"); }
         if (x && !x.ok && x.error === "edit_required") { throw new Error("수정용 비밀번호가 필요합니다 — 지금 비밀번호로는 열람만 가능합니다"); }
@@ -145,7 +144,7 @@
     // 배포 직후 최초 1회: 이 기기의 관리자 비밀번호를 비공개 저장소에 등록(first-call-wins)
     _setup: function () {
       var u = getUrl(true), k = getKey(true);
-      return fetch(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "setup", adminKey: k }) }).then(function (r) { return r.json(); });
+      return window.GasNet.json(u, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "setup", adminKey: k }) });
     },
     _resetUrl: function () { try { localStorage.removeItem(URL_KEY); } catch (e) {} }
   };

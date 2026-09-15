@@ -127,11 +127,11 @@
 
   function apiGet(cfg, params) {
     var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]); }).join("&");
-    return fetch(cfg.url + "?" + q, { method: "GET" }).then(function (r) { return r.json(); });
+    return window.GasNet.json(cfg.url + "?" + q, { method: "GET" });
   }
   function apiPost(cfg, payload) {
     payload.token = cfg.token;
-    return fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }).then(function (r) { return r.json(); });
+    return window.GasNet.json(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
   }
 
   // ---- 저장: 덮어쓰기 가드 → 실제 저장 ----
@@ -349,6 +349,8 @@
   }
 
   var listCache = null, rawListCache = null, rawListAt = 0;
+  // 목록을 클라우드에서 못 받아 정적 사본으로 때웠는가 (v413) — 화면에 그대로 알린다.
+  var listOffline = false;
   var archiveBodyFilter = "전체"; // ② 회의체 필터 (v43)
   // 시스템 레코드(주제 흐름 요약 저장소 등)는 회의록 목록에서 제외 (v31)
   function isSysRecord(it) { return !!it && /^(topic_summaries|roster_history|notices_v1|checks_v1)/.test(String(it.id || "")); }
@@ -365,10 +367,11 @@
     apiGet(cfg, { action: "list", token: cfg.token }).then(function (res) {
       var raw = (res && res.ok) ? (res.items || []) : null;
       rawListCache = raw; rawListAt = Date.now(); // 주제별 보기가 같은 목록을 재사용 (중복 호출 방지)
+      listOffline = !raw;
       listCache = (raw || staticListFallback()).filter(function (it) { return !isSysRecord(it); });
       updateCloudLatestInfo();
       if (cb) cb();
-    }).catch(function () { listCache = staticListFallback(); updateCloudLatestInfo(); if (cb) cb(); });
+    }).catch(function () { listOffline = true; listCache = staticListFallback(); updateCloudLatestInfo(); if (cb) cb(); });
   }
   // 사이드바: 클라우드에 저장된 회의록 중 가장 최근 저장 시각 표시 (v29)
   function updateCloudLatestInfo() {
@@ -378,7 +381,9 @@
     (listCache || []).forEach(function (it) {
       if (it && it.updatedAt && (!latest || new Date(it.updatedAt) > new Date(latest))) { latest = it.updatedAt; name = it.name || ""; }
     });
-    el.textContent = latest ? ("☁ 클라우드 최신 갱신: " + fmtWhen(latest)) : "☁ 클라우드 최신 갱신: 확인 불가";
+    el.textContent = listOffline
+      ? (latest ? "☁ 클라우드 연결 실패 — 저장된 사본 기준 " + fmtWhen(latest) : "☁ 클라우드 연결 실패")
+      : (latest ? ("☁ 클라우드 최신 갱신: " + fmtWhen(latest)) : "☁ 클라우드 최신 갱신: 확인 불가");
     if (name) el.title = "가장 최근 저장된 회의록: " + name;
   }
   // 기록 범위 (v47): 회의체별로 첫 회의 ~ 마지막 회의와 연도별 월 보유 현황을 보여 준다.
@@ -466,6 +471,15 @@
     var html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + ["전체", "입대의", "임차"].map(function (b) {
       return '<button type="button" class="btn' + (archiveBodyFilter === b ? ' gold' : '') + '" style="padding:6px 12px;font-size:12px" onclick="Cloud.setArchiveBody(\'' + b + '\')">' + (b === "입대의" ? "◆ 입주자대표회의" : b === "임차" ? "◇ 임차인대표회의" : "전체") + '</button>';
     }).join("") + '</div>';
+    // 클라우드에서 목록을 못 받은 경우 (v413): 조용히 옛 사본을 보여주면 "왜 안 뜨지"가 된다.
+    // 지금 보고 있는 것이 무엇인지 말하고, 다시 시도할 자리를 준다.
+    if (listOffline) {
+      html = '<div style="padding:12px 14px;border:1px solid #e3c9a0;background:#fdf6e7;border-radius:12px;margin-bottom:12px;font-size:13px;line-height:1.6;color:#6b5a33">' +
+        '<b>☁ 클라우드에 연결하지 못했습니다.</b><br>구글 서버가 응답하지 않을 때가 있습니다. 아래 목록은 이 사이트에 저장된 사본이라 ' +
+        '최근에 저장한 회의록이 빠져 있을 수 있습니다. 잠시 뒤 다시 시도해 보세요.' +
+        '<div style="margin-top:8px"><button type="button" class="btn gold" onclick="Cloud.refreshList()">다시 시도</button></div>' +
+        '</div>' + html;
+    }
     html += coverageHtml(listCache, isTenant, meetDate); // 기록 범위 (v47)
     if (!items.length) html += '<div style="padding:24px;color:#999;text-align:center">' + (q ? "검색 결과 없음" : "저장된 회의록이 없습니다.") + '</div>';
     years.forEach(function (yr) {
@@ -665,6 +679,7 @@
     _pick: function () {},
     _del: function () {},
     renderArchiveList: renderArchiveList,
+    refreshList: function () { listCache = null; listOffline = false; renderArchiveList(); }, // 연결 실패 뒤 다시 시도 (v413)
     _open: function (id) { var b = document.querySelector('[data-view="previewView"]'); if (b) b.click(); doLoad(loadCfg(), id); },
     _delArc: function (id, name) {
       if (!confirm("클라우드에서 삭제할까요?\n" + (name || id))) return;
