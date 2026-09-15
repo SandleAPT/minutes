@@ -1340,9 +1340,12 @@ function voteStatus(a){
   return {forCount,againstCount,incomplete,unanimous,detail};
 }
 function requireCompleteVotes(){
-  const pending=state.agendas.filter(a=>!isAgendaComplete(a));
+  const pending=state.agendas.filter(a=>hasAgendaTitle(a)&&!isAgendaComplete(a));
   if(pending.length){
-    const message=`의결사항·표결이 비어 있는 안건 ${pending.length}건은 '의결 전(결과 미기입)'으로 표시됩니다.`;
+    // v414: 예전 문구는 "의결 전으로 표시된다"고 했지만 실제로는 출력에서 빠졌다. 선택에 맞춰 사실대로 말한다.
+    const message=exportIncludeDrafts
+      ? `미완성 안건 ${pending.length}건도 함께 출력합니다. 의결·표결란은 ‘의결 전 — 안건 상정 단계’로 표시됩니다.`
+      : `의결사항·표결이 비어 있는 안건 ${pending.length}건은 이번 출력에서 빠집니다. 회의 전 자료로 함께 뽑으려면 ‘미완성 안건 ${pending.length}건도 포함’을 선택하세요.`;
     modalStatus(message,"warn");
     showToast(message,"warn");
   }
@@ -1385,6 +1388,32 @@ function inlineAttachmentImages(key,kind,name){
     })().catch(err=>{ console.error(err); AttPreview.delete(key); return []; }));
   }
   return AttPreview.get(key);
+}
+/* 미리보기의 첨부 페이지 채우기 (v414).
+ * 예전에는 첨부 페이지가 화면에서 회색 자리표시("인쇄 시 이 위치에 원문 페이지가 포함됩니다")로만
+ * 보였다. 인쇄물에는 제대로 들어가지만, 화면만 보고 "체크했는데 사진이 안 나온다"고 읽히는 것이
+ * 당연했다 — 사용자 지적(2026-09-16). 그래서 자료 목록 인라인과 **같은 캐시**(AttPreview)를 써서
+ * 화면에서도 실제 원문을 보여 준다. 새로 변환하는 비용은 없다.
+ * 원본이 이 브라우저에 없으면(다른 기기에서 첨부함) 자리표시를 그대로 두고 그 사실을 알린다. */
+function hydrateAttachmentPages(root){
+  if(!root) return;
+  root.querySelectorAll(".attachment-placeholder[data-att-key]").forEach(async box=>{
+    const kind=box.dataset.attKind;
+    if(kind!=="image"&&kind!=="pdf") return;
+    const imgs=await inlineAttachmentImages(box.dataset.attKey,kind,box.dataset.attName);
+    if(!box.isConnected) return;
+    const url=imgs[Math.max(0,Number(box.dataset.attPage||1)-1)];
+    if(!url){ // 이 브라우저에 원본이 없다 — 왜 비어 보이는지 말해 준다
+      const note=box.querySelector(".small");
+      if(note) note.textContent="이 브라우저에 원본 파일이 없습니다. 첨부한 기기에서 열거나 ⑧ 안건·발언에서 다시 첨부하세요.";
+      return;
+    }
+    const img=document.createElement("img");
+    img.src=url; img.alt=`${box.dataset.attName} ${box.dataset.attPage}쪽`;
+    img.decoding="async"; img.title="누르면 크게 보기";
+    img.onclick=()=>openAttachmentLightbox(img.src,img.alt);
+    box.replaceWith(img);
+  });
 }
 function hydrateInlineAttachments(root){
   if(!root) return;
@@ -1565,9 +1594,25 @@ function includedPdfMaterials(a){
 function attachmentPageHtml(item,material,pageIndex,currentPage,totalPages,imageUrl=""){
   return `<section class="paper attachment-page">
     <div class="attachment-head"><b>${esc(item.label)} · ${esc(material.fileName)}</b><span>첨부 ${pageIndex} / ${material.pageCount}</span></div>
-    ${imageUrl?`<img src="${imageUrl}" alt="${esc(material.fileName)} ${pageIndex}쪽">`:`<div class="attachment-placeholder"><div><b>${esc(material.fileName)}</b><br>원문 ${pageIndex} / ${material.pageCount}쪽<br><span class="small">인쇄 시 이 위치에 원문 페이지가 포함됩니다.</span></div></div>`}
+    ${imageUrl?`<img src="${imageUrl}" alt="${esc(material.fileName)} ${pageIndex}쪽">`:`<div class="attachment-placeholder" data-att-key="${esc(material.attachmentKey||material.id)}" data-att-kind="${materialKind(material)}" data-att-name="${esc(material.fileName)}" data-att-page="${pageIndex}"><div><b>${esc(material.fileName)}</b><br>원문 ${pageIndex} / ${material.pageCount}쪽<br><span class="small">원문을 불러오는 중입니다… (인쇄·Word 출력에는 이 위치에 원문이 들어갑니다)</span></div></div>`}
     ${pageNumberHtml(currentPage,totalPages)}
   </section>`;
+}
+/* 출력에 미완성 안건을 함께 넣을지 (v414).
+ * 원래 인쇄·Word 는 의결·표결까지 끝난 안건만 내보냈다. 회의 전에는 안건이 전부 미완성이라
+ * "출력물에 회의자료 포함"을 켜고 인쇄해도 표지만 나오고 자료가 안 나갔다 — 사용자 지적(2026-09-16).
+ * 회의 전 자료 배포가 실제 필요이므로 **관리자 기기에서만** 선택할 수 있게 열어 둔다.
+ * 기본값은 예전 그대로 꺼짐이고, 켜면 의결란이 "의결 전 — 안건 상정 단계"로 표시된다. */
+let exportIncludeDrafts=false;
+function exportDraftsChecked(){
+  const el=document.getElementById("exportDraftsChk");
+  return !!(el&&el.checked&&isAdminDevice());
+}
+function exportDraftsOptionHtml(){
+  if(!isAdminDevice()) return "";
+  const pending=state.agendas.filter(a=>hasAgendaTitle(a)&&!isAgendaComplete(a)).length;
+  if(!pending) return "";
+  return `<label class="toggle" style="margin-top:10px"><input type="checkbox" id="exportDraftsChk"> 미완성 안건 ${pending}건도 포함 <span class="small">(회의 전 자료 배포용 — 의결·표결란은 ‘의결 전’으로 표시됩니다)</span></label>`;
 }
 function outputPagePlan(includeDrafts=false){
   const plan=[];
@@ -1594,6 +1639,7 @@ function renderPreview(){
   const shell=document.getElementById("previewShell");
   shell.innerHTML=notice+coverHtml(totalPages)+pages;
   hydrateInlineAttachments(shell); // 첨부 원문 인라인 표시 (v73)
+  hydrateAttachmentPages(shell);   // 첨부 페이지에도 실제 원문을 채운다 (v414)
   renderSourceBox(); // 원문 전문 (v62)
 }
 // 원문 전문 상자 (v62): 레코드에 `source`(옮겨 적은 공고 원문)가 있으면 미리보기 아래에 접이식으로 보여 준다.
@@ -1669,7 +1715,7 @@ function openExportModal(type){
       <p>현재 회의록을 수정 가능한 <b>.docx 문서</b>로 저장합니다.</p>
       <div class="export-modal-summary">
         Word에서 수정하거나 한글에서 열어 HWP 형식으로 다시 저장할 수 있습니다.<br>
-        ‘출력물에 회의자료 포함’을 선택한 PDF·이미지 원문도 해당 안건 뒤에 이어집니다.
+        ‘출력물에 회의자료 포함’을 선택한 PDF·이미지 원문도 해당 안건 뒤에 이어집니다.${exportDraftsOptionHtml()}
       </div>`;
     actions.innerHTML=`
       <button class="btn soft" onclick="closeExportModal()">취소</button>
@@ -1681,7 +1727,7 @@ function openExportModal(type){
       <div class="export-modal-summary">
         <b>첨부 제외 출력</b> — 종이로 배포할 회의록 본문만 출력합니다.<br>
         <b>첨부 포함 출력</b> — 웹 게시용으로 회의록과 첨부 원문을 한 파일에 포함합니다.<br><br>
-        인쇄창에서 프린터 대신 <b>PDF로 저장</b>을 선택할 수 있습니다.
+        인쇄창에서 프린터 대신 <b>PDF로 저장</b>을 선택할 수 있습니다.${exportDraftsOptionHtml()}
       </div>`;
     actions.innerHTML=`
       <button class="btn soft" onclick="closeExportModal()">취소</button>
@@ -1854,7 +1900,7 @@ async function renderPdfMaterialPages(material){
 }
 
 async function buildPrintableContent(includeAttachments=true){
-  const plan=outputPagePlan().filter(entry=>includeAttachments||entry.type!=="attachment");
+  const plan=outputPagePlan(exportIncludeDrafts).filter(entry=>includeAttachments||entry.type!=="attachment");
   const totalPages=1+plan.length;
   const imageCache=new Map();
   const parts=[coverHtml(totalPages)];
@@ -2316,7 +2362,7 @@ async function buildDocxBlob(){
   const agendaRows=officialAgendaRows();
   children.push(table(agendaRows.length?agendaRows.map(row=>[cell(p(row.label,{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1080,{compact:true}),cell(p(row.title||" ",{size:24,after:0,line:280}),9080,{compact:true})]):[[cell("-",1080,{compact:true}),cell("등록된 안건이 없습니다.",9080,{compact:true})]],[1080,9080]));
 
-  for(const item of outputAgendaItems()){
+  for(const item of outputAgendaItems(exportIncludeDrafts)){
     const a=item.agenda;normalizeRemarks(a);const vote=voteStatus(a);
     children.push(pageBreak(),p(buildMeetingName(),{size:20,color:"6F746C",alignment:AlignmentType.RIGHT,after:30}));
     children.push(p([run(item.label,{bold:true,size:26,color:"647660"}),run(`  ${item.title}`,{bold:true,size:34})],{after:85,line:360,border:titleBorders}));
@@ -2374,7 +2420,7 @@ async function buildDocxBlob(){
 }
 
 async function saveWordFromModal(){
-  if(!requireCompleteVotes()) return;
+  exportIncludeDrafts=exportDraftsChecked(); if(!requireCompleteVotes()) return;
   try{
     modalStatus("Word/한글용 문서를 생성하는 중입니다…");
     const blob=await buildDocxBlob();
@@ -2404,7 +2450,7 @@ function goPreview(){
 }
 
 async function printFromModal(includeAttachments=true){
-  if(!requireCompleteVotes()) return;
+  exportIncludeDrafts=exportDraftsChecked(); if(!requireCompleteVotes()) return;
   const printWindow=window.open("","_blank","width=980,height=760");
   if(!printWindow){
     closeExportModal();
@@ -2437,7 +2483,7 @@ function printMinutes(){
 
 // 안건 입력 중에도 해당 안건 한 건만 A4 1쪽 형식으로 바로 확인한다.
 // 미완성 안건도 검토할 수 있어야 하므로 전체 출력의 표결 완료 검사는 적용하지 않는다.
-function printSingleAgenda(agendaId){
+async function printSingleAgenda(agendaId){
   const item=outputAgendaItems(true).find(entry=>entry.agenda.id===agendaId);
   if(!item){
     showToast("미리 볼 안건을 찾을 수 없습니다.","warn");
@@ -2449,7 +2495,19 @@ function printSingleAgenda(agendaId){
     return;
   }
   try{
-    const content=agendaPageHtml(item,1,1);
+    // v414: '출력물에 회의자료 포함'을 켠 안건이면 첨부 원문도 뒤에 이어 붙인다.
+    // 회의 전 자료 배포가 이 단추의 실제 쓰임이라, 사진이 빠지면 쓸 수 없다.
+    const atts=item.agenda.showMaterials?(item.agenda.materials||[]).filter(m=>m.fileName&&m.pageCount>0):[];
+    let total=1; atts.forEach(m=>total+=m.pageCount);
+    let content=agendaPageHtml(item,1,total), pageNo=2;
+    for(const material of atts){
+      let images=[];
+      try{ images=await renderPdfMaterialPages(material); }
+      catch(err){ console.error(err); showToast(`${material.fileName} 원문을 불러오지 못해 자리표시로 넣습니다.`,"warn"); }
+      for(let pageIndex=1;pageIndex<=material.pageCount;pageIndex++){
+        content+=attachmentPageHtml(item,material,pageIndex,pageNo++,total,images[pageIndex-1]||"");
+      }
+    }
     printWindow.document.open();
     printWindow.document.write(printableDocumentHtml(content));
     printWindow.document.close();
