@@ -243,7 +243,10 @@ td.center,th.center{text-align:center}
   position:absolute;left:14mm;right:14mm;bottom:6mm;
   text-align:right;font-size:9.3px;color:#777;letter-spacing:.2px
 }
-.agenda-document-head{margin-bottom:7mm}
+/* v423: 제목과 첫 칸(안건 요지 등) 사이 4mm. 인쇄는 v417부터 .paper 가 세로 flex 라 여백이 겹치지 않아
+   머리 7mm + 머리띠 6mm = 13mm 로 벌어졌다(화면은 겹쳐 7mm) — "안건요지부분이 제목이랑 너무 떨어져있는데"(사용자, 2026-09-16). */
+.agenda-document-head{margin-bottom:4mm}
+.agenda-document-head + .section-band,.agenda-document-head + .agenda-proposer,.agenda-document-head + .other-subtitle{margin-top:0}
 .agenda-meeting-name{
   margin-bottom:2.5mm;text-align:right;font-size:9.3px;color:#6f746c;font-weight:700
 }
