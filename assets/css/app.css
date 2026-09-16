@@ -230,11 +230,12 @@ td.center,th.center{text-align:center}
 /* 표결 이름 칸 — 출력물에 참석자가 직접 서명한다.
    v419 이름 뒤 서명 빈칸 → v422 한 줄 4명 격자(글씨만 줄여서는 4명이 안 들어갔다) → v424 이름 10pt·찬반 8.5pt(시안 2).
    v425: 서명 빈칸을 없앴다 — "그 위에 그냥 사인해달라고 하게"(사용자, 2026-09-16). 이름 칸 위에 서명한다.
-   한 줄 4명·글씨 크기·찬반을 이름 아래 줄로 두는 배치는 그대로. */
+   v426: 찬반도 이름 옆 같은 줄로 올렸다 — 아래 줄로 내린 건 빈칸 자리를 만들려던 것이라 빈칸이 없으면 필요 없다
+   ("아예 찬성이라는 글씨까지 올려야 해" — 사용자). 한 줄 4명·이름 10pt 는 그대로. */
 .vote-mixed-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:6px}
-.vote-person{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:3px 4px 3px 6px;font-size:10pt;line-height:1.2}
+.vote-person{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;padding:4px 6px;font-size:10pt;line-height:1.25}
 .vote-person b{white-space:nowrap}
-.vote-person small{font-size:8.5pt;line-height:1.1}
+.vote-person small{font-size:8.5pt;line-height:1.25}
 @media screen and (max-width:640px){.vote-mixed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:10pt}
 .footer-note{margin-top:5mm;text-align:center;font-size:10px;color:#777}
