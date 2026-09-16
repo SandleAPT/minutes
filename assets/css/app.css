@@ -837,7 +837,11 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
   display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #9d978c;border-top:0
 }
 .cover-meta-block{padding:8px 10px;font-size:9.5pt;line-height:1.55}
-.formatted-text{display:grid;gap:.12em}
+/* v428: grid → block. Safari(WebKit)로 인쇄·PDF 저장하면 grid 행 높이가 줄바꿈 전 폭으로 잡혀,
+   두 줄로 넘어간 문장의 둘째 줄이 다음 줄·상자 테두리와 겹쳐 찍혔다(사용자 PDF 2026-09-16, 제1·3·5안).
+   크롬은 멀쩡해서 그동안 못 봤다. 줄 사이 간격(.12em)은 margin 으로 같게 둔다. */
+.formatted-text{display:block}
+.formatted-text>.formatted-line+.formatted-line{margin-top:.12em}
 .formatted-line{min-height:1.15em;white-space:pre-wrap;overflow-wrap:anywhere}
 .formatted-line.blank{min-height:.75em}
 .formatted-line.hanging{
