@@ -1925,11 +1925,20 @@ async function renderPdfMaterialPages(material){
  * '첨부 제외 출력'을 고르면 사진도 빼는 것이 맞다 — 그 선택의 뜻이 "본문만"이다.
  * 원본이 이 브라우저에 없으면 renderPdfMaterialPages 가 던지고, 인쇄가 중단되며
  * 어느 파일이 없는지 알려 준다(예전 동작 그대로). */
-async function materialPrintImages(agenda,includeAttachments=true){
+async function materialPrintImages(agenda,includeAttachments=true,{skipMissing=false}={}){
   const map={};
   if(!includeAttachments) return map;
   for(const material of includedImageMaterials(agenda)){
-    const images=await renderPdfMaterialPages(material);
+    let images=[];
+    try{ images=await renderPdfMaterialPages(material); }
+    catch(err){
+      // v421: 안건 한 건 미리보기는 사진 원본이 이 브라우저에 없어도 열려야 한다. v415부터 여기서
+      // 던져 미리보기 창이 통째로 닫혔다("안건 pdf 미리보기가 안되네" — 사용자, 2026-09-16).
+      // PDF 첨부가 이미 그러듯 알리고 빼고 간다. 전체 인쇄는 예전처럼 멈추고 어느 파일인지 알린다.
+      if(!skipMissing) throw err;
+      console.error(err);
+      showToast(`${material.fileName} 원본이 이 브라우저에 없어 사진을 빼고 엽니다.`,"warn");
+    }
     if(images[0]) map[material.id]=images[0];
   }
   return map;
@@ -2541,7 +2550,7 @@ async function printSingleAgenda(agendaId){
     // 회의 전 자료 배포가 이 단추의 실제 쓰임이라, 사진이 빠지면 쓸 수 없다.
     const atts=includedPdfMaterials(item.agenda);
     let total=1; atts.forEach(m=>total+=m.pageCount);
-    let content=agendaPageHtml(item,1,total,await materialPrintImages(item.agenda)), pageNo=2;
+    let content=agendaPageHtml(item,1,total,await materialPrintImages(item.agenda,true,{skipMissing:true})), pageNo=2;
     for(const material of atts){
       let images=[];
       try{ images=await renderPdfMaterialPages(material); }
