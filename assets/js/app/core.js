@@ -2311,7 +2311,7 @@ async function buildDocxBlob(){
   const d=window.docx;
   if(!d) throw new Error("Word 문서 생성 도구를 불러오지 못했습니다.");
   const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,VerticalAlign,BorderStyle,ShadingType,TableLayoutType,Footer,PageNumber,PageBreak,ImageRun}=d;
-  const FONT="Malgun Gothic", INK="2F332F", LINE="9D978C", SAGE="7F927A", WIDTH=10160, BODY=26;
+  const FONT="Malgun Gothic", INK="2F332F", LINE="9D978C", SAGE="7F927A", WIDTH=10160, BODY=25 /* v420: 인쇄와 같이 0.5pt(=반포인트 1) 작게 */;
   const numberingConfigs=[];
   let numberingSequence=0;
   const run=(text,{bold=false,size=BODY,color=INK}={})=>new TextRun({text:String(text??" ").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,""),bold,size,color,font:FONT});
@@ -2360,11 +2360,11 @@ async function buildDocxBlob(){
   });
   const split=Math.ceil(reps.length/2),left=reps.slice(0,split),right=reps.slice(split);
   const rosterWidths=[840,800,1380,2060,840,800,1380,2060];
-  const rosterRows=[["동","직책","성명","서명","동","직책","성명","서명"].map((v,i)=>cell(p(v,{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),rosterWidths[i],{compact:true}))];
+  const rosterRows=[["동","직책","성명","서명","동","직책","성명","서명"].map((v,i)=>cell(p(v,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),rosterWidths[i],{compact:true}))];
   for(let i=0;i<Math.max(left.length,right.length,1);i++){
     const row=[];[left[i],right[i]].forEach((rep,side)=>{
       const values=rep?[`${seatLabel(rep)}`,rep.role||"대표",rep.name,attendance[String(rep.dong)]?"":"미참석"]:[" "," "," "," "];
-      values.forEach((v,j)=>row.push(cell(p(v,{size:24,alignment:AlignmentType.CENTER,after:0,line:280,color:rep&&!attendance[String(rep.dong)]?"888888":INK}),rosterWidths[side*4+j],{shade:"FFFFFF",compact:true})));
+      values.forEach((v,j)=>row.push(cell(p(v,{size:23,alignment:AlignmentType.CENTER,after:0,line:280,color:rep&&!attendance[String(rep.dong)]?"888888":INK}),rosterWidths[side*4+j],{shade:"FFFFFF",compact:true})));
     });rosterRows.push(row);
   }
   const guests=(state.meeting.guests||[]).filter(g=>g.name.trim()||g.position.trim());
@@ -2372,38 +2372,38 @@ async function buildDocxBlob(){
   const audienceText=Number(state.meeting.audience?.count)>0?`입주민 총 ${Math.floor(Number(state.meeting.audience.count))}명`:"없음";
   const sequenceData=sequenceItems().length?sequenceItems():["-"];
   const sequenceTable=sequenceIsStacked(sequenceData)
-    ? table(sequenceData.map((s,i)=>[cell(p(String(i+1).padStart(2,"0"),{size:20,color:"647660",alignment:AlignmentType.CENTER,after:0}),720,{compact:true}),cell(p(s,{size:24,after:0,line:280}),9440,{compact:true})]),[720,9440])
+    ? table(sequenceData.map((s,i)=>[cell(p(String(i+1).padStart(2,"0"),{size:19,color:"647660",alignment:AlignmentType.CENTER,after:0}),720,{compact:true}),cell(p(s,{size:23,after:0,line:280}),9440,{compact:true})]),[720,9440])
     : table([[cell(p(sequenceData.flatMap((s,i)=>[
-        run(`${String(i+1).padStart(2,"0")}  `,{size:20,color:"647660"}),
-        run(s,{size:24}),
-        ...(i<sequenceData.length-1?[run("     →     ",{size:22,color:"999B95"})]:[])
+        run(`${String(i+1).padStart(2,"0")}  `,{size:19,color:"647660"}),
+        run(s,{size:23}),
+        ...(i<sequenceData.length-1?[run("     →     ",{size:21,color:"999B95"})]:[])
       ]),{alignment:AlignmentType.CENTER,after:0,line:280}),10160,{compact:true})]],[10160]);
   const children=[];
-  children.push(p(docTitle(),{bold:true,size:40,alignment:AlignmentType.CENTER,after:120,line:390,border:titleBorders}));
+  children.push(p(docTitle(),{bold:true,size:39,alignment:AlignmentType.CENTER,after:120,line:390,border:titleBorders}));
   children.push(table([
-    [cell(p("회의명",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),new TableCell({children:[p(buildMeetingName(),{bold:true,size:24,after:0,line:280})],columnSpan:3,width:{size:8738,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,margins:{top:45,bottom:45,left:90,right:90}})],
-    [cell(p("일시",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),cell(p(formattedMeetingDateTime(),{size:24,after:0,line:280}),3860,{compact:true}),cell(p("장소",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1220,{compact:true}),cell(p(state.meeting.place,{size:24,after:0,line:280}),3658,{compact:true})]
+    [cell(p("회의명",{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),new TableCell({children:[p(buildMeetingName(),{bold:true,size:23,after:0,line:280})],columnSpan:3,width:{size:8738,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,margins:{top:45,bottom:45,left:90,right:90}})],
+    [cell(p("일시",{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),1422,{compact:true}),cell(p(formattedMeetingDateTime(),{size:23,after:0,line:280}),3860,{compact:true}),cell(p("장소",{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),1220,{compact:true}),cell(p(state.meeting.place,{size:23,after:0,line:280}),3658,{compact:true})]
   ],[1422,3860,1220,3658]));
   children.push(sectionTitle("회의 진행순서"),sequenceTable);
   children.push(sectionTitle("참석자 명단"),table(rosterRows,rosterWidths));
   children.push(sectionTitle("배석자 · 참관 현황"),table([
-    [cell(p("배석자",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1220,{compact:true}),cell(formatted(guestText,{size:24}),5580,{compact:true}),cell(p("참관",{bold:true,size:24,alignment:AlignmentType.CENTER,after:0}),1840,{compact:true}),cell(p(audienceText,{size:24,alignment:AlignmentType.CENTER,after:0}),1520,{compact:true})]
+    [cell(p("배석자",{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),1220,{compact:true}),cell(formatted(guestText,{size:23}),5580,{compact:true}),cell(p("참관",{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),1840,{compact:true}),cell(p(audienceText,{size:23,alignment:AlignmentType.CENTER,after:0}),1520,{compact:true})]
   ],[1220,5580,1840,1520]));
   children.push(sectionTitle("상정 안건"));
   const agendaRows=officialAgendaRows();
-  children.push(table(agendaRows.length?agendaRows.map(row=>[cell(p(row.label,{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),1080,{compact:true}),cell(p(row.title||" ",{size:24,after:0,line:280}),9080,{compact:true})]):[[cell("-",1080,{compact:true}),cell("등록된 안건이 없습니다.",9080,{compact:true})]],[1080,9080]));
+  children.push(table(agendaRows.length?agendaRows.map(row=>[cell(p(row.label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),1080,{compact:true}),cell(p(row.title||" ",{size:23,after:0,line:280}),9080,{compact:true})]):[[cell("-",1080,{compact:true}),cell("등록된 안건이 없습니다.",9080,{compact:true})]],[1080,9080]));
 
   for(const item of outputAgendaItems(exportIncludeDrafts)){
     const a=item.agenda;normalizeRemarks(a);const vote=voteStatus(a);
-    children.push(pageBreak(),p(buildMeetingName(),{size:20,color:"6F746C",alignment:AlignmentType.RIGHT,after:30}));
-    children.push(p([run(item.label,{bold:true,size:26,color:"647660"}),run(`  ${item.title}`,{bold:true,size:34})],{after:85,line:360,border:titleBorders}));
-    if(item.isOther)children.push(p(`기타안건 ${item.subIndex} / ${item.subTotal}  ${a.title||"소제목 미입력"}`,{bold:true,size:28,after:60,border:{bottom:{style:BorderStyle.SINGLE,size:4,color:"C8C2B6",space:3}}}));
+    children.push(pageBreak(),p(buildMeetingName(),{size:19,color:"6F746C",alignment:AlignmentType.RIGHT,after:30}));
+    children.push(p([run(item.label,{bold:true,size:25,color:"647660"}),run(`  ${item.title}`,{bold:true,size:33})],{after:85,line:360,border:titleBorders}));
+    if(item.isOther)children.push(p(`기타안건 ${item.subIndex} / ${item.subTotal}  ${a.title||"소제목 미입력"}`,{bold:true,size:27,after:60,border:{bottom:{style:BorderStyle.SINGLE,size:4,color:"C8C2B6",space:3}}}));
     if(String(a.summary||"").trim()) children.push(sectionTitle("안건 요지"),contentBox(a.summary,true));
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim()||m.fileName);
     if(a.showMaterials&&printableMaterials.length){
       children.push(sectionTitle("회의자료 · 첨부자료"));
-      const rows=[["자료명","링크 · 파일명 · 보관 위치","검토 내용 · 비고"].map((v,i)=>cell(p(v,{bold:true,size:26,alignment:AlignmentType.CENTER,after:0}),[2200,3400,4560][i]))];
-      printableMaterials.forEach(m=>rows.push([cell(m.title||m.fileName||"자료명 미입력",2200),cell([m.reference,m.fileName].filter(Boolean).join("\n")||" ",3400),cell(formatted(m.note,{size:26}),4560)]));
+      const rows=[["자료명","링크 · 파일명 · 보관 위치","검토 내용 · 비고"].map((v,i)=>cell(p(v,{bold:true,size:25,alignment:AlignmentType.CENTER,after:0}),[2200,3400,4560][i]))];
+      printableMaterials.forEach(m=>rows.push([cell(m.title||m.fileName||"자료명 미입력",2200),cell([m.reference,m.fileName].filter(Boolean).join("\n")||" ",3400),cell(formatted(m.note,{size:25}),4560)]));
       children.push(table(rows,[2200,3400,4560]));
       // v415: 사진은 자료 표 바로 밑에. 문서 뒤쪽 첨부 페이지로 보내면 설명과 떨어져 읽히지 않는다.
       for(const material of includedImageMaterials(a)){
@@ -2419,22 +2419,22 @@ async function buildDocxBlob(){
     const filled=Object.entries(a.remarks||{}).filter(([_,text])=>String(text||"").trim());
     if(!a.noRemarks&&filled.length){
       children.push(sectionTitle("주요 발언"));
-      children.push(table(filled.map(([key,text])=>[cell(p(remarkSpeakerLabel(key),{bold:true,size:24,alignment:AlignmentType.CENTER,after:0,line:280}),2800),cell(formatted(text,{autoBullets:true,size:24}),7360)]),[2800,7360]));
+      children.push(table(filled.map(([key,text])=>[cell(p(remarkSpeakerLabel(key),{bold:true,size:23,alignment:AlignmentType.CENTER,after:0,line:280}),2800),cell(formatted(text,{autoBullets:true,size:23}),7360)]),[2800,7360]));
     }
     children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true),sectionTitle("표결"));
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
     }else{
       children.push(p([ // v418: 만장일치여도 집계줄·사람별 칸 모두 (서명용)
-        run(`찬성 ${vote.forCount}`,{bold:true,size:25,color:"2F5128"}),
-        run(`   ·   반대 ${vote.againstCount}`,{bold:true,size:25,color:"8A2A20"})
+        run(`찬성 ${vote.forCount}`,{bold:true,size:24,color:"2F5128"}),
+        run(`   ·   반대 ${vote.againstCount}`,{bold:true,size:24,color:"8A2A20"})
       ],{after:45,line:290}));
       const personRows=currentAttendees().map(rep=>{
         const stateName=(a.votes||{})[actorKey(rep)]||"";
         const label=stateName==="for"?"찬성":stateName==="against"?"반대":"미선택";
         const shade=stateName==="for"?"E6F0E1":stateName==="against"?"FDE9E6":"FFF4D6";
         // v419: 찬반 옆에 서명 칸. 한 사람 한 줄이라 칸을 더해도 표 높이는 그대로다.
-        return [cell(actorFullLabel(rep),5360,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),1800,{shade,compact:true}),cell(" ",3000,{compact:true})];
+        return [cell(actorFullLabel(rep),5360,{compact:true}),cell(p(label,{bold:true,size:22,alignment:AlignmentType.CENTER,after:0}),1800,{shade,compact:true}),cell(" ",3000,{compact:true})];
       });
       children.push(table(personRows,[5360,1800,3000]));
     }
@@ -2447,11 +2447,11 @@ async function buildDocxBlob(){
         const dims=await new Promise(resolve=>{const im=new Image();im.onload=()=>resolve({w:im.naturalWidth||640,h:im.naturalHeight||900});im.onerror=()=>resolve({w:640,h:900});im.src=images[i];});
         const fit=Math.min(640/dims.w,900/dims.h);
         const w=Math.max(1,Math.round(dims.w*fit)),h=Math.max(1,Math.round(dims.h*fit));
-        children.push(pageBreak(),p(`${item.label} · ${material.fileName} · ${i+1} / ${images.length}쪽`,{bold:true,size:18,color:"666666",after:28}),new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:0},children:[new ImageRun({data:bytes,type:"jpg",transformation:{width:w,height:h}})]}));
+        children.push(pageBreak(),p(`${item.label} · ${material.fileName} · ${i+1} / ${images.length}쪽`,{bold:true,size:17,color:"666666",after:28}),new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:0},children:[new ImageRun({data:bytes,type:"jpg",transformation:{width:w,height:h}})]}));
       }
     }
   }
-  const footer=new Footer({children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[run("",{size:16,color:"77766F"}),new TextRun({children:[PageNumber.CURRENT],font:FONT,size:16,color:"77766F"}),run(" / ",{size:16,color:"77766F"}),new TextRun({children:[PageNumber.TOTAL_PAGES],font:FONT,size:16,color:"77766F"})]})]});
+  const footer=new Footer({children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[run("",{size:15,color:"77766F"}),new TextRun({children:[PageNumber.CURRENT],font:FONT,size:15,color:"77766F"}),run(" / ",{size:15,color:"77766F"}),new TextRun({children:[PageNumber.TOTAL_PAGES],font:FONT,size:15,color:"77766F"})]})]});
   const doc=new Document({
     creator:"산들마을 입주자대표회의",title:buildMeetingName(),
     numbering:{config:numberingConfigs},
