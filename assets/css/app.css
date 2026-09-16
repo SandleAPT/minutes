@@ -225,6 +225,9 @@ td.center,th.center{text-align:center}
 .vote-person b{font-weight:800}.vote-person small{font-size:8.8pt;font-weight:900;white-space:nowrap}
 .vote-person.against{border-color:#efb8b0;background:#fde9e6;color:#8a2a20}
 .vote-person.pending{border-color:#e1cd86;background:#fff4d6;color:#725b13}
+/* 서명 빈칸 (v419): 찬반 바로 뒤 흰 칸. 가로 18mm — 12mm로 줄여도 한 줄에 드는 사람 수가 같아서 서명하기 편한 쪽으로. */
+.vote-person:has(.vote-sign){padding:3px 3px 3px 8px}
+.vote-sign{display:inline-block;width:18mm;height:6.5mm;background:#fff;border:1px solid currentColor;border-color:inherit;border-radius:5px;margin-left:2px;vertical-align:middle}
 .vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:10.5pt}
 .footer-note{margin-top:5mm;text-align:center;font-size:10px;color:#777}
 .page-number{

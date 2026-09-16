@@ -1321,7 +1321,9 @@ function votePeopleHtml(a){
       const stateName=(a.votes||{})[actorKey(rep)]||"";
       const label=stateName==="for"?"찬성":stateName==="against"?"반대":"미선택";
       const cls=stateName==="for"?"for":stateName==="against"?"against":"pending";
-      return `<span class="vote-person ${cls}"><b>${esc(actorFullLabel(rep))}</b><small>${label}</small></span>`;
+      // v419: 찬반 바로 뒤에 서명 빈칸 — 출력물에 각자 직접 서명한다(사용자, 2026-09-16).
+      // 한 줄로 이어지는 이름 상자에 붙여서, 6명은 두 줄 그대로(+2mm)·8명은 세 줄로만 늘어난다.
+      return `<span class="vote-person ${cls}"><b>${esc(actorFullLabel(rep))}</b><small>${label}</small><span class="vote-sign" aria-label="서명란"></span></span>`;
     })
     .join("");
   return people||"표결 대상 없음";
@@ -2431,9 +2433,10 @@ async function buildDocxBlob(){
         const stateName=(a.votes||{})[actorKey(rep)]||"";
         const label=stateName==="for"?"찬성":stateName==="against"?"반대":"미선택";
         const shade=stateName==="for"?"E6F0E1":stateName==="against"?"FDE9E6":"FFF4D6";
-        return [cell(actorFullLabel(rep),8160,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),2000,{shade,compact:true})];
+        // v419: 찬반 옆에 서명 칸. 한 사람 한 줄이라 칸을 더해도 표 높이는 그대로다.
+        return [cell(actorFullLabel(rep),5360,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),1800,{shade,compact:true}),cell(" ",3000,{compact:true})];
       });
-      children.push(table(personRows,[8160,2000]));
+      children.push(table(personRows,[5360,1800,3000]));
     }
     if(a.showFollowup)children.push(sectionTitle("후속조치"),contentBox(a.followup,true));
     for(const material of includedPdfMaterials(a)){
