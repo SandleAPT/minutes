@@ -177,38 +177,40 @@ td.center,th.center{text-align:center}
 .source-box .source-meta{color:var(--muted);font-size:12px;margin-left:6px}
 .source-box .source-text{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7;margin:12px 0 6px;padding:12px 14px;background:#faf8f3;border-radius:10px;border:1px solid #eee8dc}
 .source-box .source-foot{font-size:12px;color:var(--muted);margin-top:4px}
+/* v427: 한 번 더 0.5pt 작게(v420 과 같은 규칙들, 본문 10.5→10pt) — "글씨가 겹쳐버린다"(사용자, 2026-09-16).
+   표결 이름 칸은 이름이 칸보다 길면 겹치지 않고 칸 안에서 줄을 바꾼다(flex-wrap, 이름 nowrap 해제). */
 /* v420: 회의록 문서(미리보기·인쇄) 글씨를 모두 0.5pt 작게 — 서명 빈칸이 들어가 참석 8명이면 긴 안건이 A4 한 장을
    넘던 것을 한 장에 맞춘다(사용자, 2026-09-16). px 값은 0.5pt=0.67px 만큼 뺐다. 화면 UI 글씨는 그대로. */
 .paper{
   width:210mm;min-height:297mm;margin:0 auto;background:var(--paper);
   box-shadow:0 18px 50px rgba(50,45,38,.16);
-  padding:14mm 14mm 18mm;position:relative;border-radius:3px;font-size:10.5pt;
+  padding:14mm 14mm 18mm;position:relative;border-radius:3px;font-size:10pt;
 }
 .paper .doc-title{
   border:0;border-top:3px double #6f7f6b;border-bottom:1px solid #aeb8aa;background:#fff;
-  padding:11px 14px;text-align:center;font-size:26.3px;font-weight:900;letter-spacing:.5px;
+  padding:11px 14px;text-align:center;font-size:25.6px;font-weight:900;letter-spacing:.5px;
   margin-bottom:8mm
 }
 .doc-table{width:100%;border-collapse:collapse}
-.doc-table th,.doc-table td{border:1px solid #9d978c;padding:7px 8px;font-size:10.5pt;line-height:1.4}
+.doc-table th,.doc-table td{border:1px solid #9d978c;padding:7px 8px;font-size:10pt;line-height:1.4}
 .doc-table th{position:static;background:#f4f6f2;color:#302c23}
 .section-band{
-  background:#fff;color:#2f332f;padding:6px 9px 6px 11px;font-size:10.5pt;font-weight:900;
+  background:#fff;color:#2f332f;padding:6px 9px 6px 11px;font-size:10pt;font-weight:900;
   margin-top:6mm;border-top:1px solid #9da79a;border-bottom:1px solid #cbd1c8;
   border-left:4px solid #7f927a
 }
-.section-band .band-sub{float:right;font-weight:600;color:#6f746c;font-size:9.5pt}
-.cover-sequence{border:1px solid #9d978c;border-top:0;padding:8px 12px;display:grid;gap:4px;font-size:10.5pt;line-height:1.5}
+.section-band .band-sub{float:right;font-weight:600;color:#6f746c;font-size:9pt}
+.cover-sequence{border:1px solid #9d978c;border-top:0;padding:8px 12px;display:grid;gap:4px;font-size:10pt;line-height:1.5}
 .cover-sequence b{color:#647660;font-weight:800;margin-right:5px}
 .summary-box,.decision-box,.follow-box{
-  border:1px solid #9d978c;border-top:0;padding:11px 12px;min-height:28mm;font-size:10.5pt;line-height:1.6;
+  border:1px solid #9d978c;border-top:0;padding:11px 12px;min-height:28mm;font-size:10pt;line-height:1.6;
   white-space:pre-wrap
 }
 .decision-box{min-height:22mm}
 .decision-box.pending{color:#8a8476;font-style:italic}
 .follow-box{min-height:15mm}
 .remark-table{width:100%;border-collapse:collapse}
-.remark-table th,.remark-table td{border:1px solid #9d978c;padding:2mm 2.5mm;font-size:10.5pt;line-height:1.55;vertical-align:top}
+.remark-table th,.remark-table td{border:1px solid #9d978c;padding:2mm 2.5mm;font-size:10pt;line-height:1.55;vertical-align:top}
 .remark-table th{background:#f4f6f2;position:static}
 .remark-table td:first-child{width:1%;white-space:nowrap;font-weight:800;word-break:keep-all;overflow-wrap:normal}
 .remark-table td:nth-child(2){white-space:pre-wrap}
@@ -218,13 +220,13 @@ td.center,th.center{text-align:center}
 }
 .vote-summary-list{display:grid;gap:7px}
 .vote-consensus{display:flex;align-items:center;gap:13px;border:1px solid #9d978c;background:#fbfcfa;min-height:42px}
-.vote-consensus b{flex:0 0 110px;align-self:stretch;display:flex;align-items:center;justify-content:center;background:#e8efe5;border-right:1px solid #9d978c;padding:7px 10px;font-size:11pt;white-space:nowrap}
-.vote-consensus span{padding:7px 10px;font-size:10.5pt;line-height:1.45}
-.vote-tally{display:flex;align-items:center;gap:14px;border:1px solid #9d978c;border-bottom:0;padding:7px 10px;background:#faf9f6;font-size:10.5pt;font-weight:900}
+.vote-consensus b{flex:0 0 110px;align-self:stretch;display:flex;align-items:center;justify-content:center;background:#e8efe5;border-right:1px solid #9d978c;padding:7px 10px;font-size:10.5pt;white-space:nowrap}
+.vote-consensus span{padding:7px 10px;font-size:10pt;line-height:1.45}
+.vote-tally{display:flex;align-items:center;gap:14px;border:1px solid #9d978c;border-bottom:0;padding:7px 10px;background:#faf9f6;font-size:10pt;font-weight:900}
 .vote-tally .for{color:#2f5128}.vote-tally .against{color:#8a2a20}
 .vote-mixed-grid{display:flex;flex-wrap:wrap;gap:6px;border:1px solid #9d978c;padding:9px 10px;background:#fff}
-.vote-person{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;border:1px solid #c7d8bf;background:#e6f0e1;color:#2f5128;font-size:9.3pt;line-height:1.25;word-break:keep-all}
-.vote-person b{font-weight:800}.vote-person small{font-size:8.3pt;font-weight:900;white-space:nowrap}
+.vote-person{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;border:1px solid #c7d8bf;background:#e6f0e1;color:#2f5128;font-size:8.8pt;line-height:1.25;word-break:keep-all}
+.vote-person b{font-weight:800}.vote-person small{font-size:7.8pt;font-weight:900;white-space:nowrap}
 .vote-person.against{border-color:#efb8b0;background:#fde9e6;color:#8a2a20}
 .vote-person.pending{border-color:#e1cd86;background:#fff4d6;color:#725b13}
 /* 표결 이름 칸 — 출력물에 참석자가 직접 서명한다.
@@ -233,38 +235,38 @@ td.center,th.center{text-align:center}
    v426: 찬반도 이름 옆 같은 줄로 올렸다 — 아래 줄로 내린 건 빈칸 자리를 만들려던 것이라 빈칸이 없으면 필요 없다
    ("아예 찬성이라는 글씨까지 올려야 해" — 사용자). 한 줄 4명·이름 10pt 는 그대로. */
 .vote-mixed-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:6px}
-.vote-person{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;padding:4px 6px;font-size:10pt;line-height:1.25}
-.vote-person b{white-space:nowrap}
-.vote-person small{font-size:8.5pt;line-height:1.25}
+.vote-person{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;column-gap:6px;row-gap:0;padding:4px 6px;font-size:9.5pt;line-height:1.25}
+.vote-person b{white-space:normal;min-width:0}
+.vote-person small{font-size:8pt;line-height:1.25}
 @media screen and (max-width:640px){.vote-mixed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:10pt}
+.vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:9.5pt}
 .footer-note{margin-top:5mm;text-align:center;font-size:10px;color:#777}
 .page-number{
   position:absolute;left:14mm;right:14mm;bottom:6mm;
-  text-align:right;font-size:9.3px;color:#777;letter-spacing:.2px
+  text-align:right;font-size:8.6px;color:#777;letter-spacing:.2px
 }
 /* v423: 제목과 첫 칸(안건 요지 등) 사이 4mm. 인쇄는 v417부터 .paper 가 세로 flex 라 여백이 겹치지 않아
    머리 7mm + 머리띠 6mm = 13mm 로 벌어졌다(화면은 겹쳐 7mm) — "안건요지부분이 제목이랑 너무 떨어져있는데"(사용자, 2026-09-16). */
 .agenda-document-head{margin-bottom:4mm}
 .agenda-document-head + .section-band,.agenda-document-head + .agenda-proposer,.agenda-document-head + .other-subtitle{margin-top:0}
 .agenda-meeting-name{
-  margin-bottom:2.5mm;text-align:right;font-size:9.3px;color:#6f746c;font-weight:700
+  margin-bottom:2.5mm;text-align:right;font-size:8.6px;color:#6f746c;font-weight:700
 }
 .agenda-page-title{
   display:flex;align-items:center;gap:10px;
   border-top:3px double #6f7f6b;border-bottom:1px solid #aeb8aa;
-  padding:10px 8px;font-size:19.3px;font-weight:900;line-height:1.35
+  padding:10px 8px;font-size:18.6px;font-weight:900;line-height:1.35
 }
 .agenda-page-title .agenda-page-num{
-  flex:0 0 auto;color:#647660;font-size:12.3px;font-weight:900
+  flex:0 0 auto;color:#647660;font-size:11.6px;font-weight:900
 }
 .agenda-proposer{
-  display:grid;grid-template-columns:105px 1fr;border:1px solid #9d978c;margin-top:3mm;font-size:10pt;line-height:1.4
+  display:grid;grid-template-columns:105px 1fr;border:1px solid #9d978c;margin-top:3mm;font-size:9.5pt;line-height:1.4
 }
 .agenda-proposer b{background:#f4f6f2;padding:6px 8px;text-align:center;border-right:1px solid #9d978c}
 .agenda-proposer span{padding:6px 9px}
 .materials-box{border:1px solid #9d978c;border-top:0;page-break-inside:avoid;break-inside:avoid}
-.material-preview-row{padding:8px 10px;border-bottom:1px solid #d3cec4;font-size:10.5pt;line-height:1.5}
+.material-preview-row{padding:8px 10px;border-bottom:1px solid #d3cec4;font-size:10pt;line-height:1.5}
 .material-preview-row:last-child{border-bottom:0}
 .material-preview-row b{display:block;margin-bottom:2px}
 .material-preview-row a{color:#496b8b;word-break:break-all}
@@ -273,14 +275,14 @@ td.center,th.center{text-align:center}
 .cover-reps{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #9d978c;border-bottom:0}
 .cover-rep{display:grid;grid-template-columns:55px 70px 1fr 45px;border-bottom:1px solid #9d978c}
 .cover-rep:nth-child(odd){border-right:1px solid #9d978c}
-.cover-rep span{padding:6px 7px;font-size:10.5pt;border-right:1px solid #9d978c}
+.cover-rep span{padding:6px 7px;font-size:10pt;border-right:1px solid #9d978c}
 .cover-rep span:last-child{border-right:0}
 .cover-agenda{margin-top:0}
 .cover-agenda .row{display:grid;grid-template-columns:70px 1fr;border:1px solid #9d978c;border-bottom:0}
 .cover-agenda .row:last-child{border-bottom:1px solid #9d978c}
-.cover-agenda .row span{padding:6px 8px;font-size:10.5pt;line-height:1.4}
+.cover-agenda .row span{padding:6px 8px;font-size:10pt;line-height:1.4}
 .cover-agenda .row span:first-child{background:#f4f6f2;text-align:center;font-weight:800;border-right:1px solid #9d978c}
-.cover-agenda-proposer{display:block;margin-top:2px;color:#6f746c;font-size:8.5pt;font-weight:600}
+.cover-agenda-proposer{display:block;margin-top:2px;color:#6f746c;font-size:8pt;font-weight:600}
 .help{
   padding:12px 14px;border-radius:12px;background:#fff6d8;border:1px solid #ead38c;
   font-size:12px;line-height:1.55;color:#635838;margin-bottom:14px
@@ -425,7 +427,7 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .arc-cov.tenant .arc-cov-m.on{background:#3f7fa6}
 .arc-cov-m.gap{background:#fde9e6;color:#b85c52;font-weight:700}
 .arc-cov-m.na{background:transparent;color:#d6d1c6}
-.doc-body-mark{text-align:center;font-size:11.3px;font-weight:800;letter-spacing:.08em;color:#2f5f80;margin:0 0 6px}.doc-body-mark.owner{color:#7a5a12}
+.doc-body-mark{text-align:center;font-size:10.6px;font-weight:800;letter-spacing:.08em;color:#2f5f80;margin:0 0 6px}.doc-body-mark.owner{color:#7a5a12}
 
 
 /* 참석/서명 표현 */
@@ -848,9 +850,9 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .cover-page{padding:10mm 12mm 14mm}
 .cover-page .doc-title{margin-bottom:4mm;padding:8px 12px}
 .cover-page .section-band{margin-top:3.2mm;padding-top:4px;padding-bottom:4px}
-.cover-page .doc-table th,.cover-page .doc-table td{padding:6px 8px;font-size:10.5pt}
+.cover-page .doc-table th,.cover-page .doc-table td{padding:6px 8px;font-size:10pt}
 .cover-page .cover-rep,.cover-page .cover-rep>span{min-height:36px!important}
-.cover-page .cover-agenda .row span{padding:5px 7px;font-size:10.5pt;line-height:1.35}
+.cover-page .cover-agenda .row span{padding:5px 7px;font-size:10pt;line-height:1.35}
 .cover-page .doc-table th{white-space:nowrap;word-break:keep-all}
 .cover-meta-table .meta-label{width:12%}
 .cover-meta-table td{word-break:keep-all}
@@ -865,12 +867,12 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
   display:inline-flex;align-items:center;gap:7px;
   padding:0;
   border:0;border-radius:0;background:transparent;
-  font-size:10.5pt;font-weight:400;text-align:left;line-height:1.4;
+  font-size:10pt;font-weight:400;text-align:left;line-height:1.4;
   white-space:nowrap
 }
 .sequence-step b{
   display:inline;flex:0 0 auto;width:auto;height:auto;border-radius:0;
-  background:transparent;color:#71806d;font-size:9.5pt;font-weight:600
+  background:transparent;color:#71806d;font-size:9pt;font-weight:600
 }
 .sequence-step:not(:last-child)::after{
   content:"→";position:static;margin:0 9px;
@@ -892,14 +894,14 @@ html[data-body="임차"]{--gold:#3f7fa6;--ivory:#edf4f8}html[data-body="임차"]
 .meeting-sequence{margin-top:16px;padding-top:16px;border-top:1px solid #ebe5da}
 .other-subtitle{
   margin:0 0 4mm;padding:8px 10px;border:1px solid #c8c2b6;background:#fff;
-  font-size:10.5pt;font-weight:900;line-height:1.4
+  font-size:10pt;font-weight:900;line-height:1.4
 }
-.other-subtitle small{display:block;margin-bottom:3px;color:#6f746c;font-size:8.5pt;font-weight:700}
+.other-subtitle small{display:block;margin-bottom:3px;color:#6f746c;font-size:8pt;font-weight:700}
 .pdf-attachment-row{grid-template-columns:minmax(0,1fr) auto!important}
 .pdf-file-info{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12px;line-height:1.45}
 .pdf-file-info b{display:block;margin-bottom:2px}
 .attachment-page{padding:8mm!important;display:flex;flex-direction:column}
-.attachment-head{height:9mm;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:8.5pt;color:#666}
+.attachment-head{height:9mm;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:8pt;color:#666}
 .attachment-page img{display:block;max-width:194mm;max-height:262mm;width:auto;height:auto;margin:auto;object-fit:contain}
 .attachment-placeholder{flex:1;display:grid;place-items:center;border:1px dashed #bbb;color:#777;text-align:center;line-height:1.7;padding:20px}
 .formatted-line.level-1{margin-left:.72em}
