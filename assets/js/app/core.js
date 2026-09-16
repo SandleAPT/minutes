@@ -1542,11 +1542,8 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
   const vote=voteStatus(a);
   const voteHtml=voteIsBlank(a)
     ? `<div class="vote-consensus" style="background:#f6f4ee;border-color:#ddd6c7"><b>표결 미기입</b><span>의결 전 상정 안건</span></div>`
-    /* v416: 만장일치면 찬성·반대 집계줄 없이 한 칸만 낸다. 집계줄 아래에 따로 놓으니 두 상자가
-       끊어져 보였고("디자인이 아래 끊켜버렸네" — 사용자, 2026-09-16), "참석 N명 전원 찬성"이
-       이미 수를 다 말해 준다. 갈린 표결일 때만 집계줄과 사람별 칸이 함께 필요하다. */
-    : vote.unanimous
-    ? `<div class="vote-consensus"><b>만장일치</b><span>${esc(vote.detail)}</span></div>`
+    /* v418: 만장일치여도 참석자 이름을 모두 낸다. 출력물에 각자 직접 서명해야 해서
+       「만장일치」 한 칸으로 줄이면 서명할 자리가 없다(사용자, 2026-09-16 — v415·v416 되돌림). */
     : `<div class="vote-tally"><span class="for">찬성 ${vote.forCount}</span><span class="against">반대 ${vote.againstCount}</span></div>
        <div class="vote-mixed-grid">${votePeopleHtml(a)}</div>
        ${vote.incomplete ? `<div class="vote-incomplete">미선택 ${vote.incomplete}명 · 표결 선택이 완료되지 않았습니다.</div>` : ""}`;
@@ -2023,8 +2020,6 @@ function wordDocumentHtml(){
         : `<tr><td colspan="2" class="center muted">주요 발언 기록 전</td></tr>`;
     const voteRows=voteIsBlank(a)
       ? `<tr><th>표결</th><td class="muted">미기입 — 의결 전 상정 안건</td></tr>`
-      : vote.unanimous
-      ? `<tr><th class="unanimous">만장일치</th><td>${esc(vote.detail)}</td></tr>`
       : `<tr><th>찬성(${vote.forCount})</th><td>${esc(voteNames(a,"for"))||"&nbsp;"}</td></tr>
          <tr><th>반대(${vote.againstCount})</th><td>${esc(voteNames(a,"against"))||"&nbsp;"}</td></tr>
          ${vote.incomplete?`<tr><th class="incomplete">미선택(${vote.incomplete})</th><td>표결 선택이 완료되지 않았습니다.</td></tr>`:""}`;
@@ -2247,8 +2242,6 @@ function docxDocumentXml(){
     body+=wSectionTitle("표결");
     const voteRows=voteIsBlank(a)
       ? [[{text:"표결",index:0,bold:true,align:"center",shade:"F4F6F2"},{text:"미기입 — 의결 전 상정 안건",index:1}]]
-      : vote.unanimous
-      ? [[{text:"만장일치",index:0,bold:true,align:"center",shade:"E8EFE5"},{text:vote.detail,index:1}]]
       : [
           [{text:`찬성(${vote.forCount})`,index:0,bold:true,align:"center",shade:"F4F6F2"},{text:voteNames(a,"for")||" ",index:1}],
           [{text:`반대(${vote.againstCount})`,index:0,bold:true,align:"center",shade:"F4F6F2"},{text:voteNames(a,"against")||" ",index:1}],
@@ -2430,7 +2423,7 @@ async function buildDocxBlob(){
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
     }else{
-      if(!vote.unanimous) children.push(p([ // v416: 만장일치는 집계줄 없이 한 줄만
+      children.push(p([ // v418: 만장일치여도 집계줄·사람별 칸 모두 (서명용)
         run(`찬성 ${vote.forCount}`,{bold:true,size:25,color:"2F5128"}),
         run(`   ·   반대 ${vote.againstCount}`,{bold:true,size:25,color:"8A2A20"})
       ],{after:45,line:290}));
@@ -2440,9 +2433,7 @@ async function buildDocxBlob(){
         const shade=stateName==="for"?"E6F0E1":stateName==="against"?"FDE9E6":"FFF4D6";
         return [cell(actorFullLabel(rep),8160,{compact:true}),cell(p(label,{bold:true,size:23,alignment:AlignmentType.CENTER,after:0}),2000,{shade,compact:true})];
       });
-      // v415: 만장일치는 한 줄로. 갈린 표결만 사람별로 남긴다.
-      if(vote.unanimous) children.push(contentBox(`만장일치 — ${vote.detail}`,true));
-      else children.push(table(personRows,[8160,2000]));
+      children.push(table(personRows,[8160,2000]));
     }
     if(a.showFollowup)children.push(sectionTitle("후속조치"),contentBox(a.followup,true));
     for(const material of includedPdfMaterials(a)){
