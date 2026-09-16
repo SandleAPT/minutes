@@ -227,18 +227,15 @@ td.center,th.center{text-align:center}
 .vote-person b{font-weight:800}.vote-person small{font-size:8.3pt;font-weight:900;white-space:nowrap}
 .vote-person.against{border-color:#efb8b0;background:#fde9e6;color:#8a2a20}
 .vote-person.pending{border-color:#e1cd86;background:#fff4d6;color:#725b13}
-/* 서명 빈칸 (v419): 찬반 옆 흰 칸. 처음엔 이름 상자 뒤에 18mm 로 붙여 옆으로 흘렀다(한 줄 3명). */
-/* v422: 한 줄에 4명 고정 — 사용자 "폰트를 조금 더 작게 해서 1줄에 4명분이 들어가게"(2026-09-16).
-   글씨만 줄여서는 안 됐다(7.5pt 에서도 상자 48mm, 4명이려면 43mm 이하). 그래서 4칸 격자로 고정하고,
-   글씨 8pt·찬반은 이름 아래 줄로 내리고, 서명칸이 남는 폭을 모두 쓴다(약 17mm).
-   v424: "이름이 너무 작아지는데" → 시안 3개 중 사용자 선택 시안 2 — 이름 10pt·찬반 8.5pt, 칸 사이·안쪽 여백을 줄여
-   서명칸 약 12~13mm(한 줄 4명 유지). */
-.vote-mixed-grid:has(.vote-sign){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:6px}
-.vote-person:has(.vote-sign){display:grid;grid-template-columns:auto minmax(10mm,1fr);column-gap:4px;align-items:center;padding:2px 3px 2px 5px;font-size:10pt;line-height:1.2}
-.vote-person:has(.vote-sign) b{grid-column:1;grid-row:1;white-space:nowrap}
-.vote-person:has(.vote-sign) small{grid-column:1;grid-row:2;font-size:8.5pt;line-height:1.1}
-.vote-sign{grid-column:2;grid-row:1/3;display:block;height:6.5mm;background:#fff;border:1px solid currentColor;border-color:inherit;border-radius:5px}
-@media screen and (max-width:640px){.vote-mixed-grid:has(.vote-sign){grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 표결 이름 칸 — 출력물에 참석자가 직접 서명한다.
+   v419 이름 뒤 서명 빈칸 → v422 한 줄 4명 격자(글씨만 줄여서는 4명이 안 들어갔다) → v424 이름 10pt·찬반 8.5pt(시안 2).
+   v425: 서명 빈칸을 없앴다 — "그 위에 그냥 사인해달라고 하게"(사용자, 2026-09-16). 이름 칸 위에 서명한다.
+   한 줄 4명·글씨 크기·찬반을 이름 아래 줄로 두는 배치는 그대로. */
+.vote-mixed-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:6px}
+.vote-person{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:3px 4px 3px 6px;font-size:10pt;line-height:1.2}
+.vote-person b{white-space:nowrap}
+.vote-person small{font-size:8.5pt;line-height:1.1}
+@media screen and (max-width:640px){.vote-mixed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vote-incomplete{border:1px solid #d8c27b;background:#fff4d6;padding:7px 10px;font-size:10pt}
 .footer-note{margin-top:5mm;text-align:center;font-size:10px;color:#777}
 .page-number{
