@@ -392,9 +392,12 @@ const AdminGate=(function(){
   // 기억 표시는 지우지 않는다 — 나가기를 눌러도 "이 기기는 내 기기"라는 사실은 그대로다.
   function forget(){ try{ localStorage.removeItem(KEY); localStorage.removeItem(AT_KEY); }catch(e){} verified=false; }
   // v92: 2단계 비밀번호 — 편집 화면은 '수정용' 키만 통과(열람 키는 role:'view'라 거부)
+  // v429: 결과를 "edit" / "view" / ""(틀림)로 돌려준다. 예전엔 열람용 비밀번호도 틀린 비밀번호와 똑같이
+  // 「비밀번호가 올바르지 않습니다」로 보여, 맞는 열람 비밀번호를 넣고도 "아니라고 뜬다"고 읽혔다(사용자, 2026-09-18).
+  const VIEW_ONLY_MSG="열람용 비밀번호입니다. 작성·수정 화면은 수정용 비밀번호가 필요합니다.";
   function verify(k){
     return window.GasNet.json(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})})
-      .then(x=>!!(x&&x.ok&&x.role==="edit"));
+      .then(x=>(x&&x.ok&&(x.role==="edit"||x.role==="view"))?x.role:"");
   }
   function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
   function finish(ok){
@@ -421,9 +424,10 @@ const AdminGate=(function(){
       const k=(input.value||"").trim();
       if(!k){msg.textContent="비밀번호를 입력해 주세요.";input.focus();return;}
       if(checking)return; checking=true; ok.disabled=true; msg.style.color="#666";msg.textContent="확인 중…";
-      verify(k).then(valid=>{
+      verify(k).then(role=>{
         checking=false;ok.disabled=false;
-        if(!valid){msg.style.color="#a33";msg.textContent="비밀번호가 올바르지 않습니다.";input.select();return;}
+        if(role==="view"){msg.style.color="#a33";msg.textContent=VIEW_ONLY_MSG;input.select();return;}
+        if(role!=="edit"){msg.style.color="#a33";msg.textContent="비밀번호가 올바르지 않습니다.";input.select();return;}
         const trustBox=document.getElementById("agendaAdminTrust");
         remember(k,!!(trustBox&&trustBox.checked));verified=true;finish(true);
       }).catch(()=>{checking=false;ok.disabled=false;msg.style.color="#a33";msg.textContent="확인하지 못했습니다. 네트워크 상태를 확인해 주세요.";});
@@ -440,9 +444,11 @@ const AdminGate=(function(){
     if(!k){showDialog();return;}
     if(checking)return;
     checking=true;
-    verify(k).then(valid=>{
+    verify(k).then(role=>{
       checking=false;
-      if(valid){verified=true;finish(true);}
+      if(role==="edit"){verified=true;finish(true);}
+      // v429: 저장된 키가 열람용이면 지우지 않는다 — 공고·점검 같은 열람 잠금 화면은 그 키로 계속 열려야 한다.
+      else if(role==="view"){showDialog(VIEW_ONLY_MSG);}
       else{forget();showDialog("저장된 비밀번호를 다시 확인해 주세요.");}
     }).catch(()=>{checking=false;showDialog("자동 확인에 실패했습니다. 비밀번호를 다시 입력해 주세요.");});
   }
