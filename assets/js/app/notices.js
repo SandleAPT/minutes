@@ -807,10 +807,17 @@ var Notices=(function(){
     return h;
   }
 
+  function menuBadge(sub){
+    var edit=sub==='notices'||sub==='checks';
+    if(!edit&&sub!=='contracts')return '';
+    var label=edit?'수정 권한 전용 메뉴':'열람·수정 권한이 있는 분께만 보이는 메뉴';
+    return ' <span role="img" aria-label="'+label+'" title="'+label+'">'+(edit?'🔑':'🔒')+'</span>';
+  }
+
   function draw(){
     var box=document.getElementById('noticeBody');if(!box)return;
     if(!NoticeAccess.allowed(st.sub))st.sub='rules';
-    var h='<div class="nt-tabs">'+[['rules','관리규약'],['contracts','계약·기준문서'],['elections','선거·선관위'],['notices','공고·안내'],['checks','절차 점검']].filter(function(tab){return NoticeAccess.allowed(tab[0]);}).map(function(tab){return '<button type="button" class="btn'+(st.sub===tab[0]?' gold':'')+'" onclick="Notices.sub(\''+tab[0]+'\')">'+tab[1]+'</button>';}).join('')+'</div>';
+    var h='<div class="nt-tabs">'+[['rules','관리규약'],['contracts','계약·기준문서'],['elections','선거·선관위'],['notices','공고·안내'],['checks','절차 점검']].filter(function(tab){return NoticeAccess.allowed(tab[0]);}).map(function(tab){return '<button type="button" class="btn'+(st.sub===tab[0]?' gold':'')+'" onclick="Notices.sub(\''+tab[0]+'\')">'+tab[1]+menuBadge(tab[0])+'</button>';}).join('')+'</div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==='rules'){box.innerHTML=h+rulesHtml();return;}
     if(st.sub==='elections'){box.innerHTML=h+electionsHtml();if(!st.elections&&!st.electionsLoading)loadElections();return;}

@@ -5,7 +5,7 @@ for(const role of ['', 'view','edit']){
  const context={NoticeAccess:{allowed,start(){}},document:{getElementById:id=>id==='noticeBody'?box:null},window:{parent:{postMessage(){}}},location:{search:'',origin:'https://example.test'},URLSearchParams,fetch:url=>{requests.push(url);return new Promise(()=>{});},setTimeout,clearTimeout,localStorage:{getItem(){return null},setItem(){}},GasNet:{json:()=>new Promise(()=>{})}};context.window.GasNet=context.GasNet;vm.createContext(context);vm.runInContext(source,context);
  context.Notices.render();
  for(const [sub,label] of [['rules','관리규약'],['elections','선거·선관위'],['contracts','계약·기준문서'],['notices','공고·안내'],['checks','절차 점검']]){
-  assert.equal(box.innerHTML.includes('>'+label+'</button>'),allowed(sub),role+':'+sub);
+  assert.equal(box.innerHTML.includes("onclick=\"Notices.sub('"+sub+"')\""),allowed(sub),role+':'+sub);
   context.Notices.sub(sub);
  }
  if(role!=='edit')assert(!requests.some(url=>url.includes('investigations')));
