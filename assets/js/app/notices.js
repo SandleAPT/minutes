@@ -30,6 +30,7 @@ var Notices=(function(){
       if(nq){ if(st.sub==="contracts") st.cq=nq; else if(st.sub==="rules") st.q=nq; }
     }catch(e){}
   })();
+  st.requestedSub=st.sub;
   var RULE_DOCS={
     all:{label:"◆◇ 두 규약 함께"},
     bunyang:{file:"rules.json",label:"◆ 분양 (공동주택관리규약)"},
@@ -94,6 +95,7 @@ var Notices=(function(){
   function verifyKey(k){return window.GasNet.json(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})}).then(function(x){return !!(x&&x.ok);});}
 
   function load(){
+    if(!NoticeAccess.allowed("notices"))return;
     if(st.loading) return; st.loading=true; st.err="";
     Promise.all([
       getRecSafe("notices_v1"),
@@ -126,6 +128,7 @@ var Notices=(function(){
     });
   }
   function loadContracts(){
+    if(!NoticeAccess.allowed("contracts"))return;
     if(st.contracts||st.contractsLoading) return;
     st.contractsLoading=true;
     fetch("contracts.json?v=26").then(function(r){return r.json()}).then(function(j){
@@ -140,6 +143,7 @@ var Notices=(function(){
     }).catch(function(){st.electionsLoading=false;st.err="elections.json을 불러오지 못했습니다.";draw();});
   }
   function loadInvestigations(){
+    if(!NoticeAccess.allowed("checks"))return;
     if(st.investigations||st.investigationsLoading) return;
     st.investigationsLoading=true;
     fetch("investigations.json?v=4").then(function(r){return r.json()}).then(function(j){
@@ -643,7 +647,7 @@ var Notices=(function(){
       '<button type="button" class="btn gold" onclick="Notices.unlock()">'+(st.verifying?'확인 중…':'확인')+'</button></div>'+
       '<div id="ntKeyMsg" class="nt-err" style="margin-top:8px"></div></div>';
   }
-  function locked(){return !(st.unlocked||hasKey());}
+  function locked(){return !NoticeAccess.allowed(st.sub);}
 
   function badge(txt,cls){return '<span class="nt-badge '+cls+'">'+esc(txt)+'</span>';}
   function bodyCls(b){return b==='임차'?'t':b&&b.indexOf('선관위')>=0?'e':b==='관리사무소'?'o':'a';}
@@ -805,14 +809,8 @@ var Notices=(function(){
 
   function draw(){
     var box=document.getElementById('noticeBody');if(!box)return;
-    // v91: 🔒는 '비밀번호가 필요한 탭' 표시로 항상 보여준다(풀린 기기에서도) — 사용자 요청: 남들에게 뭐가 잠겼는지 확인용
-    var checkCount=(st.investigations&&st.investigations.items?st.investigations.items.length:0)+(st.checks&&st.checks.items?st.checks.items.length:0);
-    var h='<div class="nt-tabs">'+
-      '<button type="button" class="btn'+(st.sub==='rules'?' gold':'')+'" onclick="Notices.sub(\'rules\')">관리규약</button>'+
-      '<button type="button" class="btn'+(st.sub==='contracts'?' gold':'')+'" onclick="Notices.sub(\'contracts\')">계약·기준문서 🔒</button>'+
-      '<button type="button" class="btn'+(st.sub==='elections'?' gold':'')+'" onclick="Notices.sub(\'elections\')">선거·선관위</button>'+
-      '<button type="button" class="btn'+(st.sub==='notices'?' gold':'')+'" onclick="Notices.sub(\'notices\')">공고·안내 🔒'+(!locked()&&st.notices?' ('+st.notices.items.length+')':'')+'</button>'+
-      '<button type="button" class="btn'+(st.sub==='checks'?' gold':'')+'" onclick="Notices.sub(\'checks\')">절차 점검 🔒'+(!locked()&&checkCount?' ('+checkCount+')':'')+'</button></div>';
+    if(!NoticeAccess.allowed(st.sub))st.sub='rules';
+    var h='<div class="nt-tabs">'+[['rules','관리규약'],['contracts','계약·기준문서'],['elections','선거·선관위'],['notices','공고·안내'],['checks','절차 점검']].filter(function(tab){return NoticeAccess.allowed(tab[0]);}).map(function(tab){return '<button type="button" class="btn'+(st.sub===tab[0]?' gold':'')+'" onclick="Notices.sub(\''+tab[0]+'\')">'+tab[1]+'</button>';}).join('')+'</div>';
     if(st.err) h+='<div class="nt-err">'+esc(st.err)+'</div>';
     if(st.sub==='rules'){box.innerHTML=h+rulesHtml();return;}
     if(st.sub==='elections'){box.innerHTML=h+electionsHtml();if(!st.elections&&!st.electionsLoading)loadElections();return;}
@@ -847,7 +845,8 @@ var Notices=(function(){
       if(st.sub==='rules')loadRules();else if(st.sub==='contracts'&&!locked())loadContracts();else if(st.sub==='elections')loadElections();else if(st.sub==='checks'&&!locked())loadInvestigations();else if(!locked())load();
       draw();
     },
-    sub:function(s){st.sub=s;draw();if(s==='rules')loadRules();else if(s==='contracts'&&!locked())loadContracts();else if(s==='elections')loadElections();else if(s==='checks'&&!locked()){loadInvestigations();if(!st.checks)load();}else if(s==='notices'&&!locked()&&!st.notices)load();},
+    accessChanged:function(){if(NoticeAccess.allowed(st.requestedSub))st.sub=st.requestedSub;else if(!NoticeAccess.allowed(st.sub))st.sub='rules';this.render();},
+    sub:function(s){st.requestedSub=s;if(!NoticeAccess.allowed(s))return;st.sub=s;try{if(window.parent!==window)window.parent.postMessage({source:'sandle-minutes',type:'notice-sub',sub:s},location.origin);}catch(e){}draw();if(s==='rules')loadRules();else if(s==='contracts'&&!locked())loadContracts();else if(s==='elections')loadElections();else if(s==='checks'&&!locked()){loadInvestigations();if(!st.checks)load();}else if(s==='notices'&&!locked()&&!st.notices)load();},
     fBody:function(b){st.fBody=b;draw();},
     doc:function(d){st.doc=d;draw();loadRules();},
     fKind:function(k){st.fKind=k;draw();},
@@ -865,9 +864,12 @@ var Notices=(function(){
         else if(msg)msg.textContent='비밀번호가 올바르지 않습니다.';
       }).catch(function(){st.verifying=false;if(msg)msg.textContent='확인 실패 — 네트워크 상태를 확인해 주세요.';});
     },
-    jump:function(id){if(locked())return;st.sub='notices';draw();var el=document.getElementById('nt-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}},
+    jump:function(id){if(!NoticeAccess.allowed('notices'))return;st.sub='notices';draw();var el=document.getElementById('nt-'+id);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}},
     // 연관 점검 칩: 절차 점검 목록 안에서 대상 카드를 찾아 첫 요약까지 펼친다(조사 현황·규약 대조 공통)
-    jumpCheck:function(id){if(locked())return;st.sub='checks';st.checkFilter='전체';draw();var el=document.getElementById('chk-'+id);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}}
+    jumpCheck:function(id){if(!NoticeAccess.allowed('checks'))return;st.sub='checks';st.checkFilter='전체';draw();var el=document.getElementById('chk-'+id);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hl');setTimeout(function(){el.classList.remove('hl');},1600);}}
   };
 })();
 window.Notices=Notices;
+
+
+NoticeAccess.start();
