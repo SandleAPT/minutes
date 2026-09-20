@@ -117,7 +117,9 @@ function doPost(e) {
   if (action === 'verify') {
     const role = checkAdmin(body.adminKey) ? 'edit' : (checkView(body.adminKey) ? 'view' : '');
     logAuth_('verify', role || 'fail', body.dev);
-    return jsonOut({ ok: !!role, role: role });
+    const result = { ok: !!role, role: role };
+    if (role === 'edit') result.privateStoreUrl = privateStoreConnection_(body.privateStoreUrl);
+    return jsonOut(result);
   }
   // 인증 기록 읽기 — 수정용 키만. 입주민(열람용)에게는 보여주지 않는다.
   if (action === 'authLog') {
@@ -133,6 +135,21 @@ function doPost(e) {
   if (action === 'delete') return jsonOut({ ok: true, deleted: deleteItem(body.id) });
   if (action === 'setTags') return jsonOut(setTags(body.id, body.tags || {}));
   return jsonOut({ ok: false, error: 'unknown action' });
+}
+
+// 수정 인증 성공 뒤에만 호출. 기존 기기의 URL을 최초 한 번 등록하고 다른 기기에 전달한다.
+function privateStoreConnection_(candidate) {
+  const props = PropertiesService.getScriptProperties();
+  const valid = value => /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(String(value || ''));
+  let saved = props.getProperty('PRIVATE_STORE_URL') || '';
+  if (saved || !valid(candidate)) return valid(saved) ? saved : '';
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    saved = props.getProperty('PRIVATE_STORE_URL') || '';
+    if (!saved) { saved = String(candidate); props.setProperty('PRIVATE_STORE_URL', saved); }
+    return valid(saved) ? saved : '';
+  } finally { lock.releaseLock(); }
 }
 
 function listItems() {
