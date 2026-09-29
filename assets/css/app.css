@@ -209,7 +209,7 @@ td.center,th.center{text-align:center}
   border:1px solid #9d978c;border-top:0;padding:11px 12px;min-height:28mm;font-size:10pt;line-height:1.6;
   white-space:pre-wrap
 }
-.decision-box{min-height:22mm}
+.decision-box,.summary-box.basis-box{min-height:0}
 .decision-box.pending{color:#8a8476;font-style:italic}
 .follow-box{min-height:15mm}
 .remark-table{width:100%;border-collapse:collapse}

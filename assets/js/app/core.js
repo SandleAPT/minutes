@@ -1620,7 +1620,7 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
 
     ${item.report?reportHtml(a):`<div class="section-band">의결사항</div>
     <div class="decision-box${String(a.decision||"").trim()?"":" pending"}">${nl2br(decisionForOutput(a),{autoBullets:true})}</div>
-    ${String(a.decisionBasis||"").trim()?`<div class="section-band">근거규정</div><div class="summary-box">${nl2br(a.decisionBasis,{autoBullets:true})}</div>`:""}
+    ${String(a.decisionBasis||"").trim()?`<div class="section-band">근거규정</div><div class="summary-box basis-box">${nl2br(a.decisionBasis,{autoBullets:true})}</div>`:""}
 
     <div class="section-band">표결</div>
     <div class="vote-summary-list">${voteHtml}</div>`}
