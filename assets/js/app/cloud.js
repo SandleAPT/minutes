@@ -130,7 +130,11 @@
 
   function apiGet(cfg, params) {
     if(Publication.isEditor() && (params.action==='list'||params.action==='get')){
-      return apiPost(cfg,Object.assign({},params,{adminKey:AdminGate.savedKey()}));
+      var requestKey=AdminGate.savedKey();
+      return apiPost(cfg,Object.assign({},params,{adminKey:requestKey})).then(function(result){
+        if(!Publication.isEditor()||AdminGate.savedKey()!==requestKey)throw new Error('권한이 종료되었습니다');
+        return result;
+      });
     }
     var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]); }).join("&");
     return window.GasNet.json(cfg.url + "?" + q, { method: "GET" });
@@ -524,7 +528,7 @@
       html += '<div style="margin:16px 0 7px;font-weight:800;color:#5c5b56;font-size:13px">' + esc(yr) + '년 <span style="color:#aaa;font-weight:600">(' + rows.length + ')</span></div>';
       rows.forEach(function (r) {
         var it = r.it, active = it.id === cur;
-        html += '<div onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
+        html += '<div class="cloud-meeting-row" onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
           '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + (isTenant(it) ? '<span class="body-badge">◇ 임차</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#999">' + (r.d ? '<b style="color:#6b6656">회의일 ' + esc(fmtDay(r.d)) + '</b>' : '회의일 미정') + ' · 저장 ' + esc(fmtWhen(it.updatedAt)) + (active ? ' · <span style="color:#b07d10;font-weight:700">현재 열림</span>' : '') + '</div></div>' +
           (it.publication ? '<span class="small">'+(it.publication.publishedAt?'발행됨':'미발행')+'</span>' : '') +
