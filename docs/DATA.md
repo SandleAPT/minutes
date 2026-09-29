@@ -1,6 +1,7 @@
 ﻿# 데이터 규칙 (DATA)
 
 ## 1. 회의록 레코드
+- v458 발행: 2026.09 입대의 정기 및 9/29 이후 임시, 2026.10 이후 회의는 기본 미발행. 기존 9/16 임시와 과거 회의는 공개 유지. `json.publication.managed=true`는 서버가 유지하여 날짜 변경으로 공개를 우회할 수 없다. 시트 `minutes`는 작성본, `minutes_published`는 같은 5열의 마지막 발행 스냅샷. GET은 발행본만, 수정키 POST list/get은 작성본을 반환. 목록·레코드의 `publication={managed,public,publishedAt,dirty}`는 서버 계산 메타데이터다. 발행 요청은 `expectedUpdatedAt` 일치 시에만 성공하며 작성본 date/name/json은 변경하지 않는다. 발행 후 저장은 공개본을 바꾸지 않으며 재발행이 필요하다. 이미 공개된 내용의 회수·과거 Git 이력 삭제 기능은 포함하지 않는다.
 - 클라우드 레코드 = `{id, name, date, updatedAt, json}`; `json`은 앱 상태 전체:
   `meeting{body("입대의"|"임차"), termNo, year, month, type(정기|임시), date, time, place, name, attendance{동/번호:true}, guests[], audience, sequence[]}`,
   `rosterTermNo, rosterBody, rosters{"5":[...], "t6":[...]}`, `agendas[]`, `cloudId`.

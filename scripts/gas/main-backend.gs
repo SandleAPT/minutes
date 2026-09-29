@@ -99,7 +99,7 @@ function getSheet() {
   return sh;
 }
 
-function doGet(e) {
+function legacyDoGet(e) {
   const p = (e && e.parameter) || {};
   const action = p.action || '';
   if (action === 'ping') return jsonOut({ ok: true, service: 'sandle-minutes' });
@@ -108,7 +108,7 @@ function doGet(e) {
   if (action === 'get')  return jsonOut({ ok: true, item: getItem(p.id) });
   return jsonOut({ ok: false, error: 'unknown action' });
 }
-function doPost(e) {
+function legacyDoPost(e) {
   let body = {};
   try { body = JSON.parse(e.postData.contents); }
   catch (err) { return jsonOut({ ok: false, error: 'bad json' }); }

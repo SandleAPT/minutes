@@ -401,6 +401,7 @@ const AdminGate=(function(){
   }
   function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
   function finish(ok){
+    if(ok&&window.Publication){Publication.setEditor(true,saved());if(window.Cloud)Cloud._invalidate();}
     const cb=ok?pending:denied; pending=null; denied=null; close();
     if(cb) cb();
   }
@@ -1373,6 +1374,7 @@ function voteStatus(a){
   return {forCount,againstCount,incomplete,unanimous,detail};
 }
 function requireCompleteVotes(){
+  if(window.Publication&&!Publication.canShow(state)){alert('발행된 회의록만 출력할 수 있습니다. 편집자는 관리자모드로 로그인해 주세요.');return false;}
   const pending=state.agendas.filter(a=>hasAgendaTitle(a)&&!isAgendaComplete(a));
   if(pending.length){
     // v414: 예전 문구는 "의결 전으로 표시된다"고 했지만 실제로는 출력에서 빠졌다. 선택에 맞춰 사실대로 말한다.
@@ -1677,6 +1679,14 @@ function outputPagePlan(includeDrafts=false){
   return plan;
 }
 function renderPreview(){
+  if(window.Publication){
+    Publication.render();
+    if(!Publication.canShow(state)){
+      document.getElementById('previewShell').innerHTML='<div class="help">발행된 회의록만 열람할 수 있습니다. 편집자는 관리자모드로 로그인해 주세요.</div>';
+      document.getElementById('sourceBox').style.display='none';
+      return;
+    }
+  }
   // 관리자 기기(비밀번호를 입력해 본 기기)는 미완성 안건도 미리보기에서 확인할 수 있다 (v70).
   // 인쇄·Word·DOCX·다른 방문자 화면에는 여전히 완성 안건만 나간다.
   const showDrafts=isAdminDevice();
@@ -2587,6 +2597,7 @@ function printMinutes(){
 // 안건 입력 중에도 해당 안건 한 건만 A4 1쪽 형식으로 바로 확인한다.
 // 미완성 안건도 검토할 수 있어야 하므로 전체 출력의 표결 완료 검사는 적용하지 않는다.
 async function printSingleAgenda(agendaId){
+  if(window.Publication&&!Publication.canShow(state))return;
   const item=outputAgendaItems(true).find(entry=>entry.agenda.id===agendaId);
   if(!item){
     showToast("미리 볼 안건을 찾을 수 없습니다.","warn");

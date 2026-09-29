@@ -56,6 +56,7 @@ function yearOf(dateLike) {
 
 const list = await api({ action: "list" });
 if (!list || !list.ok) throw new Error("list failed: " + JSON.stringify(list).slice(0, 200));
+if (list.publicationVersion !== 1) throw new Error('발행 지원 서버가 아닙니다 — 공개 사본 생성을 중단합니다');
 
 // ── 1. 목록을 연도별로 나눈다 (아직 본문은 받지 않는다) ──────────────
 const 목록별연도 = new Map();   // year -> [listItem]
@@ -123,6 +124,7 @@ for (const y of 받을연도) {
         date,
         updatedAt: r.item.updatedAt || it.updatedAt || "",
         json: r.item.json || "",
+        ...(r.item.publication ? {publication:r.item.publication} : {}),
       });
     }
     const 옛 = 이전연도.get(y);

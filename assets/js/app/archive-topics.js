@@ -56,16 +56,17 @@
   // 1) 이 브라우저에 저장된 사본(localStorage) + data.json(정적, 매일 자동 재발행)으로 즉시 구성해 바로 그린다.
   // 2) 그 뒤 클라우드 목록(1회 호출)과 updatedAt을 비교해 바뀐 회의록만 개별로 받아 갱신한다.
   //    → 회의록이 10년치로 늘어도 평소 호출 수는 목록 1회 + 최근 변경분 몇 건. 목록은 접속 시 받은 것을 재사용한다.
-  var REC_CACHE_KEY = "sandle_topic_records_v1";
+  var REC_CACHE_KEY = "sandle_topic_records_public_v2";
   var recMap = null, refreshing = false, lastRefreshAt = 0;
   function loadRecCache() { try { return JSON.parse(localStorage.getItem(REC_CACHE_KEY)) || {}; } catch (e) { return {}; } }
   function saveRecCache() { try { localStorage.setItem(REC_CACHE_KEY, JSON.stringify(recMap || {})); } catch (e) { /* 용량 초과 등: 캐시 없이 동작 */ } }
   function isNewer(a, b) { return (new Date(a || 0) - new Date(b || 0)) > 1000; }
   function mergeRec(rec) {
     if (!rec || !rec.id || isSystemRecord(rec) || !rec.json) return false;
+    if(window.Publication&&!Publication.publicItem(rec))return false;
     var cur = recMap[rec.id];
     if (cur && !isNewer(rec.updatedAt, cur.updatedAt)) return false;
-    recMap[rec.id] = { id: rec.id, name: rec.name || "", date: rec.date || "", updatedAt: rec.updatedAt || "", json: rec.json };
+    recMap[rec.id] = { id: rec.id, name: rec.name || "", date: rec.date || "", updatedAt: rec.updatedAt || "", json: rec.json, publication:rec.publication };
     return true;
   }
   function rebuildCache() {

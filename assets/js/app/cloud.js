@@ -65,7 +65,7 @@
       return Promise.all(idx.years.map(function (y) {
         return fetch(y.file + "?v=" + encodeURIComponent(y.updatedAt || ""), { cache: "force-cache" })
           .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) { if (d && d.items) d.items.forEach(function (it) { if (it && it.id) m[it.id] = it; }); })
+          .then(function (d) { if (d && d.items) d.items.forEach(function (it) { if (it && it.id && Publication.publicItem(it)) m[it.id] = it; }); })
           .catch(function () {}); // 한 연도 실패는 그 연도만 클라우드 폴백
       })).then(function () { window.StaticData.map = m; });
     })
@@ -75,7 +75,7 @@
         .then(function (d) {
           if (d && d.items) {
             var m = {};
-            d.items.forEach(function (it) { if (it && it.id) m[it.id] = it; });
+            d.items.forEach(function (it) { if (it && it.id && Publication.publicItem(it)) m[it.id] = it; });
             window.StaticData.map = m;
           }
         })
@@ -83,6 +83,7 @@
     });
   // 정적 사본이 있고, 클라우드 목록상 그보다 새 버전이 없으면 정적 사본을 반환
   function staticFresh(id) {
+    if(Publication.isEditor()) return null; // 편집자는 발행 사본 대신 최신 작성본을 읽는다.
     var m = window.StaticData && window.StaticData.map;
     var sd = m && m[id];
     if (!sd) return null;
@@ -117,8 +118,10 @@
     var fns = ["renderMeetingControls", "renderMeetingExtras", "renderRepMaster", "renderAttendance", "renderAgendas", "renderMetrics", "renderPreview"];
     fns.forEach(function (n) { if (typeof window[n] === "function") { try { window[n](); } catch (e) {} } });
   }
-  function applyLoadedState(parsed, cloudId) {
+  function applyLoadedState(parsed, cloudId, item) {
     state = (typeof migrateState === "function") ? migrateState(parsed) : parsed;
+    if(item && item.publication) state.publication=item.publication;
+    Publication.accept(state,item);
     if (cloudId) state.cloudId = cloudId;
     if (typeof ensureRoster === "function") { try { ensureRoster(state.meeting.termNo); ensureRoster(state.rosterTermNo || state.meeting.termNo); } catch (e) {} }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -126,12 +129,43 @@
   }
 
   function apiGet(cfg, params) {
+    if(Publication.isEditor() && (params.action==='list'||params.action==='get')){
+      return apiPost(cfg,Object.assign({},params,{adminKey:AdminGate.savedKey()}));
+    }
     var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]); }).join("&");
     return window.GasNet.json(cfg.url + "?" + q, { method: "GET" });
   }
   function apiPost(cfg, payload) {
     payload.token = cfg.token;
     return window.GasNet.json(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+  }
+
+  var publishing=false;
+  function publishSaved(id){
+    if(publishing)return;
+    if(!id){toast('먼저 현재 회의록을 클라우드에 저장해 주세요');return;}
+    AdminGate.require(function(){
+      Publication.setEditor(true,AdminGate.savedKey());
+      if(id===state.cloudId && (localStorage.getItem(STORAGE_KEY)||'')!==(localStorage.getItem(SNAP_KEY)||'')){
+        alert('저장하지 않은 변경사항이 있습니다. 먼저 현재 회의록을 저장한 뒤 발행해 주세요.');return;
+      }
+      publishing=true;
+      apiGet(loadCfg(),{action:'get',id:id}).then(function(r){
+        if(!r||!r.ok||!r.item)throw new Error('저장된 회의록을 확인하지 못했습니다');
+        var item=r.item;
+        if(!item.publication)throw new Error('이전 회의록은 이미 공개되어 있습니다');
+        var sync=getSynced();
+        if(id===state.cloudId && sync&&sync.id===id&&new Date(item.updatedAt)>new Date(sync.updatedAt))
+          throw new Error('다른 기기에서 수정되었습니다. 회의록을 다시 열어 확인한 뒤 발행해 주세요');
+        if(!confirm((item.name||'회의록')+'\n저장된 내용을 비밀번호 없는 방문자에게 공개할까요?\n이후 수정은 다시 발행해야 공개됩니다.'))return;
+        return apiPost(loadCfg(),{action:'publish',id:id,expectedUpdatedAt:item.updatedAt,adminKey:AdminGate.savedKey()}).then(function(result){
+          if(!result||!result.ok)throw new Error(result&&result.error==='conflict'?'내용이 변경되었습니다. 다시 열어 확인해 주세요':(result&&result.error)||'발행 실패');
+          if(id===state.cloudId){state.publication=result.publication;localStorage.setItem(STORAGE_KEY,JSON.stringify(state));markSynced({id:id,updatedAt:item.updatedAt});Publication.render();}
+          delete openedCache[id];listCache=null;fetchList(renderArchiveList);
+          toast('발행 완료 — 일반 방문자가 열람할 수 있습니다');
+        });
+      }).catch(function(e){alert(e.message);}).finally(function(){publishing=false;});
+    });
   }
 
   // ---- 저장: 덮어쓰기 가드 → 실제 저장 ----
@@ -163,6 +197,8 @@
     toast("클라우드에 저장 중...");
     apiPost(cfg, { action: "save", record: record, adminKey: key }).then(function (res) {
       if (res && res.ok) {
+        if(res.publication) state.publication=res.publication;
+        Publication.render();
         state.cloudId = res.id; localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         markSynced({ id: res.id }); // 일단 현재 시각으로 기록, 목록 갱신 후 서버 updatedAt으로 보정
         removeSyncBanner();
@@ -252,7 +288,8 @@
   }
   function applyLoadedItem(item) {
     var parsed = JSON.parse(item.json || "{}");
-    applyLoadedState(parsed, item.id);
+    if(!Publication.isEditor()&&!Publication.publicItem(item)){toast('미발행 회의록입니다');return;}
+    applyLoadedState(parsed, item.id, item);
     markSynced({ id: item.id, updatedAt: item.updatedAt });
     removeSyncBanner();
     closeOverlay();
@@ -490,6 +527,8 @@
         html += '<div onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
           '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + (isTenant(it) ? '<span class="body-badge">◇ 임차</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#999">' + (r.d ? '<b style="color:#6b6656">회의일 ' + esc(fmtDay(r.d)) + '</b>' : '회의일 미정') + ' · 저장 ' + esc(fmtWhen(it.updatedAt)) + (active ? ' · <span style="color:#b07d10;font-weight:700">현재 열림</span>' : '') + '</div></div>' +
+          (it.publication ? '<span class="small">'+(it.publication.publishedAt?'발행됨':'미발행')+'</span>' : '') +
+          (Publication.isEditor()&&it.publication ? '<button class="btn gold" onclick="event.stopPropagation();Cloud.publishSaved(\''+escAttr(it.id)+'\')">'+(it.publication.publishedAt?'다시 발행':'발행')+'</button>' : '') +
           '<span class="btn" style="pointer-events:none">열기</span>' +
           '<button class="btn danger" onclick="event.stopPropagation();Cloud._delArc(\'' + escAttr(it.id) + '\',\'' + escAttr(it.name || "") + '\')">삭제</button></div>';
       });
@@ -585,7 +624,7 @@
     if (!listCache || !listCache.length) return false;
     var unchanged = false;
     try { unchanged = (localStorage.getItem(STORAGE_KEY) || "") === (localStorage.getItem(SNAP_KEY) || "\u0000"); } catch (e) {}
-    if (!unchanged && !isPristine()) return false; // 저장 안 된 작업이 있으면 건드리지 않음 → 배너로 안내
+    if (!unchanged && !isPristine()) return false; // 저장하지 않은 로컬 작성본은 공개본으로 덮어쓰지 않는다.
     var newest = listCache.slice().sort(function (a, b) {
       var d = new Date(b.date || 0) - new Date(a.date || 0);
       return d !== 0 ? d : (new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
@@ -694,8 +733,10 @@
         else toast("삭제 실패");
       }).catch(function (e) { toast("삭제 오류: " + e.message); });
     },
-    _invalidate: function () { listCache = null; },
-    peekList: function () { return { items: rawListCache, at: rawListAt }; } // 주제별 보기가 최근 목록을 재사용
+    _invalidate: function () { listCache = null; rawListCache=null; openedCache={}; },
+    peekList: function () { return Publication.isEditor()?null:{ items: rawListCache, at: rawListAt }; }, // 주제 집계에는 작성본 목록을 전달하지 않는다.
+    publishCurrent: function(){ publishSaved(state.cloudId); },
+    publishSaved: publishSaved
   };
   /* 넘어온 안건 자리로 데려간다 (v353).
    * 미리보기가 그려지는 시점이 경로마다 다르다 — 정적 사본이면 바로, 클라우드면 응답 뒤다.
@@ -764,8 +805,12 @@
         if (!autoOpenLatest()) checkStartupBanner();
       });
     };
-    if (window.StaticData && window.StaticData.ready) window.StaticData.ready.then(go, go);
-    else go();
+    var k=AdminGate.savedKey();
+    var auth=k?apiPost(loadCfg(),{action:'verify',adminKey:k}).then(function(r){Publication.setEditor(!!(r&&r.ok&&r.role==='edit'),k);}):Promise.resolve();
+    auth.catch(function(){Publication.setEditor(false,'');}).then(function(){
+      renderPreview();
+      if(window.StaticData&&window.StaticData.ready)window.StaticData.ready.then(go,go);else go();
+    });
   }
   if (document.readyState !== "loading") setTimeout(bootCloud, 200);
   else document.addEventListener("DOMContentLoaded", function () { setTimeout(bootCloud, 200); });
