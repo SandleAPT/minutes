@@ -3,6 +3,7 @@
 형식: `vNN (날짜)` — 한 줄 요약. 자세한 설계·데이터 규칙은 `docs/PLAN.md`, `docs/DATA.md`.
 
 ## 2026-09-30
+- **v448 의결사항 근거규정** — 선택 입력 `decisionBasis`를 추가하고, 값이 있을 때만 미리보기·인쇄/PDF·Word HTML·DOCX에 표시. 기존 데이터의 완성 조건과 의결·표결은 그대로 유지.
 - `agendaView` 안건에 의결사항/보고사항 유형을 추가했다. 보고사항은 배경·내용·근거·후속사항만 편집하며 의결·표결 입력과 출력은 숨긴다.
 - 표지와 인쇄/PDF 미리보기, Word HTML·DOCX에서 유형을 구분한다. 기존 유형 없는 안건은 의결사항으로 해석하고 기존 저장 필드를 보존한다.
 - 검증: `node tests/report-agenda.test.js`, `for f in tests/*.test.js; do node "$f"; done`, JS 문법·diff 검사.

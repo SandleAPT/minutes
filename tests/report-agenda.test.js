@@ -53,6 +53,14 @@ assert.match(xmlReport,/보고내용/);
 assert.doesNotMatch(xmlReport,/의결사항|찬성\(/);
 // The legacy agenda still uses the decision path after migration.
 assert.match(evaluate('agendaPageHtml(outputAgendaItems(true)[0],2,3)'),/의결사항/);
+assert.doesNotMatch(evaluate('agendaPageHtml(outputAgendaItems(true)[0],2,3)'),/근거규정/);
+old.decisionBasis='- 공동주택관리법 시행령 제14조\n- 관리규약 제19조';
+assert.equal(evaluate('migrateState(JSON.parse(JSON.stringify({meeting:state.meeting,agendas:state.agendas}))).agendas[0].decisionBasis'),old.decisionBasis);
+evaluate('renderAgendas()');
+assert.match(elements.get('agendaList').innerHTML,/근거규정/);
+assert.match(evaluate('agendaPageHtml(outputAgendaItems(true)[0],2,3)'),/근거규정/);
+assert.match(evaluate('wordDocumentHtml()'),/근거규정/);
+assert.match(evaluate('docxDocumentXml()'),/근거규정/);
 evaluate('state.agendas=[testData.agendas[1]]');
 assert.match(evaluate('coverHtml(2)'),/Ⅰ\. 보고사항/);
 assert.doesNotMatch(evaluate('agendaPageHtml(outputAgendaItems()[0],2,2)'),/의결사항|표결 미기입|찬성 \d/);

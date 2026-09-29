@@ -954,7 +954,7 @@ function renderAgendaTagEditor(id){
 }
 function newAgenda(){
   return {
-    id:uid(),type:"decision",title:"",proposer:"",summary:"",reportContent:"",reportBasis:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
+    id:uid(),type:"decision",title:"",proposer:"",summary:"",decisionBasis:"",reportContent:"",reportBasis:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
     category:"",followup:"",showFollowup:false,
     materials:[],showMaterials:false
   };
@@ -984,6 +984,7 @@ function moveAgendaTo(id,position){
 }
 function normalizeRemarks(a){
   if(a.type!=="report") a.type="decision";
+  if(typeof a.decisionBasis!=="string") a.decisionBasis="";
   if(typeof a.reportContent!=="string") a.reportContent="";
   if(typeof a.reportBasis!=="string") a.reportBasis="";
   if(Array.isArray(a.remarks)){
@@ -1305,8 +1306,9 @@ function renderAgendas(){
           <div class="grid" style="grid-template-columns:${isReport(a)?"1fr":"1fr 1fr"};margin-top:16px">
             ${isReport(a)?"":`
             <div class="field"><label>의결사항 <b>*</b></label><textarea placeholder="최종적으로 무엇을 의결했는지" oninput="setAgenda('${a.id}','decision',this.value)">${esc(a.decision)}</textarea></div>
+            <div class="field"><label>근거규정 <span class="small">(선택)</span></label><textarea placeholder="관련 법령·관리규약 조항" oninput="setAgenda('${a.id}','decisionBasis',this.value)">${esc(a.decisionBasis)}</textarea></div>
             `}
-            <div class="field">
+            <div class="field" style="grid-column:1 / -1">
               <label>${isReport(a)?"향후 확인사항 또는 후속사항":"후속조치"}</label>
               <textarea placeholder="담당·기한·다음 확인사항" oninput="setAgenda('${a.id}','followup',this.value)">${esc(a.followup)}</textarea>
               <label class="toggle" style="margin-top:8px"><input type="checkbox" ${a.showFollowup?"checked":""} onchange="setAgenda('${a.id}','showFollowup',this.checked)"> 출력물에 ${isReport(a)?"향후 확인사항·후속사항":"후속조치"} 포함</label>
@@ -1618,6 +1620,7 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
 
     ${item.report?reportHtml(a):`<div class="section-band">의결사항</div>
     <div class="decision-box${String(a.decision||"").trim()?"":" pending"}">${nl2br(decisionForOutput(a),{autoBullets:true})}</div>
+    ${String(a.decisionBasis||"").trim()?`<div class="section-band">근거규정</div><div class="summary-box">${nl2br(a.decisionBasis,{autoBullets:true})}</div>`:""}
 
     <div class="section-band">표결</div>
     <div class="vote-summary-list">${voteHtml}</div>`}
@@ -2074,7 +2077,7 @@ function wordDocumentHtml(){
       ${String(a.proposer||"").trim()?`<table class="grid agenda-proposer-word"><tr><th>안건 제출자</th><td>${esc(a.proposer)}</td></tr></table>`:""}
       ${String(a.summary||"").trim()?sectionTitle(isReport(a)?"보고 배경·목적":"안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
-      ${isReport(a)?sectionTitle("보고내용")+contentBox(nl2br(a.reportContent),"summary")+(a.reportBasis?sectionTitle("관련 근거")+contentBox(nl2br(a.reportBasis),"summary"):""):sectionTitle("의결사항")+contentBox(nl2br(decisionForOutput(a)),"decision")+sectionTitle("표결")+`<table class="grid votes">${voteRows}</table>`}
+      ${isReport(a)?sectionTitle("보고내용")+contentBox(nl2br(a.reportContent),"summary")+(a.reportBasis?sectionTitle("관련 근거")+contentBox(nl2br(a.reportBasis),"summary"):""):sectionTitle("의결사항")+contentBox(nl2br(decisionForOutput(a)),"decision")+(String(a.decisionBasis||"").trim()?sectionTitle("근거규정")+contentBox(nl2br(a.decisionBasis),"summary"):"")+sectionTitle("표결")+`<table class="grid votes">${voteRows}</table>`}
       ${sectionTitle(isReport(a)?"향후 확인사항·후속사항":"후속조치")}${contentBox(nl2br(a.followup),"followup")}
     </div>`;
   }).join("");
@@ -2287,6 +2290,7 @@ function docxDocumentXml(){
       if(String(a.reportBasis||"").trim()) body+=wSectionTitle("관련 근거")+wContentBox(a.reportBasis,{autoBullets:true});
     }else{
     body+=wSectionTitle("의결사항")+wContentBox(decisionForOutput(a));
+    if(String(a.decisionBasis||"").trim()) body+=wSectionTitle("근거규정")+wContentBox(a.decisionBasis,{autoBullets:true});
     body+=wSectionTitle("표결");
     const voteRows=voteIsBlank(a)
       ? [[{text:"표결",index:0,bold:true,align:"center",shade:"F4F6F2"},{text:"미기입 — 의결 전 상정 안건",index:1}]]
@@ -2475,7 +2479,9 @@ async function buildDocxBlob(){
       children.push(sectionTitle("보고내용"),contentBox(a.reportContent||" ",true));
       if(String(a.reportBasis||"").trim())children.push(sectionTitle("관련 근거"),contentBox(a.reportBasis,true));
     }else{
-    children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true),sectionTitle("표결"));
+    children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true));
+    if(String(a.decisionBasis||"").trim())children.push(sectionTitle("근거규정"),contentBox(a.decisionBasis,true));
+    children.push(sectionTitle("표결"));
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
     }else{
