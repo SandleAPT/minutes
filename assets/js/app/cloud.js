@@ -119,6 +119,7 @@
     fns.forEach(function (n) { if (typeof window[n] === "function") { try { window[n](); } catch (e) {} } });
   }
   function applyLoadedState(parsed, cloudId, item) {
+    if(window.AgendaWriter){if(!AgendaWriter.confirmLeave())return false;AgendaWriter.clearMeeting();}
     state = (typeof migrateState === "function") ? migrateState(parsed) : parsed;
     if(item && item.publication) state.publication=item.publication;
     Publication.accept(state,item);
@@ -126,6 +127,7 @@
     if (typeof ensureRoster === "function") { try { ensureRoster(state.meeting.termNo); ensureRoster(state.rosterTermNo || state.meeting.termNo); } catch (e) {} }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     rerender();
+    return true;
   }
 
   function apiGet(cfg, params) {
@@ -176,6 +178,7 @@
   // 클라우드에 이 기기의 마지막 동기화보다 새 버전이 있으면(다른 기기에서 저장됨) 바로 덮어쓰지 않고
   // 안내 대화상자를 띄운다. (v29)
   function doSave(retried) {
+    if(window.AgendaWriter&&AgendaWriter.isWriter()){AgendaWriter.save();return;}
     if (retried) { doSaveNow(true); return; } // 비밀번호 재시도 경로는 가드 생략
     checkCloudConflict(function (conflict) {
       if (!conflict) { doSaveNow(false); return; }
@@ -293,7 +296,7 @@
   function applyLoadedItem(item) {
     var parsed = JSON.parse(item.json || "{}");
     if(!Publication.isEditor()&&!Publication.publicItem(item)){toast('미발행 회의록입니다');return;}
-    applyLoadedState(parsed, item.id, item);
+    if(!applyLoadedState(parsed, item.id, item))return;
     markSynced({ id: item.id, updatedAt: item.updatedAt });
     removeSyncBanner();
     closeOverlay();

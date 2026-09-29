@@ -14,12 +14,12 @@ class Sheet{
   deleteRow(r){this.rows.splice(r-1,1);}
 }
 const sheets={minutes:new Sheet([['id','name','date','updatedAt','json']])};
-const props={TOKEN:'public-token',ADMIN_KEY:'fixture-edit',VIEW_KEY:'fixture-view'};
+const props={TOKEN:'public-token',ADMIN_KEY:'fixture-edit',VIEW_KEY:'fixture-view',WRITER_KEY:'fixture-writer'};
 const ctx=vm.createContext({console,Date,JSON,PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||'',setProperty:(k,v)=>props[k]=v})},
   SpreadsheetApp:{openById:()=>({getSheetByName:n=>sheets[n],insertSheet:n=>(sheets[n]=new Sheet())})},
   ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>JSON.parse(s)})},
   LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Utilities:{getUuid:()=> 'fixture-new'}});
-vm.runInContext(fs.readFileSync('scripts/gas/main-backend.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/publication.gs','utf8'),ctx);
+vm.runInContext(fs.readFileSync('scripts/gas/main-backend.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/publication.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/writer.gs','utf8'),ctx);
 const post=b=>ctx.doPost({postData:{contents:JSON.stringify({token:props.TOKEN,...b})}});
 const get=b=>ctx.doGet({parameter:{token:props.TOKEN,...b}});
 const save=(id,meeting,extra={})=>post({action:'save',adminKey:props.ADMIN_KEY,record:{id,name:id,date:meeting.date,json:JSON.stringify({meeting,agendas:[{id:'a',title:'합성 테스트'}],...extra})}});
@@ -55,6 +55,25 @@ save('future',{...current,month:10,date:'2026-10-20'},{publication:{public:true}
 assert.equal(get({action:'get',id:'future'}).item,null,'forged public flag ignored');
 assert.equal(get({action:'get',id:'old'}).item.date,'2026-08-26');
 assert.equal(get({action:'ping'}).publicationVersion,1);
+ctx.logAuth_=()=>{};
+assert.equal(post({action:'verify',adminKey:props.WRITER_KEY}).role,'writer');
+assert.equal(post({action:'verify',adminKey:props.WRITER_KEY}).privateStoreUrl,undefined);
+for(const action of ['save','delete','setTags','publish','get','list','authLog'])assert.equal(post({action,adminKey:props.WRITER_KEY,id:'draft'}).error,'admin_required',action);
+for(const adminKey of ['',props.VIEW_KEY])for(const action of ['authorList','authorGet','saveAgendas'])assert.equal(post({action,adminKey,id:'draft'}).error,'writer_required');
+const author=b=>post({adminKey:props.WRITER_KEY,...b});
+assert.equal(author({action:'authorGet',id:'old'}).item,null);
+assert(!author({action:'authorList'}).items.some(x=>x.id==='old'));
+const prior=read('draft'),authorItem=author({action:'authorGet',id:'draft'}).item;
+assert.equal(authorItem.state.secret,undefined);
+assert.equal(author({action:'saveAgendas',id:'draft',expectedUpdatedAt:'stale',agendas:[]}).error,'conflict');
+const agendas=[{id:'report',type:'report',title:'임원 구성 보고',reportContent:'합성 보고내용',reportBasis:'합성 근거'}];
+const saved=author({action:'saveAgendas',id:'draft',expectedUpdatedAt:prior.updatedAt,agendas,meeting:{date:''},date:'',name:'forged',rosters:{},publication:{public:true}});
+assert.equal(saved.ok,true);
+const after=read('draft');assert.equal(after.date,prior.date);assert.equal(after.name,prior.name);
+const beforeState=JSON.parse(prior.json),afterState=JSON.parse(after.json);
+assert.deepEqual(afterState.agendas,agendas);beforeState.agendas=agendas;beforeState.publication={managed:true};assert.deepEqual(afterState,beforeState);
+assert.equal(get({action:'get',id:'draft'}).item.json,published.json,'author save does not publish');
+props.WRITER_KEY='';assert.equal(post({action:'verify',adminKey:'fixture-writer'}).ok,false,'unset role fails closed');
 // UI role/cache guard: saved password alone does not grant draft viewing.
 const ui={window:{},document:{},setInterval(){}};ui.window.AdminGate={savedKey:()=> 'fixture-edit'};
 vm.runInNewContext(fs.readFileSync('assets/js/app/publication.js','utf8'),ui);

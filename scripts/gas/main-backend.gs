@@ -115,7 +115,7 @@ function legacyDoPost(e) {
   if (!checkToken(body.token)) return jsonOut({ ok: false, error: 'unauthorized' });
   const action = body.action || '';
   if (action === 'verify') {
-    const role = checkAdmin(body.adminKey) ? 'edit' : (checkView(body.adminKey) ? 'view' : '');
+    const role = checkAdmin(body.adminKey) ? 'edit' : (checkView(body.adminKey) ? 'view' : (checkWriter_(body.adminKey) ? 'writer' : ''));
     logAuth_('verify', role || 'fail', body.dev);
     const result = { ok: !!role, role: role };
     if (role === 'edit') result.privateStoreUrl = privateStoreConnection_(body.privateStoreUrl);

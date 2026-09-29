@@ -299,7 +299,7 @@ function formattedMeetingDateTime(){
 }
 function saveState(){
   state.meeting.name=buildMeetingName();
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  if(!(window.AgendaWriter&&AgendaWriter.isWriter()))localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   renderMeetingControls();
   renderMetrics();
   renderPreview();
@@ -381,7 +381,7 @@ const AdminGate=(function(){
    * 그래서 **기기별로 나눈다** — 체크하면 30일, 체크 안 하면 그대로 24시간.
    * 빌린 기기용 안전장치는 남기고 본인 기기에서만 길게 간다. */
   const TRUST_KEY="sandle_admin_trust", TRUST_TTL=30*24*60*60*1000;
-  let verified=false, checking=false, pending=null, denied=null;
+  let verified=false, checking=false, pending=null, denied=null, verifiedRole='', verifiedKey='', agendaAccess=false;
 
   function trusted(){ try{ return localStorage.getItem(TRUST_KEY)==="1"; }catch(e){ return false; } }
   function ttl(){ return trusted()?TRUST_TTL:TTL; }
@@ -397,11 +397,12 @@ const AdminGate=(function(){
   const VIEW_ONLY_MSG="열람용 비밀번호입니다. 작성·수정 화면은 수정용 비밀번호가 필요합니다.";
   function verify(k){
     return window.GasNet.json(URL_,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"verify",adminKey:k,token:TOKEN})})
-      .then(x=>(x&&x.ok&&(x.role==="edit"||x.role==="view"))?x.role:"");
+      .then(x=>(x&&x.ok&&['edit','view','writer'].includes(x.role))?x.role:"");
   }
   function close(){ const d=document.getElementById("agendaAdminDialog"); if(d)d.remove(); checking=false; }
   function finish(ok){
-    if(ok&&window.Publication){Publication.setEditor(true,saved());if(window.Cloud)Cloud._invalidate();}
+    if(ok&&window.Publication){Publication.setEditor(verifiedRole==='edit',saved());if(window.Cloud)Cloud._invalidate();}
+    if(ok&&window.AgendaWriter)AgendaWriter.setRole(verifiedRole,saved());
     const cb=ok?pending:denied; pending=null; denied=null; close();
     if(cb) cb();
   }
@@ -410,8 +411,8 @@ const AdminGate=(function(){
     const bd=document.createElement("div"); bd.id="agendaAdminDialog";
     bd.style.cssText="position:fixed;inset:0;z-index:10002;background:rgba(30,30,28,.48);display:flex;align-items:center;justify-content:center;padding:16px";
     bd.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="agendaAdminTitle" style="background:#fff;border-radius:16px;max-width:390px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25);font-size:14px;line-height:1.6">'+
-      '<div id="agendaAdminTitle" style="font-weight:800;font-size:16px;margin-bottom:6px">🔒 관리자 전용 메뉴</div>'+
-      '<div style="color:#666;font-size:13px;margin-bottom:12px">작성·수정 화면은 <b>수정용</b> 관리자 비밀번호를 확인한 뒤 열립니다(열람용 비밀번호로는 열리지 않습니다).</div>'+
+      '<div id="agendaAdminTitle" style="font-weight:800;font-size:16px;margin-bottom:6px">🔒 작성 권한 확인</div>'+
+      '<div style="color:#666;font-size:13px;margin-bottom:12px">'+(agendaAccess?'안건 작성용 또는 수정용 비밀번호를 입력해 주세요.':'회의 설정·명단 변경은 수정용 비밀번호가 필요합니다.')+'</div>'+
       '<input id="agendaAdminInput" type="password" autocomplete="current-password" placeholder="관리자 비밀번호" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:15px;border:1px solid #d9d4c8;border-radius:10px">'+
       '<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:13px;cursor:pointer">'+
         '<input type="checkbox" id="agendaAdminTrust"'+(trusted()?" checked":"")+' style="width:16px;height:16px">'+
@@ -428,9 +429,9 @@ const AdminGate=(function(){
       verify(k).then(role=>{
         checking=false;ok.disabled=false;
         if(role==="view"){msg.style.color="#a33";msg.textContent=VIEW_ONLY_MSG;input.select();return;}
-        if(role!=="edit"){msg.style.color="#a33";msg.textContent="비밀번호가 올바르지 않습니다.";input.select();return;}
+        if(role!=="edit"&&!(agendaAccess&&role==='writer')){msg.style.color="#a33";msg.textContent=role==='writer'?'안건 작성용 비밀번호입니다. 이 메뉴는 수정 권한이 필요합니다.':"비밀번호가 올바르지 않습니다.";input.select();return;}
         const trustBox=document.getElementById("agendaAdminTrust");
-        remember(k,!!(trustBox&&trustBox.checked));verified=true;finish(true);
+        remember(k,!!(trustBox&&trustBox.checked));verified=true;verifiedRole=role;verifiedKey=k;finish(true);
       }).catch(()=>{checking=false;ok.disabled=false;msg.style.color="#a33";msg.textContent="확인하지 못했습니다. 네트워크 상태를 확인해 주세요.";});
     }
     ok.onclick=submit;
@@ -438,22 +439,24 @@ const AdminGate=(function(){
     input.addEventListener("keydown",e=>{if(e.key==="Enter")submit();else if(e.key==="Escape")finish(false);});
     setTimeout(()=>input.focus(),50);
   }
-  function requireAccess(onGranted,onDenied){
+  function requireAccess(onGranted,onDenied,agenda){
+    agendaAccess=!!agenda;
     pending=onGranted; denied=onDenied;
-    if(verified&&saved()){finish(true);return;}
+    if(verified&&saved()===verifiedKey&&(verifiedRole==='edit'||(agendaAccess&&verifiedRole==='writer'))){finish(true);return;}
     const k=saved();
     if(!k){showDialog();return;}
     if(checking)return;
     checking=true;
     verify(k).then(role=>{
       checking=false;
-      if(role==="edit"){verified=true;finish(true);}
+      if(role==="edit"||(agendaAccess&&role==='writer')){verified=true;verifiedRole=role;verifiedKey=k;finish(true);}
+      else if(role==='writer'){showDialog('안건 작성용 비밀번호입니다. 이 메뉴는 수정 권한이 필요합니다.');}
       // v429: 저장된 키가 열람용이면 지우지 않는다 — 공고·점검 같은 열람 잠금 화면은 그 키로 계속 열려야 한다.
       else if(role==="view"){showDialog(VIEW_ONLY_MSG);}
       else{forget();showDialog("저장된 비밀번호를 다시 확인해 주세요.");}
     }).catch(()=>{checking=false;showDialog("자동 확인에 실패했습니다. 비밀번호를 다시 입력해 주세요.");});
   }
-  return {require:requireAccess,forget,savedKey:saved};
+  return {require:requireAccess,requireAgenda:(ok,no)=>requireAccess(ok,no,true),forget,savedKey:saved};
 })();
 window.AdminGate=AdminGate;
 
@@ -497,13 +500,14 @@ function openNavView(btn){
     if(btn.dataset.view==="noticeView" && window.Notices) Notices.render(); // ⑤ 공고·기록 (v65)
     if(btn.dataset.view==="privateView" && window.PrivateStore) PrivateStore.render(); // ⑨ 비공개 자료 (v84)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
+    if(btn.dataset.view==="agendaView" && window.AgendaWriter) AgendaWriter.enter();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
 }
 document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     // v93: ⑥ 회의 설정·⑦ 동대표 명단·⑧ 안건·발언 모두 수정용 비밀번호 게이트(기존엔 ⑧만 잠겨 있었음 — 🔒 표시·2단계 키와 일관되게)
     if(btn.dataset.view==="setupView"||btn.dataset.view==="repsView"||btn.dataset.view==="agendaView"){
-      AdminGate.require(
+      (btn.dataset.view==='agendaView'?AdminGate.requireAgenda:AdminGate.require)(
         ()=>openNavView(btn),
         ()=>{ const cur=document.querySelector(".nav button[data-view].active"); if(cur&&window.Embed) Embed.notify(cur.dataset.view); }
       );
@@ -549,6 +553,7 @@ window.Embed=Embed;
 function updateTopbarSaveBtn(view){
   const el=document.getElementById("topbarSaveBtn");
   if(el) el.style.display=(view==="setupView"||view==="agendaView")?"":"none";
+  if(el) el.textContent=window.AgendaWriter&&AgendaWriter.isWriter()?'☁ 안건 저장':'☁ 현재 회의록 저장';
 }
 
 function initMeetingControls(){
@@ -961,6 +966,7 @@ function newAgenda(){
   };
 }
 function addAgenda(){
+  if(window.AgendaWriter&&AgendaWriter.isWriter()&&!AgendaWriter.hasMeeting()){alert('위에서 작성할 회의를 먼저 열어 주세요.');return;}
   const agenda=newAgenda();
   state.agendas.push(agenda); saveState(); renderAgendas();
   requestAnimationFrame(()=>{

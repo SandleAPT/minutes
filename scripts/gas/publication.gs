@@ -68,6 +68,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (_) { return jsonOut({ok:false,error:'bad json'}); }
   if (!checkToken(body.token)) return jsonOut({ok:false,error:'unauthorized'});
   const action = body.action;
+  if (action === 'authorList' || action === 'authorGet' || action === 'saveAgendas') return jsonOut(writerAction_(body));
   if (action === 'list' || action === 'get' || action === 'publish') {
     if (!checkAdmin(body.adminKey)) return jsonOut({ok:false,error:'admin_required'});
     if (action === 'list') return jsonOut({ok:true,items:publicationList_(true),editor:true,publicationVersion:1});
