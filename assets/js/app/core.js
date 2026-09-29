@@ -826,20 +826,25 @@ function renderMetrics(){
   document.getElementById("attendCount").textContent=currentAttendees().length;
   document.getElementById("agendaCount").textContent=officialAgendaCount();
 }
-function regularAgendas(){ return state.agendas.filter(a=>!a.isOther); }
-function otherAgendas(){ return state.agendas.filter(a=>a.isOther); }
-function officialAgendaCount(){ return regularAgendas().length+(otherAgendas().length?1:0); }
+function regularAgendas(){ return state.agendas.filter(a=>!isReport(a)&&!a.isOther); }
+function otherAgendas(){ return state.agendas.filter(a=>!isReport(a)&&a.isOther); }
+function officialAgendaCount(){ return regularAgendas().length+(otherAgendas().length?1:0)+state.agendas.filter(isReport).length; }
 function otherAgendaNumber(){ return regularAgendas().length+1; }
 function agendaMissingFields(agenda){
   normalizeRemarks(agenda);
   const missing=[];
   if(!String(agenda.title||"").trim()) missing.push("안건명");
+  if(isReport(agenda)){
+    if(!String(agenda.reportContent||"").trim()) missing.push("보고내용");
+    return missing;
+  }
   if(!String(agenda.decision||"").trim()) missing.push("의결사항");
   const vote=voteStatus(agenda);
   if(currentAttendees().length===0 || vote.incomplete>0) missing.push("표결");
   return missing;
 }
 function isAgendaComplete(agenda){ return agendaMissingFields(agenda).length===0; }
+function isReport(agenda){ return agenda?.type==="report"; }
 // 미리보기·출력 대상: 표지의 상정 안건 목록에는 제목이 입력된 안건을 모두 싣되,
 // 본문 페이지는 의결사항과 표결까지 완료된 안건만 만든다.
 // 입력 중인 미완성 내용이 공개 미리보기에 노출되지 않도록 목록과 본문 기준을 분리한다.
@@ -858,6 +863,7 @@ function agendaNumberAt(index){
 function agendaLabelAt(index){
   const agenda=state.agendas[index];
   if(!agenda) return "안건";
+  if(isReport(agenda)) return `보고 ${state.agendas.filter(isReport).indexOf(agenda)+1}`;
   if(agenda.isOther) return `기타안건 소제목 ${otherAgendas().indexOf(agenda)+1}`;
   return `제${agendaNumberAt(index)}안`;
 }
@@ -866,8 +872,17 @@ function officialAgendaRows(){
   const rows=regular.map((agenda,index)=>({label:`제${index+1}안`,title:agenda.title||"",agenda,isOtherGroup:false}));
   const others=listedOtherAgendas();
   if(others.length) rows.push({label:`제${regular.length+1}안`,title:"기타안건",agendas:others,isOtherGroup:true});
+  listedReports().forEach((agenda,index)=>rows.push({label:`${index+1}.`,title:agenda.title,agenda,report:true}));
   return rows;
 }
+function agendaGroupsPresent(){ return state.agendas.some(isReport); }
+function agendaSectionForRow(row){ return row.report?(listedRegularAgendas().length||listedOtherAgendas().length?"Ⅱ. 보고사항":"Ⅰ. 보고사항"):"Ⅰ. 의결사항"; }
+function reportHtml(a){
+  return `${String(a.summary||"").trim()?`<div class="section-band">보고 배경·목적</div><div class="summary-box">${nl2br(a.summary,{autoBullets:true})}</div>`:""}
+    <div class="section-band">보고내용</div><div class="summary-box">${nl2br(a.reportContent||"",{autoBullets:true})}</div>
+    ${String(a.reportBasis||"").trim()?`<div class="section-band">관련 근거</div><div class="summary-box">${nl2br(a.reportBasis,{autoBullets:true})}</div>`:""}`;
+}
+function listedReports(){ return state.agendas.filter(a=>isReport(a)&&hasAgendaTitle(a)); }
 // includeDrafts=true(관리자 미리보기 전용)면 제목만 있는 미완성 안건도 본문 페이지로 만든다.
 // 인쇄·Word·DOCX 는 항상 기본값(false)으로 불러 완성 안건만 나간다.
 function outputAgendaItems(includeDrafts=false){
@@ -876,6 +891,7 @@ function outputAgendaItems(includeDrafts=false){
   const items=regular.map(agenda=>({agenda,label:`제${listedRegular.indexOf(agenda)+1}안`,title:agenda.title,isOther:false,subIndex:0,draft:!isAgendaComplete(agenda)}));
   const others=includeDrafts?listedOtherAgendas():printableOtherAgendas();
   others.forEach((agenda,index)=>items.push({agenda,label:`제${listedRegular.length+1}안`,title:"기타안건",isOther:true,subIndex:index+1,subTotal:others.length,draft:!isAgendaComplete(agenda)}));
+  listedReports().filter(a=>includeDrafts||isAgendaComplete(a)).forEach((agenda,index)=>items.push({agenda,label:`보고 ${listedReports().indexOf(agenda)+1}`,title:agenda.title,isOther:false,report:true,draft:!isAgendaComplete(agenda)}));
   return items;
 }
 function isAdminDevice(){ try{ return !!(window.AdminGate&&AdminGate.savedKey()); }catch(e){ return false; } } // v91: 24시간 만료 반영
@@ -938,7 +954,7 @@ function renderAgendaTagEditor(id){
 }
 function newAgenda(){
   return {
-    id:uid(),title:"",proposer:"",summary:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
+    id:uid(),type:"decision",title:"",proposer:"",summary:"",reportContent:"",reportBasis:"",isOther:false,noRemarks:true,remarks:{},decision:"",votes:{},
     category:"",followup:"",showFollowup:false,
     materials:[],showMaterials:false
   };
@@ -967,6 +983,9 @@ function moveAgendaTo(id,position){
   requestAnimationFrame(()=>document.getElementById(`agenda-card-${id}`)?.scrollIntoView({behavior:"smooth",block:"start"}));
 }
 function normalizeRemarks(a){
+  if(a.type!=="report") a.type="decision";
+  if(typeof a.reportContent!=="string") a.reportContent="";
+  if(typeof a.reportBasis!=="string") a.reportBasis="";
   if(Array.isArray(a.remarks)){
     const obj={};
     a.remarks.forEach(r=>{
@@ -1029,7 +1048,7 @@ function setAgenda(id,key,val){
 
   // 체크박스처럼 화면 구조가 바뀌는 항목만 다시 렌더링.
   // 안건명·안건요지·의결사항·후속조치는 입력 중 포커스를 유지하도록 저장만 함.
-  if(key==="noRemarks" || key==="isOther"){
+  if(key==="noRemarks" || key==="isOther" || key==="type"){
     saveState();
     renderAgendas();
   }else{
@@ -1245,9 +1264,10 @@ function renderAgendas(){
       <div class="card agenda-card ${missing.length?"incomplete":""}" id="agenda-card-${a.id}">
         <div class="agenda-head">
           <span class="num">${agendaLabelAt(idx)}</span>
+          <span class="agenda-type-badge">${isReport(a)?"보고사항":"의결사항"}</span>
           <strong id="agenda-card-title-${a.id}">${a.title?esc(a.title):"안건명을 입력하세요"}</strong>
           <span class="agenda-completion" ${missing.length?"":"hidden"}>${missing.length?`미완성 · ${esc(missing.join(" · "))}`:""}</span>
-          <label class="toggle"><input type="checkbox" ${a.isOther?"checked":""} onchange="setAgenda('${a.id}','isOther',this.checked)"> 기타안건 소제목 <span class="small">(여러 건 선택 가능)</span></label>
+          ${isReport(a)?"":`<label class="toggle"><input type="checkbox" ${a.isOther?"checked":""} onchange="setAgenda('${a.id}','isOther',this.checked)"> 기타안건 소제목 <span class="small">(여러 건 선택 가능)</span></label>`}
           <label class="agenda-order"><span>순서</span><select aria-label="안건 순서" onchange="moveAgendaTo('${a.id}',this.value)">${
             state.agendas.map((_,order)=>`<option value="${order+1}" ${order===idx?"selected":""}>${order+1}</option>`).join("")
           }</select></label>
@@ -1256,11 +1276,13 @@ function renderAgendas(){
           <button class="btn danger" type="button" onclick="removeAgenda('${a.id}')">안건 삭제</button>
         </div>
         <div class="agenda-body">
+          <div class="field agenda-type-select"><label>안건 유형</label><select aria-label="안건 유형" onchange="setAgenda('${a.id}','type',this.value)"><option value="decision" ${isReport(a)?"":"selected"}>의결사항</option><option value="report" ${isReport(a)?"selected":""}>보고사항</option></select></div>
           <div class="grid" style="grid-template-columns:1.4fr .8fr">
             <div class="field"><label>안건명 <b>*</b></label><input id="agenda-title-input-${a.id}" value="${esc(a.title)}" placeholder="예: 관리비 부과 내역서 심의 건" oninput="setAgenda('${a.id}','title',this.value)"></div>
-            <div class="field"><label>안건 제출자 <span class="small">(선택)</span></label><input value="${esc(a.proposer)}" placeholder="예: 208동 유은혜 이사" oninput="setAgenda('${a.id}','proposer',this.value)"></div>
+            <div class="field"><label>${isReport(a)?"보고자":"안건 제출자"} <span class="small">(선택)</span></label><input value="${esc(a.proposer)}" placeholder="예: 208동 유은혜 이사" oninput="setAgenda('${a.id}','proposer',this.value)"></div>
           </div>
-          <div class="field" style="margin-top:8px"><label>회의 전 안건 요지 <span class="small">(선택)</span></label><textarea placeholder="확인 및 결정할 내용을 미리 입력" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
+          <div class="field" style="margin-top:8px"><label>${isReport(a)?"보고 배경 또는 목적":"회의 전 안건 요지"} <span class="small">(선택)</span></label><textarea placeholder="${isReport(a)?"보고하게 된 이유":"확인 및 결정할 내용을 미리 입력"}" oninput="setAgenda('${a.id}','summary',this.value)">${esc(a.summary)}</textarea></div>
+          ${isReport(a)?`<div class="field" style="margin-top:8px"><label>보고내용 <b>*</b></label><textarea placeholder="공유할 사실과 역할 등을 적어 주세요" oninput="setAgenda('${a.id}','reportContent',this.value)">${esc(a.reportContent)}</textarea></div><div class="field" style="margin-top:8px"><label>관련 근거 <span class="small">(선택)</span></label><textarea placeholder="관련 법령·관리규약" oninput="setAgenda('${a.id}','reportBasis',this.value)">${esc(a.reportBasis)}</textarea></div>`:""}
           <div class="field" style="margin-top:8px"><label>주제 태그 <span class="small">(여러 개 가능 · 안건명 기준 자동 분류, ×로 빼거나 ＋로 더하면 직접 지정 · ③ 주제별 보기에서 모아봄)</span></label>
             ${tagEditorHTML(a)}</div>
           <div class="subsection">
@@ -1280,15 +1302,17 @@ function renderAgendas(){
           ${a.noRemarks
             ? `<div class="small" style="margin-top:10px">출력물에서 주요 발언 항목이 생략됩니다.</div>`
             : `<div class="remarks">${remarks||`<div class="small">회의 설정에서 참석 동대표 또는 배석자를 등록하면 발언 입력칸이 표시됩니다.</div>`}</div>`}
-          <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+          <div class="grid" style="grid-template-columns:${isReport(a)?"1fr":"1fr 1fr"};margin-top:16px">
+            ${isReport(a)?"":`
             <div class="field"><label>의결사항 <b>*</b></label><textarea placeholder="최종적으로 무엇을 의결했는지" oninput="setAgenda('${a.id}','decision',this.value)">${esc(a.decision)}</textarea></div>
+            `}
             <div class="field">
-              <label>후속조치</label>
+              <label>${isReport(a)?"향후 확인사항 또는 후속사항":"후속조치"}</label>
               <textarea placeholder="담당·기한·다음 확인사항" oninput="setAgenda('${a.id}','followup',this.value)">${esc(a.followup)}</textarea>
-              <label class="toggle" style="margin-top:8px"><input type="checkbox" ${a.showFollowup?"checked":""} onchange="setAgenda('${a.id}','showFollowup',this.checked)"> 출력물에 후속조치 포함</label>
+              <label class="toggle" style="margin-top:8px"><input type="checkbox" ${a.showFollowup?"checked":""} onchange="setAgenda('${a.id}','showFollowup',this.checked)"> 출력물에 ${isReport(a)?"향후 확인사항·후속사항":"후속조치"} 포함</label>
             </div>
           </div>
-          <div class="vote-box">
+          ${isReport(a)?"":`<div class="vote-box">
             <div class="field">
               <label>표결 <b>*</b> — 최초 미선택 상태에서 한 번 누르면 찬성, 이후에는 찬성 ↔ 반대로 변경</label>
               <div class="vote-actions">
@@ -1299,7 +1323,7 @@ function renderAgendas(){
               </div>
             </div>
             <div class="vote-chips">${chips||`<span class="small">회의 설정에서 참석자를 선택하면 표결 대상이 표시됩니다.</span>`}</div>
-          </div>
+          </div>`}
         </div>
       </div>`;
   }).join("")+`<div class="agenda-bottom-actions"><button class="btn primary" type="button" onclick="addAgenda()">+ 다음 안건 추가</button></div>`;
@@ -1351,8 +1375,8 @@ function requireCompleteVotes(){
   if(pending.length){
     // v414: 예전 문구는 "의결 전으로 표시된다"고 했지만 실제로는 출력에서 빠졌다. 선택에 맞춰 사실대로 말한다.
     const message=exportIncludeDrafts
-      ? `미완성 안건 ${pending.length}건도 함께 출력합니다. 의결·표결란은 ‘의결 전 — 안건 상정 단계’로 표시됩니다.`
-      : `의결사항·표결이 비어 있는 안건 ${pending.length}건은 이번 출력에서 빠집니다. 회의 전 자료로 함께 뽑으려면 ‘미완성 안건 ${pending.length}건도 포함’을 선택하세요.`;
+      ? `미완성 안건 ${pending.length}건도 함께 출력합니다. 의결사항은 의결 전으로, 보고사항은 작성 중으로 표시됩니다.`
+      : `미완성 안건 ${pending.length}건은 이번 출력에서 빠집니다. 함께 뽑으려면 ‘미완성 안건 ${pending.length}건도 포함’을 선택하세요.`;
     modalStatus(message,"warn");
     showToast(message,"warn");
   }
@@ -1494,9 +1518,13 @@ function coverHtml(totalPages){
 
   const leftRows=leftReps.map(repRowHtml).join("");
   const rightRows=rightReps.map(repRowHtml).join("");
+  let lastAgendaSection="";
   const agendas=officialAgendaRows().map(row=>{
     const proposer=String(row.agenda?.proposer||"").trim();
-    return `<div class="row"><span>${row.label}</span><span>${esc(row.title)}${proposer?`<small class="cover-agenda-proposer">안건 제출자 · ${esc(proposer)}</small>`:""}</span></div>`;
+    const section=agendaSectionForRow(row);
+    const heading=agendaGroupsPresent()&&section!==lastAgendaSection?`<div class="agenda-group-title">${section}</div>`:"";
+    lastAgendaSection=section;
+    return heading+`<div class="row"><span>${row.label}</span><span>${esc(row.title)}${proposer?`<small class="cover-agenda-proposer">${row.report?"보고자":"안건 제출자"} · ${esc(proposer)}</small>`:""}</span></div>`;
   }).join("");
   const guests=(state.meeting.guests||[]).filter(g=>g.name.trim()||g.position.trim());
   const guestText=guests.length
@@ -1544,7 +1572,7 @@ function coverHtml(totalPages){
 function agendaPageHtml(item,currentPage,totalPages,printImages){
   const a=item.agenda;
   const proposer=String(a.proposer||"").trim();
-  const draftRibbon=item.draft?`<div class="draft-ribbon">미완성 초안 — 관리자에게만 보이며, 인쇄·게시에는 포함되지 않습니다 (의결·표결 미기입)</div>`:"";
+  const draftRibbon=item.draft?`<div class="draft-ribbon">미완성 초안 — 관리자에게만 보이며, 인쇄·게시에는 포함되지 않습니다${item.report?" (보고내용 미기입)":" (의결·표결 미기입)"}</div>`:"";
   normalizeRemarks(a);
   const vote=voteStatus(a);
   const voteHtml=voteIsBlank(a)
@@ -1571,14 +1599,14 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
     ${draftRibbon}
     <div class="agenda-document-head">
       <div class="agenda-meeting-name">${esc(buildMeetingName())}</div>
-      <div class="agenda-page-title"><span class="agenda-page-num">${item.label}</span><span>${esc(item.title)}</span></div>
+      <div class="agenda-page-title"><span class="agenda-page-num">${item.label}</span><span>${esc(item.title)}</span><span class="agenda-type-badge">${item.report?"보고사항":"의결사항"}</span></div>
     </div>
 
     ${item.isOther?`<div class="other-subtitle"><small>기타안건 ${item.subIndex} / ${item.subTotal}</small>${esc(a.title||"소제목 미입력")}</div>`:""}
 
-    ${proposer?`<div class="agenda-proposer"><b>안건 제출자</b><span>${esc(proposer)}</span></div>`:""}
+    ${proposer?`<div class="agenda-proposer"><b>${item.report?"보고자":"안건 제출자"}</b><span>${esc(proposer)}</span></div>`:""}
 
-    ${String(a.summary||"").trim()?`<div class="section-band">안건 요지</div>
+    ${item.report?"":String(a.summary||"").trim()?`<div class="section-band">안건 요지</div>
     <div class="summary-box">${nl2br(a.summary,{autoBullets:true})}</div>`:""}
 
     ${materials ? `<div class="${a.showMaterials?"":"screen-only-materials"}">
@@ -1588,13 +1616,13 @@ function agendaPageHtml(item,currentPage,totalPages,printImages){
 
     ${remarks}
 
-    <div class="section-band">의결사항</div>
+    ${item.report?reportHtml(a):`<div class="section-band">의결사항</div>
     <div class="decision-box${String(a.decision||"").trim()?"":" pending"}">${nl2br(decisionForOutput(a),{autoBullets:true})}</div>
 
     <div class="section-band">표결</div>
-    <div class="vote-summary-list">${voteHtml}</div>
+    <div class="vote-summary-list">${voteHtml}</div>`}
 
-    ${a.showFollowup ? `<div class="section-band">후속조치</div><div class="follow-box">${nl2br(a.followup,{autoBullets:true})}</div>` : ""}
+    ${a.showFollowup ? `<div class="section-band">${item.report?"향후 확인사항·후속사항":"후속조치"}</div><div class="follow-box">${nl2br(a.followup,{autoBullets:true})}</div>` : ""}
     ${pageNumberHtml(currentPage,totalPages)}
   </section>`;
 }
@@ -1633,7 +1661,7 @@ function exportDraftsOptionHtml(){
   if(!isAdminDevice()) return "";
   const pending=state.agendas.filter(a=>hasAgendaTitle(a)&&!isAgendaComplete(a)).length;
   if(!pending) return "";
-  return `<label class="toggle" style="margin-top:10px"><input type="checkbox" id="exportDraftsChk"> 미완성 안건 ${pending}건도 포함 <span class="small">(회의 전 자료 배포용 — 의결·표결란은 ‘의결 전’으로 표시됩니다)</span></label>`;
+  return `<label class="toggle" style="margin-top:10px"><input type="checkbox" id="exportDraftsChk"> 미완성 안건 ${pending}건도 포함 <span class="small">(회의 전 자료 배포용)</span></label>`;
 }
 function outputPagePlan(includeDrafts=false){
   const plan=[];
@@ -1999,9 +2027,10 @@ function wordDocumentHtml(){
   const contentBox=(html,extra="")=>`<table class="content-box ${extra}"><tr><td>${html||"&nbsp;"}</td></tr></table>`;
   const sequenceRows=(state.meeting.sequence||[]).map((s,i)=>`<tr><th>${i+1}</th><td>${esc(s)}</td></tr>`).join("");
   const agendaRows=state.agendas.length
-    ? state.agendas.map((a,i)=>{
-        const proposer=String(a.proposer||"").trim();
-        return `<tr><th>${agendaLabelAt(i)}</th><td>${esc(a.title||"")}${proposer?`<div class="cover-proposer">안건 제출자 · ${esc(proposer)}</div>`:""}</td></tr>`;
+    ? officialAgendaRows().map((row,i,all)=>{
+        const proposer=String(row.agenda?.proposer||"").trim();
+        const heading=agendaGroupsPresent()&&(i===0||agendaSectionForRow(row)!==agendaSectionForRow(all[i-1]))?`<tr><th colspan="2">${agendaSectionForRow(row)}</th></tr>`:"";
+        return heading+`<tr><th>${row.label}</th><td>${esc(row.title||"")}${proposer?`<div class="cover-proposer">안건 제출자 · ${esc(proposer)}</div>`:""}</td></tr>`;
       }).join("")
     : `<tr><th>-</th><td>등록된 안건이 없습니다.</td></tr>`;
 
@@ -2043,11 +2072,10 @@ function wordDocumentHtml(){
       ${bodyMarkHtml("word")}<div class="word-title">${docTitle()}</div>
       <table class="grid agenda-title"><tr><th>${agendaLabelAt(idx)}</th><td>${esc(a.title)}</td></tr></table>
       ${String(a.proposer||"").trim()?`<table class="grid agenda-proposer-word"><tr><th>안건 제출자</th><td>${esc(a.proposer)}</td></tr></table>`:""}
-      ${String(a.summary||"").trim()?sectionTitle("안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
+      ${String(a.summary||"").trim()?sectionTitle(isReport(a)?"보고 배경·목적":"안건 요지")+contentBox(nl2br(a.summary),"summary"):""}
       ${sectionTitle("주요 발언")}<table class="grid remarks">${remarkRows}</table>
-      ${sectionTitle("의결사항")}${contentBox(nl2br(decisionForOutput(a)),"decision")}
-      ${sectionTitle("표결")}<table class="grid votes">${voteRows}</table>
-      ${sectionTitle("후속조치")}${contentBox(nl2br(a.followup),"followup")}
+      ${isReport(a)?sectionTitle("보고내용")+contentBox(nl2br(a.reportContent),"summary")+(a.reportBasis?sectionTitle("관련 근거")+contentBox(nl2br(a.reportBasis),"summary"):""):sectionTitle("의결사항")+contentBox(nl2br(decisionForOutput(a)),"decision")+sectionTitle("표결")+`<table class="grid votes">${voteRows}</table>`}
+      ${sectionTitle(isReport(a)?"향후 확인사항·후속사항":"후속조치")}${contentBox(nl2br(a.followup),"followup")}
     </div>`;
   }).join("");
 
@@ -2210,9 +2238,9 @@ function docxDocumentXml(){
   ]);
   body+=wTable(sequenceRows.length?sequenceRows:[[{text:"-",index:0},{text:" ",index:1}]],[720,9440],{cellMargin:55,after:10});
   body+=wSectionTitle("상정 안건");
-  const agendaRows=state.agendas.length?state.agendas.map((a,i)=>[
-    {text:agendaLabelAt(i),index:0,bold:true,align:"center",shade:"F4F6F2",size:18},
-    {text:(a.title||" ")+(String(a.proposer||"").trim()?`\n안건 제출자 · ${String(a.proposer).trim()}`:""),index:1,size:18}
+  const agendaRows=state.agendas.length?officialAgendaRows().flatMap((row,i,all)=>[
+    ...(agendaGroupsPresent()&&(i===0||agendaSectionForRow(row)!==agendaSectionForRow(all[i-1]))?[[{text:agendaSectionForRow(row),index:0,span:2,width:10160,bold:true,shade:"E8EDE6"}]]:[]),
+    [{text:row.label,index:0,bold:true,align:"center",shade:"F4F6F2",size:18},{text:(row.title||" ")+(String(row.agenda?.proposer||"").trim()?`\n안건 제출자 · ${String(row.agenda.proposer).trim()}`:""),index:1,size:18}]
   ]):[[{text:"-",index:0},{text:"등록된 안건이 없습니다.",index:1}]];
   body+=wTable(agendaRows,[1080,9080],{cellMargin:55,after:10});
 
@@ -2225,7 +2253,7 @@ function docxDocumentXml(){
     if(String(a.proposer||"").trim()) body+=wTable([
       [{text:"안건 제출자",index:0,bold:true,shade:"F4F6F2",align:"center",size:18},{text:String(a.proposer).trim(),index:1,size:18}]
     ],[1600,8560],{cellMargin:55,after:10});
-    if(String(a.summary||"").trim()) body+=wSectionTitle("안건 요지")+wContentBox(a.summary,{autoBullets:true});
+    if(String(a.summary||"").trim()) body+=wSectionTitle(isReport(a)?"보고 배경·목적":"안건 요지")+wContentBox(a.summary,{autoBullets:true});
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim());
     if(a.showMaterials && printableMaterials.length){
       body+=wSectionTitle("회의자료 · 첨부자료");
@@ -2254,6 +2282,10 @@ function docxDocumentXml(){
       });
       body+=wTable(remarkRows,[2340,7820],{cellMargin:85,after:10});
     }
+    if(isReport(a)){
+      body+=wSectionTitle("보고내용")+wContentBox(a.reportContent||" ",{autoBullets:true});
+      if(String(a.reportBasis||"").trim()) body+=wSectionTitle("관련 근거")+wContentBox(a.reportBasis,{autoBullets:true});
+    }else{
     body+=wSectionTitle("의결사항")+wContentBox(decisionForOutput(a));
     body+=wSectionTitle("표결");
     const voteRows=voteIsBlank(a)
@@ -2264,7 +2296,8 @@ function docxDocumentXml(){
           ...(vote.incomplete?[[{text:`미선택(${vote.incomplete})`,index:0,bold:true,align:"center",shade:"FFF4D6"},{text:"표결 선택이 완료되지 않았습니다.",index:1}]]:[])
         ];
     body+=wTable(voteRows,[1900,8260],{cellMargin:70,after:10});
-    if(a.showFollowup) body+=wSectionTitle("후속조치")+wContentBox(a.followup||" ");
+    }
+    if(a.showFollowup) body+=wSectionTitle(isReport(a)?"향후 확인사항·후속사항":"후속조치")+wContentBox(a.followup||" ");
   });
 
   const sectPr=`<w:sectPr><w:footerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="650" w:right="720" w:bottom="650" w:left="720" w:header="0" w:footer="300" w:gutter="0"/><w:cols w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr>`;
@@ -2405,14 +2438,17 @@ async function buildDocxBlob(){
   ],[1220,5580,1840,1520]));
   children.push(sectionTitle("상정 안건"));
   const agendaRows=officialAgendaRows();
-  children.push(table(agendaRows.length?agendaRows.map(row=>[cell(p(row.label,{bold:true,size:22,alignment:AlignmentType.CENTER,after:0,line:280}),1080,{compact:true}),cell(p(row.title||" ",{size:22,after:0,line:280}),9080,{compact:true})]):[[cell("-",1080,{compact:true}),cell("등록된 안건이 없습니다.",9080,{compact:true})]],[1080,9080]));
+  children.push(table(agendaRows.length?agendaRows.flatMap((row,i)=>[
+    ...(agendaGroupsPresent()&&(i===0||agendaSectionForRow(row)!==agendaSectionForRow(agendaRows[i-1]))?[[new TableCell({children:[p(agendaSectionForRow(row),{bold:true,size:22,after:0})],columnSpan:2})]]:[]),
+    [cell(p(row.label,{bold:true,size:22,alignment:AlignmentType.CENTER,after:0,line:280}),1080,{compact:true}),cell(p(row.title||" ",{size:22,after:0,line:280}),9080,{compact:true})]
+  ]):[[cell("-",1080,{compact:true}),cell("등록된 안건이 없습니다.",9080,{compact:true})]],[1080,9080]));
 
   for(const item of outputAgendaItems(exportIncludeDrafts)){
     const a=item.agenda;normalizeRemarks(a);const vote=voteStatus(a);
     children.push(pageBreak(),p(buildMeetingName(),{size:18,color:"6F746C",alignment:AlignmentType.RIGHT,after:30}));
     children.push(p([run(item.label,{bold:true,size:24,color:"647660"}),run(`  ${item.title}`,{bold:true,size:32})],{after:85,line:360,border:titleBorders}));
     if(item.isOther)children.push(p(`기타안건 ${item.subIndex} / ${item.subTotal}  ${a.title||"소제목 미입력"}`,{bold:true,size:26,after:60,border:{bottom:{style:BorderStyle.SINGLE,size:4,color:"C8C2B6",space:3}}}));
-    if(String(a.summary||"").trim()) children.push(sectionTitle("안건 요지"),contentBox(a.summary,true));
+    if(String(a.summary||"").trim()) children.push(sectionTitle(item.report?"보고 배경·목적":"안건 요지"),contentBox(a.summary,true));
     const printableMaterials=(a.materials||[]).filter(m=>m.title.trim()||m.reference.trim()||m.note.trim()||m.fileName);
     if(a.showMaterials&&printableMaterials.length){
       children.push(sectionTitle("회의자료 · 첨부자료"));
@@ -2435,6 +2471,10 @@ async function buildDocxBlob(){
       children.push(sectionTitle("주요 발언"));
       children.push(table(filled.map(([key,text])=>[cell(p(remarkSpeakerLabel(key),{bold:true,size:22,alignment:AlignmentType.CENTER,after:0,line:280}),2800),cell(formatted(text,{autoBullets:true,size:22}),7360)]),[2800,7360]));
     }
+    if(item.report){
+      children.push(sectionTitle("보고내용"),contentBox(a.reportContent||" ",true));
+      if(String(a.reportBasis||"").trim())children.push(sectionTitle("관련 근거"),contentBox(a.reportBasis,true));
+    }else{
     children.push(sectionTitle("의결사항"),contentBox(decisionForOutput(a),true),sectionTitle("표결"));
     if(voteIsBlank(a)){
       children.push(contentBox("표결 미기입 — 의결 전 상정 안건",true));
@@ -2452,7 +2492,8 @@ async function buildDocxBlob(){
       });
       children.push(table(personRows,[8160,2000]));
     }
-    if(a.showFollowup)children.push(sectionTitle("후속조치"),contentBox(a.followup,true));
+    }
+    if(a.showFollowup)children.push(sectionTitle(item.report?"향후 확인사항·후속사항":"후속조치"),contentBox(a.followup,true));
     for(const material of includedPdfMaterials(a)){
       const images=await renderPdfMaterialPages(material);
       for(let i=0;i<images.length;i++){
