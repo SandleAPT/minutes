@@ -282,7 +282,7 @@ function buildMeetingName(){
   const mm=String(Number(m.month)||1).padStart(2,"0");
   const prefix=`제${m.termNo}기 ${m.year}년${mm}월`;
   const body=bodyLabel(bodyOf(m));
-  return m.type==="임시" ? `${prefix} 임시 ${body}` : `${prefix} ${body}`;
+  return `${prefix} ${m.type==="임시"?"임시":"정기"} ${body}`;
 }
 function weekdayKo(ymd){
   if(!ymd) return "";
