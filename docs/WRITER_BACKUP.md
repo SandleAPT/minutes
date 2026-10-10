@@ -1,6 +1,6 @@
 # 작성자 변경 백업
 
-상태: 구현·fixture 검증 완료. 운영 Apps Script 배포 전이며 현재 운영 서버에서는 작동하지 않는다.
+Status: main and secondary Apps Script version 10 deployed and live synthetic meeting verification passed on 2026-10-11. Four backup snapshots, date preservation, authorization and original meeting preservation verified. Frontend v462 publication pending.
 
 ## 범위
 

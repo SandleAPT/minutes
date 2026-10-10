@@ -32,3 +32,11 @@
 - 다음: 작업 브랜치 업로드 확인, 서버 접근 연결 후 writer/publication 진본 대조·배포, 합성 회의 검증, main/Pages 반영.
 
 - 공개 업로드 완료: 2026-10-11 00:34:44 KST. 정리된 작업 브랜치 codex/writer-backup-public, 구현 커밋 4121f88, 초안 PR https://github.com/SandleAPT/minutes/pull/1. main 병합·서버 배포·실회의 변경 없음. 다음: Safari의 Apple Events JavaScript 허용 후 운영 GAS 원본 대조·적용·배포·합성 회의 검증.
+
+## Server deployment verified - 2026-10-11 00:50:13 KST
+
+- Main and secondary existing web apps now use version 10. Original server files matched the baseline; only writer.gs and publication.gs changed. URLs, Code.gs, credentials and Script Properties were preserved.
+- Live server sheet smoke test passed: create, idempotent retry, agenda add/edit/remove, four administrator-readable snapshots, writer history access denied, unpublished meeting hidden, template unchanged, and Korea calendar dates preserved. The synthetic meeting was removed; test snapshots remain.
+- The first diagnostic compared a Sheets Date with a date string and failed; comparing the same Korea calendar day passed. Product code was unchanged. The editor-only diagnostic was restored and never deployed.
+- Deployed HTTP authorCreate without credentials returns writer_required, confirming the new route. Browser create/save click round-trip is still unverified.
+- The reported basic-information prompt comes from the previous new-meeting screen. The v462 writer form collects date/type/time/place before registration. Publish both corresponding PRs, verify live v462, and assess any further settings access from that flow.
