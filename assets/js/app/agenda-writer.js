@@ -39,7 +39,7 @@
       '<form id="writerCreateForm" hidden style="margin-top:12px"><p>위에서 선택한 회의의 기수·명단을 이어받습니다. 안건과 출석은 빈 상태로 시작합니다.</p>' +
       '<label>회의 날짜 <input id="writerCreateDate" type="date" required></label> ' +
       '<label>종류 <select id="writerCreateType"><option>정기</option><option>임시</option></select></label> ' +
-      '<label>시간 <input id="writerCreateTime" type="time"></label> ' +
+      '<label>시간 (24시간) <input id="writerCreateTime" type="text" placeholder="19:00" maxlength="5" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" title="24시간 형식으로 입력하세요. 예: 19:00" autocomplete="off"></label> ' +
       '<label>장소 <input id="writerCreatePlace" maxlength="200"></label> ' +
       '<button class="btn gold" id="writerCreateSubmit" type="submit">등록하고 열기</button></form>' +
       '<div id="writerStatus" role="status" style="margin-top:8px">작성 가능한 회의를 불러오는 중…</div>';
@@ -64,9 +64,12 @@
   async function create(){
     if(!isWriter()||busy)return;
     if(dirty()&&!confirm('저장하지 않은 안건 변경을 버리고 새 회의를 열까요?'))return;
+    var time=document.getElementById('writerCreateTime').value.trim();
+    if(time&&!/^([01]?\d|2[0-3]):[0-5]\d$/.test(time)){message('시간은 24시간 형식으로 입력해 주세요. 예: 19:00');return;}
+    if(time.length===4)time='0'+time;
     var input={templateId:document.getElementById('writerMeetingSelect').value,meeting:{
       date:document.getElementById('writerCreateDate').value,type:document.getElementById('writerCreateType').value,
-      time:document.getElementById('writerCreateTime').value,place:document.getElementById('writerCreatePlace').value}};
+      time:time,place:document.getElementById('writerCreatePlace').value}};
     if(!input.templateId||!input.meeting.date){message('기준 회의와 회의 날짜를 선택해 주세요.');return;}
     var signature=JSON.stringify(input);
     if(!pendingCreate||pendingCreate.signature!==signature)pendingCreate={signature:signature,id:window.crypto.randomUUID()};
