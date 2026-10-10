@@ -154,7 +154,11 @@ function writerSaveSettings_(body) {
     ['body','termNo','type','date','time','place','attendance','guests','audience','sequence'].forEach(function(k){if(Object.prototype.hasOwnProperty.call(m,k))next[k]=m[k];});
     next.termNo=Number(next.termNo);next.year=Number(m.date.slice(0,4));next.month=Number(m.date.slice(5,7));
     next.name='제'+next.termNo+'기 '+next.year+'년'+String(next.month).padStart(2,'0')+'월 '+next.type+' '+(next.body==='임차'?'임차인대표회의':'입주자대표회의');
-    if(JSON.stringify(next)===JSON.stringify(s.meeting))return {ok:true,item:writerItem_(old)};
+    if(body.agendas!==undefined){
+      if(!Array.isArray(body.agendas)||body.agendas.length>100||body.agendas.some(function(a){return !a||typeof a!=="object"||Array.isArray(a)||!/^([A-Za-z0-9_-]{1,100})$/.test(a.id||'');}))return {ok:false,error:'invalid_agendas'};
+      s.agendas=body.agendas;
+    }
+    if(JSON.stringify(next)===JSON.stringify(s.meeting)&&JSON.stringify(s.agendas)===JSON.stringify(publicationState_(old).agendas))return {ok:true,item:writerItem_(old)};
     s.meeting=next;if(writerOwned_(old))s.writerOwner='writer';const json=JSON.stringify(s);
     if(json.length>49000)return {ok:false,error:'record_too_large'};
     if(!checkAdmin(body.adminKey)){try{writerBackup_(old,json);}catch(_){return {ok:false,error:'backup_failed'};}}

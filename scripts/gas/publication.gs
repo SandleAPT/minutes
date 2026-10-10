@@ -35,6 +35,7 @@ function publicationItem_(item, editor) {
   if (!publicationManaged_(state) && !published) return item;
   if (!editor && !published) return null;
   const result = Object.assign({}, editor ? item : published);
+  if(editor)result.author=writerOwned_(item)?"writer":"edit";
   result.publication = { managed: true, public: !editor,
     publishedAt: published ? published.updatedAt : '',
     dirty: !published || published.json !== item.json || published.name !== item.name || published.date !== item.date };
@@ -69,7 +70,6 @@ function doPost(e) {
   if (!checkToken(body.token)) return jsonOut({ok:false,error:'unauthorized'});
   const action = body.action;
   if (action === 'writerBackupList' || action === 'writerBackupGet') return jsonOut(writerBackupAction_(body));
-  if (/^writerProposal(List|Get|Save|Delete)$/.test(action)) return jsonOut(writerProposalAction_(body));
   if (action === 'authorTemplates' || action === 'authorSaveSettings' || action === 'authorList' || action === 'authorGet' || action === 'authorCreate' || action === 'saveAgendas') return jsonOut(writerAction_(body));
   if (action === 'list' || action === 'get' || action === 'publish') {
     if (!checkAdmin(body.adminKey)) return jsonOut({ok:false,error:'admin_required'});

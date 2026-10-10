@@ -374,7 +374,7 @@
     var rows = items.length ? items.map(function (it) {
       return '<div style="display:flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid #eee;border-radius:12px">' +
         '<div style="flex:1;min-width:0">' +
-          '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(\uc774\ub984\uc5c6\uc74c)") + '</div>' +
+          '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(\uc774\ub984\uc5c6\uc74c)") + (it.author ? '<span class="small"> · '+(it.author==='writer'?'주희님 작성':'유네님 작성')+'</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#999">' + esc(fmtWhen(it.updatedAt)) + '</div>' +
         '</div>' +
         '<button class="btn" onclick="Cloud._pick(\'' + escAttr(it.id) + '\')">\uc5f4\uae30</button>' +
@@ -532,7 +532,7 @@
       rows.forEach(function (r) {
         var it = r.it, active = it.id === cur;
         html += '<div class="cloud-meeting-row" onclick="Cloud._open(\'' + escAttr(it.id) + '\')" style="display:flex;gap:8px;align-items:center;padding:11px 13px;border:1px solid ' + (active ? '#d8a944' : '#e7e2d8') + ';border-radius:12px;margin-bottom:7px;cursor:pointer;background:' + (active ? '#fbf5e5' : '#fff') + '">' +
-          '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + (isTenant(it) ? '<span class="body-badge">◇ 임차</span>' : '') + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.name || "(이름없음)") + (it.author ? '<span class="body-badge">'+(it.author==='writer'?'주희님 작성':'유네님 작성')+'</span>' : '') + (isTenant(it) ? '<span class="body-badge">◇ 임차</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#999">' + (r.d ? '<b style="color:#6b6656">회의일 ' + esc(fmtDay(r.d)) + '</b>' : '회의일 미정') + ' · 저장 ' + esc(fmtWhen(it.updatedAt)) + (active ? ' · <span style="color:#b07d10;font-weight:700">현재 열림</span>' : '') + '</div></div>' +
           (it.publication ? '<span class="small">'+(it.publication.publishedAt?'발행됨':'미발행')+'</span>' : '') +
           (Publication.isEditor()&&it.publication ? '<button class="btn gold" onclick="event.stopPropagation();Cloud.publishSaved(\''+escAttr(it.id)+'\')">'+(it.publication.publishedAt?'다시 발행':'발행')+'</button>' : '') +

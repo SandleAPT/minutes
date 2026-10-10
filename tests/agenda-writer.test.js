@@ -18,7 +18,7 @@ const W=context.window.AgendaWriter;
   response={ok:true,item};elements.writerMeetingOpen.onclick();await new Promise(r=>setImmediate(r));assert(W.hasMeeting());
   context.state.meeting.place='changed';response={ok:true,item:{...item,updatedAt:'revision2'}};await W.save();
   assert.equal(requests.at(-1).action,'authorSaveSettings');assert.equal(requests.at(-1).expectedUpdatedAt,'revision1');
-  assert.equal(requests.at(-1).agendas,undefined);assert.equal(requests.at(-1).meeting.place,'changed');
+  assert.equal(requests.at(-1).agendas[0].title,'old');assert.equal(requests.at(-1).meeting.place,'changed');
   context.state.meeting.place='latest';response={ok:false,error:'conflict'};await W.save();assert(alerts.at(-1).includes('다른 기기'));
   W.clearMeeting();assert(!W.hasMeeting());const before=requests.length;await W.save();assert.equal(requests.length,before);
   await W.newMeeting();assert.equal(elements.writerCreateForm.hidden,false);

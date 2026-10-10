@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  var role='',key='',loaded=null,busy=false,sequence=0,pendingCreate=null;
+  var role='',key='',loaded=null,busy=false,sequence=0,pendingCreate=null,listsReady=false;
   var url='https://script.google.com/macros/s/AKfycbyhpE-DB5WAAEx7uqTCPwU-e0sPKuupkYN3YoQWALiFWe0IHFNh1y91e1VNtDmMxxoxLA/exec';
   function isWriter(){return role==='writer'&&key&&window.AdminGate&&AdminGate.savedKey()===key;}
-  function setRole(next,k){if(role!==next||key!==k){loaded=null;pendingCreate=null;sequence++;var bar=document.getElementById('writerMeetingBar');if(bar)bar.innerHTML='';}role=next;key=k;var nav=document.querySelector('[data-view="agendaView"]');if(nav)nav.hidden=next==='writer';}
+  function setRole(next,k){if(role!==next||key!==k){loaded=null;pendingCreate=null;listsReady=false;sequence++;var bar=document.getElementById('writerMeetingBar');if(bar)bar.innerHTML='';}role=next;key=k;var nav=document.querySelector('[data-view="agendaView"]');if(nav)nav.hidden=false;}
   function message(text){var el=document.getElementById('writerStatus');if(el)el.textContent=text;}
   async function request(action,fields){
     var k=key;if(!isWriter())throw new Error('안건 작성 권한을 다시 확인해 주세요.');
@@ -15,7 +15,7 @@
     if(!result||!result.ok)throw new Error(result&&result.error==='conflict'?'다른 기기에서 수정되었습니다. 입력 내용을 복사한 뒤 회의를 다시 열어 주세요.':result&&result.error==='record_too_large'?'저장 한도를 초과했습니다. 안건 내용을 줄여 주세요.':'요청을 처리하지 못했습니다. 권한과 연결을 확인해 주세요.');
     return result;
   }
-  function dirty(){return loaded&&state.cloudId===loaded.id&&JSON.stringify(state.meeting)!==loaded.meeting;}
+  function dirty(){return loaded&&state.cloudId===loaded.id&&(JSON.stringify(state.meeting)!==loaded.meeting||JSON.stringify(state.agendas)!==loaded.agendas);}
   async function open(id){
     if(!id||busy)return;
     if(dirty()&&!confirm('저장하지 않은 회의설정 변경을 버리고 회의를 다시 열까요?'))return;
@@ -25,16 +25,16 @@
       if(!r.item)throw new Error('작성할 수 있는 회의가 아닙니다.');
       state=migrateState(r.item.state);state.cloudId=r.item.id;
       Publication.accept(state,null);
-      loaded={id:r.item.id,updatedAt:r.item.updatedAt,meeting:JSON.stringify(state.meeting)};
+      loaded={id:r.item.id,updatedAt:r.item.updatedAt,meeting:JSON.stringify(state.meeting),agendas:JSON.stringify(state.agendas)};
       // Keep author drafts in memory; do not publish them into shared public caches.
-      renderMeetingControls();renderAttendance();renderAgendas();renderPreview();if(loaded)loaded.meeting=JSON.stringify(state.meeting);
-      message(r.item.name+' · 본인이 등록한 회의설정을 수정할 수 있습니다. 저장 후 편집자가 발행합니다.');
+      renderMeetingControls();renderAttendance();renderAgendas();renderPreview();if(loaded){loaded.meeting=JSON.stringify(state.meeting);loaded.agendas=JSON.stringify(state.agendas);}
+      message(r.item.name+' · 본인이 등록한 회의의 안건·발언과 설정을 수정할 수 있습니다. 저장 후 편집자가 발행합니다.');
     }catch(e){message(e.message);}finally{busy=false;}
   }
   async function enter(){
     var bar=document.getElementById('writerMeetingBar');if(!bar)return;
     bar.hidden=!isWriter();if(!isWriter())return;
-    if(bar.childNodes.length)return;
+    if(bar.childNodes.length&&listsReady)return;
     bar.innerHTML='<label for="writerMeetingSelect">작성할 회의 </label><select id="writerMeetingSelect" style="max-width:100%;padding:8px"></select> <button class="btn" id="writerMeetingOpen">선택 회의 열기</button> <button class="btn" id="writerCreateToggle">＋ 새 회의 등록</button>' +
       '<form id="writerCreateForm" hidden style="margin-top:12px"><label>기준 회의 <select id="writerTemplateSelect"></select></label><p>위에서 선택한 회의의 기수·명단을 이어받습니다. 안건과 출석은 빈 상태로 시작합니다.</p>' +
       '<label>회의 날짜 <input id="writerCreateDate" type="date" required></label> ' +
@@ -53,7 +53,7 @@
       select.replaceChildren();
       (r.items||[]).forEach(function(item){var o=document.createElement('option');o.value=item.id;o.textContent=item.name;select.appendChild(o);});
       document.getElementById('writerCreateSubmit').disabled=!baseline.options.length;
-      message(baseline.options.length?'본인이 등록한 회의를 열거나 새 회의를 등록할 수 있습니다.':'명단을 이어받을 기준 회의를 편집자가 먼저 등록해야 합니다.');
+      listsReady=true;message(baseline.options.length?'본인이 등록한 회의를 열거나 새 회의를 등록할 수 있습니다.':'명단을 이어받을 기준 회의를 편집자가 먼저 등록해야 합니다.');
     }catch(e){message(e.message);}
   }
   async function newMeeting(){
@@ -80,24 +80,24 @@
       var r=await request('authorCreate',Object.assign({requestId:pendingCreate.id},input));if(ticket!==sequence)return;
       if(!r.item)throw new Error('새 회의를 열지 못했습니다.');
       state=migrateState(r.item.state);state.cloudId=r.item.id;Publication.accept(state,null);
-      loaded={id:r.item.id,updatedAt:r.item.updatedAt,meeting:JSON.stringify(state.meeting)};
+      loaded={id:r.item.id,updatedAt:r.item.updatedAt,meeting:JSON.stringify(state.meeting),agendas:JSON.stringify(state.agendas)};
       var select=document.getElementById('writerMeetingSelect');
       if(!Array.from(select.options).some(function(o){return o.value===r.item.id;})){
         var option=document.createElement('option');option.value=r.item.id;option.textContent=r.item.name;select.appendChild(option);
       }
       select.value=r.item.id;pendingCreate=null;document.getElementById('writerCreateForm').hidden=true;
-      renderMeetingControls();renderAttendance();renderAgendas();renderPreview();if(loaded)loaded.meeting=JSON.stringify(state.meeting);message('새 회의 등록 완료. 회의설정을 수정하고 저장해 주세요. 공개는 편집자가 발행한 뒤 적용됩니다.');
+      renderMeetingControls();renderAttendance();renderAgendas();renderPreview();if(loaded){loaded.meeting=JSON.stringify(state.meeting);loaded.agendas=JSON.stringify(state.agendas);}message('새 회의 등록 완료. 안건·발언과 회의설정을 작성하고 저장해 주세요. 공개는 편집자가 발행한 뒤 적용됩니다.');
     }catch(e){message(e.message);}finally{busy=false;document.getElementById('writerCreateSubmit').disabled=false;}
   }
   async function save(){
     if(busy)return;
     if(!loaded||state.cloudId!==loaded.id){alert('회의설정에서 본인이 등록한 회의를 먼저 열어 주세요.');return;}
-    busy=true;var submitted=JSON.stringify(state.meeting),id=loaded.id;
-    message('회의설정 저장 중…');
+    busy=true;var submitted=JSON.stringify(state.meeting),submittedAgendas=JSON.stringify(state.agendas),id=loaded.id;
+    message('작성 내용 저장 중…');
     try{
-      var r=await request('authorSaveSettings',{id:id,expectedUpdatedAt:loaded.updatedAt,meeting:JSON.parse(submitted)});
-      if(state.cloudId===id){loaded.updatedAt=r.item.updatedAt;loaded.meeting=submitted;}
-      message('회의설정 저장 완료. 일반 방문자 공개는 편집자가 발행한 뒤 적용됩니다.');
+      var r=await request('authorSaveSettings',{id:id,expectedUpdatedAt:loaded.updatedAt,meeting:JSON.parse(submitted),agendas:JSON.parse(submittedAgendas)});
+      if(state.cloudId===id){loaded.updatedAt=r.item.updatedAt;loaded.meeting=submitted;loaded.agendas=submittedAgendas;}
+      message('작성 내용 저장 완료. 일반 방문자 공개는 편집자가 발행한 뒤 적용됩니다.');
     }catch(e){message(e.message);alert(e.message);}finally{busy=false;}
   }
   setInterval(function(){

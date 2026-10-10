@@ -113,10 +113,12 @@
 `private-store.gs`의 `setup` 액션으로는 못 바꾼다 — 최초 1회만 등록되고(`already_setup`)
 그 뒤로는 거부한다. 원격으로 키를 갈아끼울 통로를 두지 않으려고 그렇게 만든 것이다.
 
-## v464 작성자 소유권과 회의자료 저장
+## v465 작성자 소유권과 회의별 저장
 
+- 사용자는 제한 단위를 회의별로 확정했다. 주희님은 신규 등록한 본인 회의만 열고 안건·발언과 회의설정을 편집한다. 회의자료 작성 메뉴는 관리자 전용이다.
 - `writerOwner:"writer"`는 서버가 새 회의에 붙인다. 이전 `m_writer_`/writerCreation 회의도 주희님 소유로 인식한다. 기존 관리자 회의는 관리자 소유다. 관리자 저장 후에도 원래 작성자 표식을 보존한다.
-- writer `authorList/authorGet/authorSaveSettings/saveAgendas`는 본인 소유 회의만 허용한다. `authorTemplates`는 발행관리 대상의 id/name/date만 반환하며 새 회의의 기수·명단을 이어받는 용도다. 설정 저장은 meeting 허용 필드만 병합하고 안건·원문·발행 상태를 보존한다. 저장 전 별도 백업을 검증한다.
-- `writerProposalList/Get/Save/Delete`는 인증 POST 전용. `proposal_writer_` 식별자만 허용하고 관리자 private-store는 열지 않는다. 별도 `writer_proposals` 시트에 40,000자씩 나눈 본문을 읽어 검증한 뒤 커밋 메타데이터를 추가한다. 이전 리비전은 보존하며 삭제는 tombstone이다. 공개 GET/회의록 목록/정적 백업에 포함하지 않는다.
-- 회의자료의 기존 private-store 레코드는 이전·복제하지 않는다. 관리자 화면이 두 저장소 목록을 합치고 식별자에 따라 저장소로 요청한다. 주희님 로컬 초안도 별도 키를 사용한다.
-- 서버 설치: main-backend.gs, publication.gs, writer.gs, writer-proposals.gs를 함께 적용한다. 운영 편집기 writer.gs에는 마지막 두 모듈을 이어 붙여 설치해도 동일하다. 비밀번호·운영 프로젝트 식별자는 공개 문서에 기록하지 않는다.
+- writer `authorList/authorGet/authorSaveSettings/saveAgendas`는 본인 소유 회의만 허용한다. `authorTemplates`는 발행관리 대상의 id/name/date만 반환하며 새 회의의 기수·명단을 이어받는 용도다.
+- `authorSaveSettings`는 expectedUpdatedAt 확인 후 meeting 허용 필드와 선택 agendas를 함께 병합한다. 원문·명단·작성자·발행 상태를 보존하고 변경 전후 백업을 먼저 검증한다. 기존 관리자 회의의 id를 직접 보내도 수정은 거절된다.
+- 주희님 회의는 `m_writer_` 식별자를 가진 별도 레코드다. 기존 관리자 회의에 덮어쓰지 않으며 관리자 목록에는 작성자를 표시한다. 작성자 변경 이력은 별도 minutes_writer_backups 시트에 저장한다. 발행 전 공개 API에서는 숨긴다.
+- v464에서 잠시 도입한 writer-proposals 모듈/API는 메뉴 선택 정정에 따라 제거했다. 운영 검증용 임시자료만 사용했고 정리했다. 기존 관리자 private-store 및 회의자료 앱 저장 흐름은 복원했다.
+- 설치 파일: main-backend.gs, publication.gs, writer.gs, publication-check.gs. 비밀번호·운영 프로젝트 식별자는 공개 문서에 기록하지 않는다.
