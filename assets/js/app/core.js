@@ -305,6 +305,7 @@ function saveState(){
   renderPreview();
 }
 function startNewMeeting(){
+  if(window.AgendaWriter&&AgendaWriter.isWriter()){AgendaWriter.newMeeting();return;}
   if(!confirm("새 회의록을 만들까요?\n지금 열려 있는 회의록에 저장하지 않은 수정이 있다면, 먼저 ② 이전 회의록에서 '☁ 현재 회의록 저장'을 눌러 주세요.")) return;
   const keepRosters=state.rosters||{};
   const keepTerm=state.rosterTermNo;
