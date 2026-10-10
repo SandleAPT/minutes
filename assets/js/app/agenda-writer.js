@@ -92,6 +92,8 @@
   async function save(){
     if(busy)return;
     if(!loaded||state.cloudId!==loaded.id){alert('회의설정에서 본인이 등록한 회의를 먼저 열어 주세요.');return;}
+    var time=String(state.meeting.time||'19:00').trim();if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(time)){alert('시간은 24시간 형식으로 입력해 주세요. 예: 19:00');return;}
+    state.meeting.time=time.length===4?'0'+time:time;state.meeting.place=String(state.meeting.place||'').trim()||'관리사무소 대표회의실';
     busy=true;var submitted=JSON.stringify(state.meeting),submittedAgendas=JSON.stringify(state.agendas),id=loaded.id;
     message('작성 내용 저장 중…');
     try{
