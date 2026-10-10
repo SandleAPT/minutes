@@ -157,6 +157,8 @@ assert.equal(author(createBody).item.state.agendas[0].title,'추가','retry does
 assert.equal(author({action:'delete',id:created.item.id}).error,'admin_required');
 // Settings preserve agendas and owner through admin edits; writer cannot edit admin records.
 const settingsBefore=read(created.item.id), settingsState=JSON.parse(settingsBefore.json);
+assert.equal(author({action:'authorSaveSettings',id:created.item.id,expectedUpdatedAt:settingsBefore.updatedAt,meeting:{...settingsState.meeting,guests:[{id:"unsafe'"}]}}).error,'invalid_meeting');
+assert.equal(author({action:'authorSaveSettings',id:created.item.id,expectedUpdatedAt:settingsBefore.updatedAt,meeting:settingsState.meeting,agendas:[{id:'valid',materials:[{id:"unsafe'"}]}]}).error,'invalid_agendas');
 const settings=author({action:'authorSaveSettings',id:created.item.id,expectedUpdatedAt:settingsBefore.updatedAt,
   meeting:{...settingsState.meeting,date:'2026-10-21',time:'20:15',place:'새 회의실'},agendas:[{id:'combined',title:'설정과 안건 함께 저장'}],source:{forged:true},writerOwner:'edit'});
 assert.equal(settings.ok,true);assert.equal(read(created.item.id).date,'2026-10-21');

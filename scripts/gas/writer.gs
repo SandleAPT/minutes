@@ -147,7 +147,9 @@ function writerSaveSettings_(body) {
     if (!body.expectedUpdatedAt || body.expectedUpdatedAt!==old.updatedAt) return {ok:false,error:'conflict'};
     if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(m.date||'') || !['정기','임시'].includes(m.type) ||
       !['입대의','임차'].includes(m.body) || !Number.isInteger(Number(m.termNo)) || Number(m.termNo)<1 || Number(m.termNo)>99 ||
-      String(m.place||'').length>200 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.time||'')) return {ok:false,error:'invalid_meeting'};
+      String(m.place||'').length>200 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.time||'') ||
+      (m.guests!==undefined&&(!Array.isArray(m.guests)||m.guests.length>100||m.guests.some(function(g){return !g||!/^([A-Za-z0-9_-]{1,100})$/.test(g.id||'');}))) ||
+      (m.sequence!==undefined&&(!Array.isArray(m.sequence)||m.sequence.length>100||m.sequence.some(function(v){return typeof v!=="string";})))) return {ok:false,error:'invalid_meeting'};
     const date=new Date(m.date+'T00:00:00Z');
     if(isNaN(date.getTime())||date.toISOString().slice(0,10)!==m.date)return {ok:false,error:'invalid_meeting'};
     const next=Object.assign({},s.meeting);
@@ -155,7 +157,7 @@ function writerSaveSettings_(body) {
     next.termNo=Number(next.termNo);next.year=Number(m.date.slice(0,4));next.month=Number(m.date.slice(5,7));
     next.name='제'+next.termNo+'기 '+next.year+'년'+String(next.month).padStart(2,'0')+'월 '+next.type+' '+(next.body==='임차'?'임차인대표회의':'입주자대표회의');
     if(body.agendas!==undefined){
-      if(!Array.isArray(body.agendas)||body.agendas.length>100||body.agendas.some(function(a){return !a||typeof a!=="object"||Array.isArray(a)||!/^([A-Za-z0-9_-]{1,100})$/.test(a.id||'');}))return {ok:false,error:'invalid_agendas'};
+      if(!Array.isArray(body.agendas)||body.agendas.length>100||body.agendas.some(function(a){return !a||typeof a!=="object"||Array.isArray(a)||!/^([A-Za-z0-9_-]{1,100})$/.test(a.id||'')||(a.materials&&(!Array.isArray(a.materials)||a.materials.some(function(v){return !v||!/^([A-Za-z0-9_-]{1,100})$/.test(v.id||'');}))); }))return {ok:false,error:'invalid_agendas'};
       s.agendas=body.agendas;
     }
     if(JSON.stringify(next)===JSON.stringify(s.meeting)&&JSON.stringify(s.agendas)===JSON.stringify(publicationState_(old).agendas))return {ok:true,item:writerItem_(old)};
