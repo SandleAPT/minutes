@@ -40,3 +40,9 @@
 - The first diagnostic compared a Sheets Date with a date string and failed; comparing the same Korea calendar day passed. Product code was unchanged. The editor-only diagnostic was restored and never deployed.
 - Deployed HTTP authorCreate without credentials returns writer_required, confirming the new route. Browser create/save click round-trip is still unverified.
 - The reported basic-information prompt comes from the previous new-meeting screen. The v462 writer form collects date/type/time/place before registration. Publish both corresponding PRs, verify live v462, and assess any further settings access from that flow.
+
+## Deployment complete - 2026-10-11 00:53:05 KST
+
+- PR #1 merged at 89fb02ab89023dfd57660fb9a59a9290fe124d3d; Pages run 38065270469 succeeded. Portal PR #3 merged at 6082b4fc4ca15c0e4627f6936541cdc54bd394fb; Pages run 38065259153 succeeded. Both live pages serve v462.
+- Real Safari writer session: agenda list loaded, header new-meeting button opened the writer form, and date/type/time/place controls were present. No extra meeting was created during this UI check. Full browser create/save click round-trip remains untested; actual server sheet create/add/edit/remove/backup validation passed as above.
+- Temporary editor diagnostic restored and Drive save confirmed. Original server snapshots and deployment identifiers remain local only. No further deployment work pending.

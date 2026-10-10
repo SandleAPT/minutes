@@ -1,6 +1,6 @@
 # 작성자 변경 백업
 
-Status: main and secondary Apps Script version 10 deployed and live synthetic meeting verification passed on 2026-10-11. Four backup snapshots, date preservation, authorization and original meeting preservation verified. Frontend v462 publication pending.
+Status: main and secondary Apps Script version 10 deployed and live synthetic meeting verification passed on 2026-10-11. Four backup snapshots, date preservation, authorization and original meeting preservation verified. Frontend v462 published on both sites; live writer new-meeting form verified.
 
 ## 범위
 
