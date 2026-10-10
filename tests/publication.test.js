@@ -20,7 +20,7 @@ const ctx=vm.createContext({console,Date,JSON,PropertiesService:{getScriptProper
   SpreadsheetApp:{openById:()=>({getSheetByName:n=>sheets[n],insertSheet:n=>(sheets[n]=new Sheet())}),flush(){}},
   ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>JSON.parse(s)})},
   LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},Utilities:{getUuid:()=> 'fixture-new-'+(++uuid)}});
-vm.runInContext(fs.readFileSync('scripts/gas/main-backend.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/publication.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/writer.gs','utf8'),ctx);
+vm.runInContext(fs.readFileSync('scripts/gas/main-backend.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/publication.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/writer.gs','utf8')+'\n'+fs.readFileSync('scripts/gas/writer-proposals.gs','utf8'),ctx);
 const post=b=>ctx.doPost({postData:{contents:JSON.stringify({token:props.TOKEN,...b})}});
 const get=b=>ctx.doGet({parameter:{token:props.TOKEN,...b}});
 const save=(id,meeting,extra={})=>post({action:'save',adminKey:props.ADMIN_KEY,record:{id,name:id,date:meeting.date,json:JSON.stringify({meeting,agendas:[{id:'a',title:'합성 테스트'}],...extra})}});
@@ -64,6 +64,11 @@ for(const adminKey of ['',props.VIEW_KEY])for(const action of ['authorList','aut
 const author=b=>post({adminKey:props.WRITER_KEY,...b});
 assert.equal(author({action:'authorGet',id:'old'}).item,null);
 assert(!author({action:'authorList'}).items.some(x=>x.id==='old'));
+assert.equal(author({action:'authorGet',id:'draft'}).item,null,'admin meeting is not owned');
+assert.equal(author({action:'authorSaveSettings',id:'draft',expectedUpdatedAt:read('draft').updatedAt,meeting:current}).error,'meeting_not_available');
+assert(!author({action:'authorList'}).items.some(x=>x.id==='draft'));
+assert(author({action:'authorTemplates'}).items.some(x=>x.id==='draft'));
+const ownedState=JSON.parse(read('draft').json);ownedState.writerOwner='writer';save('draft',ownedState.meeting,ownedState);
 const prior=read('draft'),authorItem=author({action:'authorGet',id:'draft'}).item;
 assert.equal(authorItem.state.secret,undefined);
 assert.equal(author({action:'saveAgendas',id:'draft',expectedUpdatedAt:'stale',agendas:[]}).error,'conflict');
@@ -150,6 +155,34 @@ assert.equal(read(failedId),null);history.rows[0]=headers;
 assert.equal(author({action:'saveAgendas',id:created.item.id,expectedUpdatedAt:created.item.updatedAt,agendas:[{id:'new',title:'추가'}]}).ok,true);
 assert.equal(author(createBody).item.state.agendas[0].title,'추가','retry does not reset later edits');
 assert.equal(author({action:'delete',id:created.item.id}).error,'admin_required');
+// Settings preserve agendas and owner through admin edits; writer cannot edit admin records.
+const settingsBefore=read(created.item.id), settingsState=JSON.parse(settingsBefore.json);
+const settings=author({action:'authorSaveSettings',id:created.item.id,expectedUpdatedAt:settingsBefore.updatedAt,
+  meeting:{...settingsState.meeting,date:'2026-10-21',time:'20:15',place:'새 회의실'},source:{forged:true},writerOwner:'edit'});
+assert.equal(settings.ok,true);assert.equal(read(created.item.id).date,'2026-10-21');
+assert.deepEqual(JSON.parse(read(created.item.id).json).agendas,settingsState.agendas);
+assert.equal(JSON.parse(read(created.item.id).json).writerOwner,'writer');
+assert.equal(author({action:'authorSaveSettings',id:created.item.id,expectedUpdatedAt:'stale',meeting:settingsState.meeting}).error,'conflict');
+const adminEdited=JSON.parse(read(created.item.id).json);delete adminEdited.writerOwner;delete adminEdited.writerCreation;
+assert(save(created.item.id,adminEdited.meeting,adminEdited).ok);
+assert.equal(JSON.parse(read(created.item.id).json).writerOwner,'writer','admin save keeps ownership');
+const proposalId='proposal_writer_fixture-1';
+const record={id:proposalId,title:'합성 회의자료',date:'2026-10-21',json:JSON.stringify({kind:'agenda-proposal',data:{title:'합성'},attachments:[{dataUrl:'x'.repeat(80050)}]})};
+assert.equal(author({action:'writerProposalSave',record:{...record,id:'proposal_admin_1'}}).error,'not_owned');
+assert.equal(post({action:'writerProposalList'}).error,'writer_required');
+const material=author({action:'writerProposalSave',record});assert.equal(material.ok,true);
+assert.equal(author({action:'writerProposalGet',id:proposalId}).item.json,record.json);
+assert.equal(author({action:'writerProposalGet',id:proposalId}).item.date,record.date);
+assert.equal(author({action:'writerProposalGet',id:'proposal_admin_1'}).error,'not_owned');
+assert.equal(author({action:'writerProposalSave',record,expectedRevision:'stale'}).error,'conflict');
+const updatedRecord={...record,json:JSON.stringify({kind:'agenda-proposal',data:{title:'유네 수정'},attachments:[]})};
+const adminMaterial=post({action:'writerProposalSave',adminKey:props.ADMIN_KEY,record:updatedRecord,expectedRevision:material.revision});assert(adminMaterial.ok);
+assert.equal(author({action:'writerProposalGet',id:proposalId}).item.json,updatedRecord.json);
+assert(sheets.writer_proposals.rows.some(r=>r[1]===material.revision&&r[2]===0),'previous revision retained');
+assert.equal(get({action:'list'}).items.some(x=>x.id===proposalId),false);
+assert.equal(author({action:'writerProposalDelete',id:proposalId,expectedRevision:adminMaterial.revision}).ok,true);
+assert.equal(author({action:'writerProposalGet',id:proposalId}).item,null);
+assert.equal(author({action:'writerProposalList'}).items.length,0);
 props.WRITER_KEY='';assert.equal(post({action:'verify',adminKey:'fixture-writer'}).ok,false,'unset role fails closed');
 // UI role/cache guard: saved password alone does not grant draft viewing.
 const ui={window:{},document:{},setInterval(){}};ui.window.AdminGate={savedKey:()=> 'fixture-edit'};

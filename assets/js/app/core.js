@@ -501,14 +501,14 @@ function openNavView(btn){
     if(btn.dataset.view==="noticeView" && window.Notices) Notices.render(); // ⑤ 공고·기록 (v65)
     if(btn.dataset.view==="privateView" && window.PrivateStore) PrivateStore.render(); // ⑨ 비공개 자료 (v84)
     if(btn.dataset.view==="repsView" && window.RosterHistory) RosterHistory.render();
-    if(btn.dataset.view==="agendaView" && window.AgendaWriter) AgendaWriter.enter();
+    if(btn.dataset.view==="setupView" && window.AgendaWriter) AgendaWriter.enter();
     if(window.track) track("view_tab",{tab:btn.dataset.view, label:btn.textContent.trim()});
 }
 document.querySelectorAll(".nav button[data-view]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     // v93: ⑥ 회의 설정·⑦ 동대표 명단·⑧ 안건·발언 모두 수정용 비밀번호 게이트(기존엔 ⑧만 잠겨 있었음 — 🔒 표시·2단계 키와 일관되게)
     if(btn.dataset.view==="setupView"||btn.dataset.view==="repsView"||btn.dataset.view==="agendaView"){
-      (btn.dataset.view==='agendaView'?AdminGate.requireAgenda:AdminGate.require)(
+      (btn.dataset.view==='setupView'?AdminGate.requireAgenda:AdminGate.require)(
         ()=>openNavView(btn),
         ()=>{ const cur=document.querySelector(".nav button[data-view].active"); if(cur&&window.Embed) Embed.notify(cur.dataset.view); }
       );
@@ -554,7 +554,7 @@ window.Embed=Embed;
 function updateTopbarSaveBtn(view){
   const el=document.getElementById("topbarSaveBtn");
   if(el) el.style.display=(view==="setupView"||view==="agendaView")?"":"none";
-  if(el) el.textContent=window.AgendaWriter&&AgendaWriter.isWriter()?'☁ 안건 저장':'☁ 현재 회의록 저장';
+  if(el) el.textContent=window.AgendaWriter&&AgendaWriter.isWriter()?'☁ 회의설정 저장':'☁ 현재 회의록 저장';
 }
 
 function initMeetingControls(){

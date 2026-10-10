@@ -11,17 +11,23 @@ function writerItem_(item) {
     state:{meeting:s.meeting,rosters:s.rosters || {},rosterTermNo:s.rosterTermNo,
       rosterBody:s.rosterBody,agendas:s.agendas || [],publication:{managed:true}}};
 }
+function writerOwned_(item) {
+  const s = publicationState_(item);
+  return !!s && (s.writerOwner === "writer" || (!!s.writerCreation && String(item.id).indexOf("m_writer_") === 0));
+}
 function writerAction_(body) {
   if (!checkWriter_(body.adminKey) && !checkAdmin(body.adminKey)) return {ok:false,error:'writer_required'};
+  if (body.action === 'authorTemplates') return {ok:true,items:publicationList_(true).filter(function(item){return !!item.publication;}).map(function(item){return {id:item.id,name:item.name,date:item.date};})};
   if (body.action === 'authorList') {
-    return {ok:true,items:publicationList_(true).filter(function(item) {return !!item.publication;})};
+    return {ok:true,items:publicationList_(true).filter(function(item) {return !!item.publication && (checkAdmin(body.adminKey) || writerOwned_(getItem(item.id)));})};
   }
-  if (body.action === 'authorGet') return {ok:true,item:writerItem_(getItem(body.id))};
+  if (body.action === 'authorGet') { const old=getItem(body.id); return {ok:true,item:checkAdmin(body.adminKey)||writerOwned_(old)?writerItem_(old):null}; }
   if (body.action === 'authorCreate') return writerCreate_(body);
+  if (body.action === 'authorSaveSettings') return writerSaveSettings_(body);
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     const old = getItem(body.id), item = writerItem_(old);
-    if (!item) return {ok:false,error:'meeting_not_available'};
+    if (!item || (!checkAdmin(body.adminKey) && !writerOwned_(old))) return {ok:false,error:'meeting_not_available'};
     if (!body.expectedUpdatedAt || old.updatedAt !== body.expectedUpdatedAt) return {ok:false,error:'conflict'};
     if (!Array.isArray(body.agendas) || body.agendas.length > 100 ||
         body.agendas.some(function(a){return !a || typeof a !== 'object' || Array.isArray(a) ||
@@ -120,7 +126,7 @@ function writerCreate_(body) {
       (kind === '임차' ? '임차인대표회의' : '입주자대표회의');
     meeting.name = name;
     const state = {meeting:meeting,rosters:base.rosters || {},rosterTermNo:term,rosterBody:kind,
-      agendas:[],cloudId:id,publication:{managed:true},writerCreation:input};
+      agendas:[],cloudId:id,publication:{managed:true},writerOwner:"writer",writerCreation:input};
     const json = JSON.stringify(state);
     if (json.length > 49000) return {ok:false,error:'record_too_large'};
     if (!checkAdmin(body.adminKey)) {
@@ -130,4 +136,29 @@ function writerCreate_(body) {
     saveItem({id:id,name:name,date:date,json:json});
     return {ok:true,item:writerItem_(getItem(id))};
   } finally { lock.releaseLock(); }
+}
+
+/** Merge only meeting settings into the author's own record. */
+function writerSaveSettings_(body) {
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    const old=getItem(body.id),s=publicationState_(old),m=body.meeting;
+    if (!writerItem_(old) || (!checkAdmin(body.adminKey)&&!writerOwned_(old))) return {ok:false,error:'meeting_not_available'};
+    if (!body.expectedUpdatedAt || body.expectedUpdatedAt!==old.updatedAt) return {ok:false,error:'conflict'};
+    if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(m.date||'') || !['정기','임시'].includes(m.type) ||
+      !['입대의','임차'].includes(m.body) || !Number.isInteger(Number(m.termNo)) || Number(m.termNo)<1 || Number(m.termNo)>99 ||
+      String(m.place||'').length>200 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.time||'')) return {ok:false,error:'invalid_meeting'};
+    const date=new Date(m.date+'T00:00:00Z');
+    if(isNaN(date.getTime())||date.toISOString().slice(0,10)!==m.date)return {ok:false,error:'invalid_meeting'};
+    const next=Object.assign({},s.meeting);
+    ['body','termNo','type','date','time','place','attendance','guests','audience','sequence'].forEach(function(k){if(Object.prototype.hasOwnProperty.call(m,k))next[k]=m[k];});
+    next.termNo=Number(next.termNo);next.year=Number(m.date.slice(0,4));next.month=Number(m.date.slice(5,7));
+    next.name='제'+next.termNo+'기 '+next.year+'년'+String(next.month).padStart(2,'0')+'월 '+next.type+' '+(next.body==='임차'?'임차인대표회의':'입주자대표회의');
+    if(JSON.stringify(next)===JSON.stringify(s.meeting))return {ok:true,item:writerItem_(old)};
+    s.meeting=next;if(writerOwned_(old))s.writerOwner='writer';const json=JSON.stringify(s);
+    if(json.length>49000)return {ok:false,error:'record_too_large'};
+    if(!checkAdmin(body.adminKey)){try{writerBackup_(old,json);}catch(_){return {ok:false,error:'backup_failed'};}}
+    saveItem({id:old.id,name:next.name,date:next.date,json:json});
+    return {ok:true,item:writerItem_(getItem(old.id))};
+  } finally {lock.releaseLock();}
 }

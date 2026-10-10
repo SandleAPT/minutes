@@ -69,7 +69,8 @@ function doPost(e) {
   if (!checkToken(body.token)) return jsonOut({ok:false,error:'unauthorized'});
   const action = body.action;
   if (action === 'writerBackupList' || action === 'writerBackupGet') return jsonOut(writerBackupAction_(body));
-  if (action === 'authorList' || action === 'authorGet' || action === 'authorCreate' || action === 'saveAgendas') return jsonOut(writerAction_(body));
+  if (/^writerProposal(List|Get|Save|Delete)$/.test(action)) return jsonOut(writerProposalAction_(body));
+  if (action === 'authorTemplates' || action === 'authorSaveSettings' || action === 'authorList' || action === 'authorGet' || action === 'authorCreate' || action === 'saveAgendas') return jsonOut(writerAction_(body));
   if (action === 'list' || action === 'get' || action === 'publish') {
     if (!checkAdmin(body.adminKey)) return jsonOut({ok:false,error:'admin_required'});
     if (action === 'list') return jsonOut({ok:true,items:publicationList_(true),editor:true,publicationVersion:1});
@@ -84,6 +85,7 @@ function doPost(e) {
       const state = publicationState_(rec);
       if (publicationManaged_(state) || publicationManaged_(publicationState_(old)) || (rec.id && publishedItem_(rec.id))) {
         if (!state || !state.meeting) return jsonOut({ok:false,error:'meeting_required'});
+        if (writerOwned_(old)) { state.writerOwner="writer"; state.writerCreation=publicationState_(old).writerCreation; }
         state.publication = {managed:true}; // 클라이언트가 발행 여부를 위조할 수 없다.
         rec.json = JSON.stringify(state);
       }
